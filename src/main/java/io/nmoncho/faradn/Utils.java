@@ -1,8 +1,6 @@
 package io.nmoncho.faradn;
 
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.jsoup.nodes.Node;
 import org.slf4j.Logger;
@@ -12,7 +10,6 @@ public class Utils {
 
   public static final Logger log = LoggerFactory.getLogger(Utils.class);
   public static final String STYLE_ATTR = "style";
-  public static final String STYLE_ATTR_PATTERN = "\\s*\\:\\s*(.+?)[;$]";
 
   /**
    * Finds a CSS style value (e.g. `font-weight`)
@@ -24,19 +21,23 @@ public class Utils {
    * @return some CSS value, if present, otherwise empty
    */
   public static Optional<String> findStyleValue(Node node, String name) {
-    return Optional
-        .of(node.attr(STYLE_ATTR))
-        .filter(attr -> !attr.isBlank())
-        .flatMap(attr -> {
-          Pattern pattern = Pattern.compile(name + STYLE_ATTR_PATTERN); // TODO could add a cache to avoid re-compiling
-          Matcher matcher = pattern.matcher(attr);
+    final String attr = node.attr(STYLE_ATTR);
+    if (attr.isBlank()) {
+      return Optional.empty();
+    }
 
-          if (matcher.find()) {
-            return Optional.of(matcher.group(1));
-          } else {
-            return Optional.empty();
-          }
-        });
+    for (String declaration : attr.split(";")) {
+      final int colon = declaration.indexOf(':');
+      if (colon > 0) {
+        final String property = declaration.substring(0, colon).trim();
+        final String value = declaration.substring(colon + 1).trim();
+        if (property.equalsIgnoreCase(name) && !value.isEmpty()) {
+          return Optional.of(value);
+        }
+      }
+    }
+
+    return Optional.empty();
   }
 
   /**

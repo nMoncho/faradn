@@ -22,8 +22,6 @@ import io.nmoncho.faradn.printer.PrintJobState;
 import io.nmoncho.faradn.printer.escpos.NodeVisitor;
 import io.nmoncho.faradn.printer.escpos.commands.CharacterCommands;
 
-import static io.nmoncho.faradn.Utils.STYLE_ATTR_PATTERN;
-
 public class PrintingJobTest {
 
   //  @Test
