@@ -1,15 +1,14 @@
 package io.nmoncho.faradn;
 
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.List;
 
 import org.jsoup.Jsoup;
-import org.jsoup.nodes.Element;
-import org.jsoup.nodes.Node;
-import org.jsoup.nodes.TextNode;
-import org.jsoup.select.NodeVisitor;
+
+import io.nmoncho.faradn.document.Block;
+import io.nmoncho.faradn.document.BlockBuilder;
 
 public class Document {
 
@@ -21,6 +20,17 @@ public class Document {
 
   public org.jsoup.nodes.Document getDoc() {
     return doc;
+  }
+
+  /**
+   * Translates this document into the intermediate representation: a flat,
+   * reading-order sequence of blocks with fully resolved styles. Renderers
+   * consume this instead of the DOM.
+   *
+   * @return immutable list of blocks
+   */
+  public List<Block> blocks() {
+    return BlockBuilder.build(doc);
   }
 
   @Override
