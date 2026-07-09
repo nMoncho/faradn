@@ -6,34 +6,34 @@ package io.nmoncho.faradn.printer.escpos;
  */
 public class SimpleCode implements Code {
 
-	private final String humanReadableCode;
-	private final byte[] code;
+  private final String humanReadableCode;
+  private final byte[] code;
 
-	public SimpleCode(byte[] code) {
-		this(null, code);
-	}
+  public SimpleCode(byte[] code) {
+    this(null, code);
+  }
 
-	public SimpleCode(String humanReadableCode, byte[] code) {
-		this.humanReadableCode = humanReadableCode;
-		this.code = code;
-	}
+  public SimpleCode(String humanReadableCode, byte[] code) {
+    this.humanReadableCode = humanReadableCode;
+    this.code = code;
+  }
 
-	public SimpleCode(int code) {
-		this(null, code);
-	}
+  public SimpleCode(int code) {
+    this(null, code);
+  }
 
-	public SimpleCode(String humanReadableCode, int code) {
-		this.humanReadableCode = humanReadableCode;
-		this.code = new byte[] { (byte) code };
-	}
+  public SimpleCode(String humanReadableCode, int code) {
+    this.humanReadableCode = humanReadableCode;
+    this.code = new byte[] { (byte) code };
+  }
 
-	@Override
-	public byte[] getCode() {
-		return this.code;
-	}
+  @Override
+  public byte[] getCode() {
+    return this.code;
+  }
 
-	@Override
-	public String toString() {
-		return humanReadableCode != null ? humanReadableCode : humanReadable();
-	}
+  @Override
+  public String toString() {
+    return humanReadableCode != null ? humanReadableCode : humanReadable();
+  }
 }
