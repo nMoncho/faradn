@@ -128,5 +128,39 @@
     <mockito.version>5.11.0</mockito.version>
   </properties>
 
+  <profiles>
+    <!--
+      usb4java 1.3.0 bundles libusb4java natives for darwin-x86-64,
+      linux-x86-64, linux-aarch64 and Windows, but NOT darwin-aarch64
+      (Apple Silicon). On that platform we add the native explicitly. It is
+      not published to Maven Central, so it must be built and installed into
+      the local repository once:
+
+        mvn install:install-file -Dfile=libusb4java-1.3.0-darwin-aarch64.jar \
+          -DgroupId=org.usb4java -DartifactId=libusb4java -Dversion=1.3.0 \
+          -Dclassifier=darwin-aarch64 -Dpackaging=jar
+
+      On every other OS/arch this profile stays inactive and usb4java resolves
+      the correct native transitively from Maven Central.
+    -->
+    <profile>
+      <id>macos-aarch64</id>
+      <activation>
+        <os>
+          <family>mac</family>
+          <arch>aarch64</arch>
+        </os>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.usb4java</groupId>
+          <artifactId>libusb4java</artifactId>
+          <version>${usb4java.version}</version>
+          <classifier>darwin-aarch64</classifier>
+        </dependency>
+      </dependencies>
+    </profile>
+  </profiles>
+
 
 </project>

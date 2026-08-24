@@ -17,6 +17,9 @@ public class CharacterCommands {
   public static ParametricCode<PrintMode> SELECT_PRINT_MODE = new ParametricCode<>(
       new byte[] { Code.ESC, 0x21 });
 
+  public static ParametricCode<CharacterSize> SELECT_CHARACTER_SIZE = new ParametricCode<>(
+      new byte[] { Code.GS, 0x21 });
+
   public static BooleanCode CANCEL_USER_DEFINED_CHARACTERS = new BooleanCode(new byte[] { Code.ESC, 0x3F });
   public static BooleanCode USER_DEFINED_CHARACTER_SET = new BooleanCode(new byte[] { Code.ESC, 0x25 });
   // TODO understand following code: ESC & 'Define user-defined characters', SEE Page 107
@@ -81,6 +84,32 @@ public class CharacterCommands {
 
     public static Lines of(int lines) {
       return new Lines(lines);
+    }
+  }
+
+  /**
+   * Parameter for {@code GS !}: character width and height magnification, each
+   * an integer multiple from 1x to 8x. The byte packs width in the high nibble
+   * and height in the low nibble, both zero-based.
+   */
+  public static class CharacterSize implements Byteable {
+    private final int width;
+    private final int height;
+
+    public CharacterSize(int width, int height) {
+      if (width < 1 || width > 8) {
+        throw new IllegalArgumentException("width must be in [1, 8], got " + width);
+      }
+      if (height < 1 || height > 8) {
+        throw new IllegalArgumentException("height must be in [1, 8], got " + height);
+      }
+      this.width = width;
+      this.height = height;
+    }
+
+    @Override
+    public byte[] getBytes() {
+      return new byte[] { (byte) (((width - 1) << 4) | (height - 1)) };
     }
   }
 

@@ -1,8 +1,9 @@
 package io.nmoncho.faradn;
 
 import io.nmoncho.faradn.printer.Devices;
-import io.nmoncho.faradn.printer.escpos.commands.MiscellaneousCommands;
-import io.nmoncho.faradn.printer.escpos.commands.PrintCommands;
+import io.nmoncho.faradn.printer.PrinterProfile;
+import io.nmoncho.faradn.printer.TmT88vProfile;
+import io.nmoncho.faradn.printer.escpos.EscPosRenderer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,12 +22,26 @@ public class Printer {
   }
 
   /**
-   * Prints a {@link Document}
+   * Renders a {@link Document} for this printer's default profile and prints it.
    *
    * @param doc
    *        document to print
    */
   public void print(Document doc) {
+    print(doc, TmT88vProfile.INSTANCE);
+  }
+
+  /**
+   * Renders a {@link Document} for the given profile and prints it.
+   *
+   * @param doc
+   *        document to print
+   * @param profile
+   *        capabilities of the target printer
+   */
+  public void print(Document doc, PrinterProfile profile) {
+    final byte[] payload = new EscPosRenderer(profile).render(doc.blocks());
+
     Optional<Map.Entry<UsbInterface, UsbEndpoint>> ifaceEndpoint = Devices
         .findPrinterInterface(device)
         .flatMap(iface -> Devices.findOutEndpoint(iface).map(endpoint -> Map.entry(iface, endpoint)));
@@ -42,21 +57,22 @@ public class Printer {
           pair.getValue(),
           device);
 
-      print(doc, pair.getKey(), pair.getValue());
+      send(payload, pair.getKey(), pair.getValue());
     });
   }
 
   /**
-   * Prints the provided document using the specified USB interface and endpoint.
+   * Sends an already-rendered ESC/POS payload over the specified USB interface
+   * and endpoint.
    *
-   * @param doc
-   *        document to print
+   * @param payload
+   *        ESC/POS bytes to send
    * @param iface
    *        interface to use for printing
    * @param endpoint
    *        endpoint to use for printing
    */
-  private void print(Document doc, UsbInterface iface, UsbEndpoint endpoint) {
+  private void send(byte[] payload, UsbInterface iface, UsbEndpoint endpoint) {
     UsbPipe pipe = null;
 
     try {
@@ -65,8 +81,7 @@ public class Printer {
 
       pipe.open();
 
-      pipe.syncSubmit(MiscellaneousCommands.INITIALIZE.getCode());
-      pipe.syncSubmit(PrintCommands.LINE_FEED.getCode());
+      pipe.syncSubmit(payload);
     } catch (UsbNotActiveException | UsbDisconnectedException | UsbException ex) {
       throw new PrintingException("Something when wrong while trying to print", ex);
     } finally {
