@@ -88,4 +88,4 @@ nb-configuration.xml
 ## Miscellaneous
 ##############################
 *.log
-
+.bloop/

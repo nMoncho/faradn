@@ -67,18 +67,18 @@ golden-byte tests.
 
 **Tags**
 
-| Markup | Effect |
-|---|---|
-| `<b>`, `<strong>` | bold |
-| `<u>` | underline |
-| `<h1>` | bold, double width and height |
-| `<h2>` | bold, double height |
-| `<h3>` | bold |
-| `<center>` | centered |
-| `<p>`, `<div>`, headings, lists, … | paragraph (block) boundaries |
-| `<br>`, `<hr>` | line break, horizontal rule |
-| `<img>` | image (URL or Base64 `data:` URI; PNG, JPEG, BMP, WBMP) |
-| `<em>`, `<i>` | ignored — ESC/POS printers have no italic |
+| Markup                             | Effect                                                  |
+|------------------------------------|---------------------------------------------------------|
+| `<b>`, `<strong>`                  | bold                                                    |
+| `<u>`                              | underline                                               |
+| `<h1>`                             | bold, double width and height                           |
+| `<h2>`                             | bold, double height                                     |
+| `<h3>`                             | bold                                                    |
+| `<center>`                         | centered                                                |
+| `<p>`, `<div>`, headings, lists, … | paragraph (block) boundaries                            |
+| `<br>`, `<hr>`                     | line break, horizontal rule                             |
+| `<img>`                            | image (URL or Base64 `data:` URI; PNG, JPEG, BMP, WBMP) |
+| `<em>`, `<i>`                      | ignored — ESC/POS printers have no italic               |
 
 **Inline CSS**
 

@@ -47,7 +47,7 @@ public class Image {
 
         // Resize if needed
         int originalHeight = image.getHeight();
-        int originalWidth = image.getHeight();
+        int originalWidth = image.getWidth();
         int targetHeight = height.orElse(originalHeight);
         int targetWidth = width.orElse(originalWidth);
 
@@ -131,7 +131,7 @@ public class Image {
     if (el.tag().getName().equals("img") && !el.attr("src").trim().isEmpty()) {
       String src = el.absUrl("src");
       Optional<Integer> height = Utils.parseAttribute(el, "height");
-      Optional<Integer> width = Utils.parseAttribute(el, "height");
+      Optional<Integer> width = Utils.parseAttribute(el, "width");
 
       Matcher matcher = BASE64_REGEX.matcher(src);
       if (matcher.matches()) {

@@ -1,12 +1,13 @@
 package io.nmoncho.faradn;
 
 import io.nmoncho.faradn.printer.Devices;
-import io.nmoncho.faradn.printer.escpos.Codes;
-import org.javatuples.Pair;
+import io.nmoncho.faradn.printer.escpos.commands.MiscellaneousCommands;
+import io.nmoncho.faradn.printer.escpos.commands.PrintCommands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.usb.*;
+import java.util.Map;
 import java.util.Optional;
 
 public class Printer {
@@ -26,9 +27,9 @@ public class Printer {
    *        document to print
    */
   public void print(Document doc) {
-    Optional<Pair<UsbInterface, UsbEndpoint>> ifaceEndpoint = Devices
+    Optional<Map.Entry<UsbInterface, UsbEndpoint>> ifaceEndpoint = Devices
         .findPrinterInterface(device)
-        .flatMap(iface -> Devices.findOutEndpoint(iface).map(endpoint -> new Pair<>(iface, endpoint)));
+        .flatMap(iface -> Devices.findOutEndpoint(iface).map(endpoint -> Map.entry(iface, endpoint)));
 
     if (ifaceEndpoint.isEmpty()) {
       log.warn("Couldn't find proper USB Interface and Endpoint for print. Nothing will be printed");
@@ -37,11 +38,11 @@ public class Printer {
     ifaceEndpoint.ifPresent(pair -> {
       log.debug(
           "Selected interface [{}] and endpoint [{}], from device [{}]",
-          pair.getValue0(),
-          pair.getValue1(),
+          pair.getKey(),
+          pair.getValue(),
           device);
 
-      print(doc, pair.getValue0(), pair.getValue1());
+      print(doc, pair.getKey(), pair.getValue());
     });
   }
 
@@ -64,9 +65,8 @@ public class Printer {
 
       pipe.open();
 
-      pipe.syncSubmit(Codes.INIT_PRINTER);
-      // pipe.syncSubmit(Codes.SET_PRINT_MODE); // TODO Add this in part of initialization, and then when finish printing image!
-      pipe.syncSubmit(Codes.LINE_FEED);
+      pipe.syncSubmit(MiscellaneousCommands.INITIALIZE.getCode());
+      pipe.syncSubmit(PrintCommands.LINE_FEED.getCode());
     } catch (UsbNotActiveException | UsbDisconnectedException | UsbException ex) {
       throw new PrintingException("Something when wrong while trying to print", ex);
     } finally {
