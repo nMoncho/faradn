@@ -5,7 +5,7 @@
   }, {
     "pattern":"\\Qjavax.usb.properties\\E"
   }, {
-    "pattern":"\\Qorg/usb4java/darwin-aarch64/libusb4java.dylib\\E"
+    "pattern":"org/usb4java/.*/libusb4java\\..*"
   }, {
     "pattern":"\\Qreference.conf\\E"
   }, {

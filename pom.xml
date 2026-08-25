@@ -9,6 +9,37 @@
   <version>0.1.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
+  <name>Farad'n Parent</name>
+  <description>HTML-to-ESC/POS printing for Java: write your receipt as HTML, print it on paper.</description>
+  <url>https://github.com/nMoncho/faradn</url>
+
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>nMoncho</id>
+      <name>Gustavo De Micheli</name>
+      <url>https://github.com/nMoncho</url>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:https://github.com/nMoncho/faradn.git</connection>
+    <developerConnection>scm:git:git@github.com:nMoncho/faradn.git</developerConnection>
+    <url>https://github.com/nMoncho/faradn</url>
+  </scm>
+
+  <issueManagement>
+    <system>GitHub Issues</system>
+    <url>https://github.com/nMoncho/faradn/issues</url>
+  </issueManagement>
+
   <modules>
     <module>faradn-core</module>
     <module>faradn-cli</module>
@@ -18,6 +49,8 @@
     <java.version>17</java.version>
     <maven.compiler.release>${java.version}</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- Reproducible builds: bump per release (or set from the tag). -->
+    <project.build.outputTimestamp>2026-08-25T00:00:00Z</project.build.outputTimestamp>
     <formatter.version>2.23.0</formatter.version>
     <enforcer.version>3.4.1</enforcer.version>
     <surefire.version>3.2.5</surefire.version>
@@ -121,6 +154,77 @@
           <classifier>darwin-aarch64</classifier>
         </dependency>
       </dependencies>
+    </profile>
+
+    <!--
+      Release artifacts: source + javadoc jars, GPG signatures, and publishing to
+      Maven Central via the Sonatype Central Portal. Active only with -Prelease.
+
+      Before the first publish, confirm: (1) the io.nmoncho namespace is verified on
+      central.sonatype.com; (2) a `central` server with a Central user token lives in
+      settings.xml; (3) a GPG signing key is available. Then dry-run with
+      `mvn -Prelease -DskipTests verify` before `deploy`.
+    -->
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>3.3.1</version>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <goals>
+                  <goal>jar-no-fork</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>3.6.3</version>
+            <executions>
+              <execution>
+                <id>attach-javadoc</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <doclint>none</doclint>
+              <quiet>true</quiet>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>3.2.4</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.sonatype.central</groupId>
+            <artifactId>central-publishing-maven-plugin</artifactId>
+            <version>0.5.0</version>
+            <extensions>true</extensions>
+            <configuration>
+              <publishingServerId>central</publishingServerId>
+              <autoPublish>false</autoPublish>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
 
