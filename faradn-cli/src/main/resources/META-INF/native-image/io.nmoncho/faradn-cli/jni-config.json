@@ -1,0 +1,30 @@
+[
+{
+  "name":"io.nmoncho.faradn.cli.Faradn",
+  "methods":[{"name":"main","parameterTypes":["java.lang.String[]"] }]
+},
+{
+  "name":"java.lang.Boolean",
+  "methods":[{"name":"getBoolean","parameterTypes":["java.lang.String"] }]
+},
+{
+  "name":"java.lang.String",
+  "methods":[{"name":"lastIndexOf","parameterTypes":["int"] }, {"name":"substring","parameterTypes":["int"] }]
+},
+{
+  "name":"java.lang.System",
+  "methods":[{"name":"getProperty","parameterTypes":["java.lang.String"] }, {"name":"setProperty","parameterTypes":["java.lang.String","java.lang.String"] }]
+},
+{
+  "name":"org.usb4java.Context",
+  "fields":[{"name":"contextPointer"}]
+},
+{
+  "name":"org.usb4java.DeviceList",
+  "fields":[{"name":"deviceListPointer"}, {"name":"size"}]
+},
+{
+  "name":"org.usb4java.LibUsb",
+  "methods":[{"name":"hotplugCallback","parameterTypes":["org.usb4java.Context","org.usb4java.Device","int","long"] }, {"name":"triggerPollfdAdded","parameterTypes":["java.io.FileDescriptor","int","long"] }, {"name":"triggerPollfdRemoved","parameterTypes":["java.io.FileDescriptor","long"] }]
+}
+]
