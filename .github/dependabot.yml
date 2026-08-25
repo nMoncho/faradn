@@ -8,6 +8,8 @@ updates:
     groups:
       maven-dependencies:
         patterns: [ "*" ]
+    ignore:
+      - dependency-name: "org.graalvm.buildtools:native-maven-plugin"
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
