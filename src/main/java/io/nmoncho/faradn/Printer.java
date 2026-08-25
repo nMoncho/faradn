@@ -1,15 +1,21 @@
 package io.nmoncho.faradn;
 
+import java.util.Optional;
+
+import javax.usb.UsbDevice;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.nmoncho.faradn.printer.Devices;
 import io.nmoncho.faradn.printer.PrinterProfile;
 import io.nmoncho.faradn.printer.TmT88vProfile;
 import io.nmoncho.faradn.printer.escpos.EscPosRenderer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.usb.*;
-import java.util.Map;
-import java.util.Optional;
+import io.nmoncho.faradn.transport.PrinterNotReadyException;
+import io.nmoncho.faradn.transport.PrinterStatus;
+import io.nmoncho.faradn.transport.Transport;
+import io.nmoncho.faradn.transport.TransportException;
+import io.nmoncho.faradn.transport.UsbTransport;
 
 public class Printer {
 
@@ -22,7 +28,8 @@ public class Printer {
   }
 
   /**
-   * Renders a {@link Document} for this printer's default profile and prints it.
+   * Renders a {@link Document} for this printer's default profile and prints it
+   * over USB.
    *
    * @param doc
    *        document to print
@@ -32,7 +39,7 @@ public class Printer {
   }
 
   /**
-   * Renders a {@link Document} for the given profile and prints it.
+   * Renders a {@link Document} for the given profile and prints it over USB.
    *
    * @param doc
    *        document to print
@@ -40,63 +47,56 @@ public class Printer {
    *        capabilities of the target printer
    */
   public void print(Document doc, PrinterProfile profile) {
-    final byte[] payload = new EscPosRenderer(profile).render(doc.blocks());
-
-    Optional<Map.Entry<UsbInterface, UsbEndpoint>> ifaceEndpoint = Devices
-        .findPrinterInterface(device)
-        .flatMap(iface -> Devices.findOutEndpoint(iface).map(endpoint -> Map.entry(iface, endpoint)));
-
-    if (ifaceEndpoint.isEmpty()) {
-      log.warn("Couldn't find proper USB Interface and Endpoint for print. Nothing will be printed");
+    try (UsbTransport transport = new UsbTransport(device)) {
+      print(transport, doc, profile);
     }
-
-    ifaceEndpoint.ifPresent(pair -> {
-      log.debug(
-          "Selected interface [{}] and endpoint [{}], from device [{}]",
-          pair.getKey(),
-          pair.getValue(),
-          device);
-
-      send(payload, pair.getKey(), pair.getValue());
-    });
   }
 
   /**
-   * Sends an already-rendered ESC/POS payload over the specified USB interface
-   * and endpoint.
+   * Reads the printer's real-time status over USB.
    *
-   * @param payload
-   *        ESC/POS bytes to send
-   * @param iface
-   *        interface to use for printing
-   * @param endpoint
-   *        endpoint to use for printing
+   * @return the decoded status
    */
-  private void send(byte[] payload, UsbInterface iface, UsbEndpoint endpoint) {
-    UsbPipe pipe = null;
+  public PrinterStatus status() {
+    try (UsbTransport transport = new UsbTransport(device)) {
+      return transport.status();
+    }
+  }
 
+  /**
+   * Renders a {@link Document} and writes it to any {@link Transport}, after a
+   * best-effort pre-flight readiness check. This is the transport-agnostic core
+   * shared by the USB convenience methods and callers that supply their own
+   * transport (for example a
+   * {@link io.nmoncho.faradn.transport.NetworkTransport}).
+   *
+   * @param transport
+   *        where to send the rendered job
+   * @param doc
+   *        document to print
+   * @param profile
+   *        capabilities of the target printer
+   */
+  public static void print(Transport transport, Document doc, PrinterProfile profile) {
+    final byte[] payload = new EscPosRenderer(profile).render(doc.blocks());
+    ensureReady(transport);
+    transport.write(payload);
+  }
+
+  /**
+   * Best-effort pre-flight check: if the status channel works and reports a
+   * problem, refuse the job; if status cannot be read, print anyway.
+   */
+  private static void ensureReady(Transport transport) {
+    final PrinterStatus status;
     try {
-      iface.claim();
-      pipe = endpoint.getUsbPipe();
-
-      pipe.open();
-
-      pipe.syncSubmit(payload);
-    } catch (UsbNotActiveException | UsbDisconnectedException | UsbException ex) {
-      throw new PrintingException("Something when wrong while trying to print", ex);
-    } finally {
-      try {
-        if (pipe != null) {
-          pipe.close();
-        }
-      } catch (UsbException ignored) {
-      }
-      try {
-        if (iface != null) {
-          iface.release();
-        }
-      } catch (UsbException ignored) {
-      }
+      status = transport.status();
+    } catch (TransportException e) {
+      log.debug("Skipping pre-flight status check: {}", e.getMessage());
+      return;
+    }
+    if (!status.ready()) {
+      throw new PrinterNotReadyException(status);
     }
   }
 

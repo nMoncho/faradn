@@ -251,6 +251,20 @@ public class Devices {
   }
 
   /**
+   * Finds the first {@link javax.usb.UsbEndpoint} that reads from the device,
+   * used for the real-time status back-channel, if the interface exposes one.
+   *
+   * @param iface
+   *        to inspect
+   * @return a present IN Endpoint, empty otherwise.
+   */
+  public static Optional<UsbEndpoint> findInEndpoint(UsbInterface iface) {
+    return findEndpoint(
+        iface,
+        endpoint -> endpoint.getDirection() == UsbConst.ENDPOINT_DIRECTION_IN);
+  }
+
+  /**
    * Finds the a {@link javax.usb.UsbEndpoint} for a given {@link UsbInterface},
    * for the given {@link java.util.function.Predicate}
    *
