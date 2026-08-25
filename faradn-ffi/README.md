@@ -18,6 +18,8 @@ Produces, under `faradn-ffi/target/`:
   runtime, so it is a self-contained, several-MB file (no JRE needed on the
   target).
 - `libfaradn.h`, `graal_isolate.h` — the C headers.
+- On **Windows**, `libfaradn.lib` (the import library) is produced too, for
+  compile-time linking; runtime consumers can also `LoadLibrary` the DLL directly.
 
 ## API
 
