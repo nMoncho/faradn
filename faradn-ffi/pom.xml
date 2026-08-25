@@ -1,0 +1,75 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.nmoncho</groupId>
+    <artifactId>faradn-parent</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>faradn-ffi</artifactId>
+  <packaging>jar</packaging>
+
+  <description>C ABI shared library exposing Farad'n's HTML-to-ESC/POS rendering to other languages.</description>
+
+  <properties>
+    <!-- The shared library ships on GitHub Releases, not to Maven Central. -->
+    <maven.deploy.skip>true</maven.deploy.skip>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.nmoncho</groupId>
+      <artifactId>faradn-core</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+
+    <!-- GraalVM SDK: @CEntryPoint and C type conversions. Provided by native-image at build time. -->
+    <dependency>
+      <groupId>org.graalvm.sdk</groupId>
+      <artifactId>graal-sdk</artifactId>
+      <version>${graalsdk.version}</version>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+  <profiles>
+    <!-- Build the C ABI shared library with GraalVM: mvn -Pnative-shared -pl faradn-ffi -am package -->
+    <profile>
+      <id>native-shared</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.graalvm.buildtools</groupId>
+            <artifactId>native-maven-plugin</artifactId>
+            <version>${nativemaven.version}</version>
+            <extensions>true</extensions>
+            <executions>
+              <execution>
+                <id>build-shared</id>
+                <goals>
+                  <goal>compile-no-fork</goal>
+                </goals>
+                <phase>package</phase>
+              </execution>
+            </executions>
+            <configuration>
+              <!-- "lib" prefix so it links as -lfaradn / link-lib=faradn. -->
+              <imageName>libfaradn</imageName>
+              <sharedLibrary>true</sharedLibrary>
+              <buildArgs>
+                <buildArg>--no-fallback</buildArg>
+                <buildArg>-H:+AddAllCharsets</buildArg>
+                <buildArg>-Djava.awt.headless=true</buildArg>
+              </buildArgs>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+</project>

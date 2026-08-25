@@ -1,0 +1,8 @@
+[package]
+name = "faradn-example"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "faradn-example"
+path = "src/main.rs"
