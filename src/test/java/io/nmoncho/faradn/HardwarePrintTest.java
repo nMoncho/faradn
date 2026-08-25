@@ -24,16 +24,16 @@ import io.nmoncho.faradn.transport.NetworkTransport;
  * mvn test -Dfaradn.printer.host=192.168.1.50 -Dtest=HardwarePrintTest
  * }</pre>
  *
- * Both print a text-only receipt; verify by eye that heading sizes, bold,
- * centering, alignment, underline and rules come out right, and — checkpoint 2
- * —
- * that pulling the paper roll makes the job fail rather than hang. Images and
- * barcodes are a later milestone, so the fixture is deliberately text only.
+ * Both print a full receipt exercising the logo image, a table, a Code 128
+ * barcode, a QR code and word-wrapped text (checkpoint 3), plus heading sizes,
+ * bold, centering, alignment, underline and rules (checkpoint 1). Verify by eye
+ * that it is legible, scan the barcode and QR, and — checkpoint 2 — pull the
+ * paper roll to confirm the job fails rather than hangs.
  */
 @Tag("hardware")
 public class HardwarePrintTest {
 
-  private static final File RECEIPT = new File("src/test/resources/printjobs/receipt-text.html");
+  private static final File RECEIPT = new File("src/test/resources/printjobs/receipt-full.html");
 
   @Test
   @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")

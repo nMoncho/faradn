@@ -23,4 +23,7 @@ public interface PrinterProfile {
   /** Whether the printer has an autocutter. */
   boolean supportsCut();
 
+  /** The character code page the renderer selects and encodes text for. */
+  CodePage codePage();
+
 }

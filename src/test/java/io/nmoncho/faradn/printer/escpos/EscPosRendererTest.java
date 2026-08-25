@@ -2,8 +2,12 @@ package io.nmoncho.faradn.printer.escpos;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -14,9 +18,8 @@ import org.junit.jupiter.api.Test;
 
 import io.nmoncho.faradn.Document;
 import io.nmoncho.faradn.Image;
-import io.nmoncho.faradn.UnsupportedBlockException;
 import io.nmoncho.faradn.document.Barcode;
-import io.nmoncho.faradn.document.Block;
+import io.nmoncho.faradn.document.Cell;
 import io.nmoncho.faradn.document.ComputedStyle;
 import io.nmoncho.faradn.document.ComputedStyle.Alignment;
 import io.nmoncho.faradn.document.Cut;
@@ -24,8 +27,12 @@ import io.nmoncho.faradn.document.Feed;
 import io.nmoncho.faradn.document.ImageBlock;
 import io.nmoncho.faradn.document.Paragraph;
 import io.nmoncho.faradn.document.Rule;
+import io.nmoncho.faradn.document.Table;
 import io.nmoncho.faradn.document.TextRun;
+import io.nmoncho.faradn.printer.CodePage;
+import io.nmoncho.faradn.printer.PrinterProfile;
 import io.nmoncho.faradn.printer.TmT88vProfile;
+import io.nmoncho.faradn.printer.escpos.commands.BarcodeCommands;
 
 /**
  * Golden-byte tests: assert the exact ESC/POS a document renders to. Expected
@@ -38,6 +45,8 @@ public class EscPosRendererTest {
   private static final byte GS = 0x1D;
 
   private static final byte[] INIT = { ESC, 0x40 };
+  private static final byte[] SELECT_PC437 = { ESC, 0x74, 0x00 };
+  private static final byte[] HEAD = cat(INIT, SELECT_PC437);
   private static final byte[] LF = { 0x0A };
   private static final byte[] BOLD_ON = { ESC, 0x45, 0x01 };
   private static final byte[] BOLD_OFF = { ESC, 0x45, 0x00 };
@@ -58,7 +67,7 @@ public class EscPosRendererTest {
     byte[] out = renderer.render(List.of(
         new Paragraph(List.of(new TextRun("Hello", ComputedStyle.INITIAL)), Alignment.LEFT)));
 
-    assertBytes(cat(INIT, "Hello", LF, FEED_4, PARTIAL_CUT), out);
+    assertBytes(cat(HEAD, "Hello", LF, FEED_4, PARTIAL_CUT), out);
   }
 
   @Test
@@ -69,7 +78,7 @@ public class EscPosRendererTest {
         new TextRun("Total:", bold),
         new TextRun(" 10", ComputedStyle.INITIAL)), Alignment.LEFT)));
 
-    assertBytes(cat(INIT, BOLD_ON, "Total:", BOLD_OFF, " 10", LF, FEED_4, PARTIAL_CUT), out);
+    assertBytes(cat(HEAD, BOLD_ON, "Total:", BOLD_OFF, " 10", LF, FEED_4, PARTIAL_CUT), out);
   }
 
   @Test
@@ -79,7 +88,7 @@ public class EscPosRendererTest {
     byte[] out = renderer.render(List.of(
         new Paragraph(List.of(new TextRun("Receipt", h1)), Alignment.CENTER)));
 
-    assertBytes(cat(INIT, ALIGN_CENTER, BOLD_ON, size(2, 2), "Receipt",
+    assertBytes(cat(HEAD, ALIGN_CENTER, BOLD_ON, size(2, 2), "Receipt",
         BOLD_OFF, size(1, 1), LF, FEED_4, PARTIAL_CUT), out);
   }
 
@@ -90,7 +99,7 @@ public class EscPosRendererTest {
     byte[] out = renderer.render(List.of(
         new Paragraph(List.of(new TextRun("x", underline)), Alignment.LEFT)));
 
-    assertBytes(cat(INIT, UNDERLINE_ON, "x", UNDERLINE_OFF, LF, FEED_4, PARTIAL_CUT), out);
+    assertBytes(cat(HEAD, UNDERLINE_ON, "x", UNDERLINE_OFF, LF, FEED_4, PARTIAL_CUT), out);
   }
 
   @Test
@@ -100,7 +109,7 @@ public class EscPosRendererTest {
     byte[] out = renderer.render(List.of(
         new Paragraph(List.of(new TextRun("x", invert)), Alignment.LEFT)));
 
-    assertBytes(cat(INIT, INVERT_ON, "x", INVERT_OFF, LF, FEED_4, PARTIAL_CUT), out);
+    assertBytes(cat(HEAD, INVERT_ON, "x", INVERT_OFF, LF, FEED_4, PARTIAL_CUT), out);
   }
 
   @Test
@@ -110,56 +119,121 @@ public class EscPosRendererTest {
     byte[] out = renderer.render(List.of(
         new Paragraph(List.of(new TextRun("x", right)), Alignment.RIGHT)));
 
-    assertBytes(cat(INIT, ALIGN_RIGHT, "x", LF, FEED_4, PARTIAL_CUT), out);
+    assertBytes(cat(HEAD, ALIGN_RIGHT, "x", LF, FEED_4, PARTIAL_CUT), out);
   }
 
   @Test
   void ruleFillsTheLineWidth() {
     byte[] out = renderer.render(List.of(new Rule()));
 
-    assertBytes(cat(INIT, "-".repeat(TmT88vProfile.INSTANCE.columns()), LF, FEED_4, PARTIAL_CUT), out);
+    assertBytes(cat(HEAD, "-".repeat(TmT88vProfile.INSTANCE.columns()), LF, FEED_4, PARTIAL_CUT), out);
   }
 
   @Test
   void feedBlockEmitsPrintAndFeedLines() {
     byte[] out = renderer.render(List.of(new Feed(3)));
 
-    assertBytes(cat(INIT, feed(3), FEED_4, PARTIAL_CUT), out);
+    assertBytes(cat(HEAD, feed(3), FEED_4, PARTIAL_CUT), out);
   }
 
   @Test
   void fullCutBlock() {
     byte[] out = renderer.render(List.of(new Cut(false)));
 
-    assertBytes(cat(INIT, FULL_CUT, FEED_4, PARTIAL_CUT), out);
+    assertBytes(cat(HEAD, FULL_CUT, FEED_4, PARTIAL_CUT), out);
   }
 
   @Test
   void partialCutBlock() {
     byte[] out = renderer.render(List.of(new Cut(true)));
 
-    assertBytes(cat(INIT, PARTIAL_CUT, FEED_4, PARTIAL_CUT), out);
+    assertBytes(cat(HEAD, PARTIAL_CUT, FEED_4, PARTIAL_CUT), out);
   }
 
   @Test
   void emptyDocumentStillFramesTheJob() {
     byte[] out = renderer.render(List.of());
 
-    assertBytes(cat(INIT, FEED_4, PARTIAL_CUT), out);
+    assertBytes(cat(HEAD, FEED_4, PARTIAL_CUT), out);
   }
 
   @Test
   void endToEndBoldFromHtml() {
     byte[] out = renderer.render(Document.from("<p>a<b>b</b></p>").blocks());
 
-    assertBytes(cat(INIT, "a", BOLD_ON, "b", BOLD_OFF, LF, FEED_4, PARTIAL_CUT), out);
+    assertBytes(cat(HEAD, "a", BOLD_ON, "b", BOLD_OFF, LF, FEED_4, PARTIAL_CUT), out);
   }
 
   @Test
   void endToEndCenterFromHtml() {
     byte[] out = renderer.render(Document.from("<center>Hi</center>").blocks());
 
-    assertBytes(cat(INIT, ALIGN_CENTER, "Hi", LF, FEED_4, PARTIAL_CUT), out);
+    assertBytes(cat(HEAD, ALIGN_CENTER, "Hi", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void longWordHardWrapsAtTheColumnBudget() {
+    byte[] out = renderer.render(List.of(
+        new Paragraph(List.of(new TextRun("x".repeat(50), ComputedStyle.INITIAL)), Alignment.LEFT)));
+
+    assertBytes(cat(HEAD, "x".repeat(42), LF, "x".repeat(8), LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void wrapsAtSpaces() {
+    String text = "a".repeat(25) + " " + "b".repeat(25);
+    byte[] out = renderer.render(List.of(
+        new Paragraph(List.of(new TextRun(text, ComputedStyle.INITIAL)), Alignment.LEFT)));
+
+    assertBytes(cat(HEAD, "a".repeat(25), LF, "b".repeat(25), LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void selectsTheProfilesCodePage() {
+    byte[] out = new EscPosRenderer(profile(42, CodePage.PC858)).render(List.of(
+        new Paragraph(List.of(new TextRun("x", ComputedStyle.INITIAL)), Alignment.LEFT)));
+
+    assertBytes(cat(INIT, new byte[] { ESC, 0x74, 0x13 }, "x", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void imageBlockRastersToGsV0() {
+    BufferedImage img = solid(8, 8, Color.BLACK);
+    byte[] raster = ImageRasterizer.raster(img, TmT88vProfile.INSTANCE.dotsPerLine());
+
+    byte[] out = renderer.render(List.of(new ImageBlock(Image.of(img), Alignment.LEFT)));
+
+    assertBytes(cat(HEAD, raster, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void barcodeRendersViaBarcodeCommands() {
+    byte[] barcode = BarcodeCommands.encode("ean13", "123456789012");
+
+    byte[] out = renderer.render(List.of(new Barcode("123456789012", "ean13", Alignment.LEFT)));
+
+    assertBytes(cat(HEAD, barcode, LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void tableLaysOutOnACharacterGrid() {
+    ComputedStyle plain = ComputedStyle.INITIAL;
+    Cell left = new Cell(List.of(new TextRun("ab", plain)), Alignment.LEFT);
+    Cell right = new Cell(List.of(new TextRun("cd", plain)), Alignment.RIGHT);
+    Table table = new Table(List.of(List.of(left, right)));
+
+    byte[] out = new EscPosRenderer(profile(9, CodePage.PC437)).render(List.of(table));
+
+    // columnWidth = (9 - 1) / 2 = 4: "ab" + 2 pad, gutter, 2 pad + "cd"
+    assertBytes(cat(INIT, SELECT_PC437, "ab", "  ", " ", "  ", "cd", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void tableFromHtmlLeftAlignsCells() {
+    byte[] out = new EscPosRenderer(profile(9, CodePage.PC437))
+        .render(Document.from("<table><tr><td>ab</td><td>cd</td></tr></table>").blocks());
+
+    assertBytes(cat(INIT, SELECT_PC437, "ab", "  ", " ", "cd", "  ", LF, FEED_4, PARTIAL_CUT), out);
   }
 
   @Test
@@ -172,17 +246,13 @@ public class EscPosRendererTest {
   }
 
   @Test
-  void barcodeIsNotSupportedYet() {
-    List<Block> blocks = List.of(new Barcode("12345678", "code128", Alignment.LEFT));
+  void fullReceiptFixtureRendersEndToEnd() {
+    byte[] out = renderer.render(
+        Document.from(new File("src/test/resources/printjobs/receipt-full.html")).blocks());
 
-    assertThrows(UnsupportedBlockException.class, () -> renderer.render(blocks));
-  }
-
-  @Test
-  void imageIsNotSupportedYet() {
-    List<Block> blocks = List.of(new ImageBlock(Image.fromBase64("Zm9v"), Alignment.LEFT));
-
-    assertThrows(UnsupportedBlockException.class, () -> renderer.render(blocks));
+    assertArrayEquals(INIT, Arrays.copyOfRange(out, 0, INIT.length));
+    assertArrayEquals(PARTIAL_CUT, Arrays.copyOfRange(out, out.length - PARTIAL_CUT.length, out.length));
+    assertTrue(out.length > 200, "full receipt should exercise image, table, barcodes and wrapping");
   }
 
   @Test
@@ -191,6 +261,49 @@ public class EscPosRendererTest {
   }
 
   // ----- helpers -----
+
+  private static PrinterProfile profile(int columns, CodePage codePage) {
+    return new PrinterProfile() {
+      @Override
+      public String name() {
+        return "test";
+      }
+
+      @Override
+      public int dotsPerLine() {
+        return 512;
+      }
+
+      @Override
+      public int columns() {
+        return columns;
+      }
+
+      @Override
+      public int dpi() {
+        return 180;
+      }
+
+      @Override
+      public boolean supportsCut() {
+        return true;
+      }
+
+      @Override
+      public CodePage codePage() {
+        return codePage;
+      }
+    };
+  }
+
+  private static BufferedImage solid(int width, int height, Color color) {
+    BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+    Graphics g = image.getGraphics();
+    g.setColor(color);
+    g.fillRect(0, 0, width, height);
+    g.dispose();
+    return image;
+  }
 
   private static byte[] size(int width, int height) {
     return new byte[] { GS, 0x21, (byte) (((width - 1) << 4) | (height - 1)) };

@@ -1,19 +1,24 @@
 package io.nmoncho.faradn.printer.escpos;
 
 import java.io.ByteArrayOutputStream;
-import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 
 import io.nmoncho.faradn.UnsupportedBlockException;
+import io.nmoncho.faradn.document.Barcode;
 import io.nmoncho.faradn.document.Block;
+import io.nmoncho.faradn.document.Cell;
 import io.nmoncho.faradn.document.ComputedStyle;
 import io.nmoncho.faradn.document.ComputedStyle.Alignment;
 import io.nmoncho.faradn.document.Cut;
 import io.nmoncho.faradn.document.Feed;
+import io.nmoncho.faradn.document.ImageBlock;
 import io.nmoncho.faradn.document.Paragraph;
 import io.nmoncho.faradn.document.Rule;
+import io.nmoncho.faradn.document.Table;
 import io.nmoncho.faradn.document.TextRun;
 import io.nmoncho.faradn.printer.PrinterProfile;
+import io.nmoncho.faradn.printer.escpos.commands.BarcodeCommands;
 import io.nmoncho.faradn.printer.escpos.commands.CharacterCommands;
 import io.nmoncho.faradn.printer.escpos.commands.CharacterCommands.CharacterSize;
 import io.nmoncho.faradn.printer.escpos.commands.CharacterCommands.Lines;
@@ -30,18 +35,22 @@ import io.nmoncho.faradn.printer.escpos.commands.PrintPositionCommands.Justifica
  * The renderer is a pure, deterministic function of its input: it performs no
  * I/O and holds no mutable state between calls, which is what makes it
  * golden-byte testable. It tracks the style currently applied on the printer
- * and emits only the commands for what actually changes between consecutive
- * runs, so the output stays close to minimal.
+ * and
+ * emits only the commands for what actually changes between consecutive runs,
+ * so
+ * the output stays close to minimal.
  * <p>
- * Every job is framed by {@code ESC @} (initialize) at the start and an
- * end-of-job feed (and cut, if the profile supports one) at the end. Images
- * and barcodes are not realized yet and raise
- * {@link UnsupportedBlockException}.
+ * Every job is framed by {@code ESC @} (initialize) and an {@code ESC t} code
+ * page selection at the start, and an end-of-job feed (and cut, if the profile
+ * supports one) at the end. Paragraphs are word-wrapped to the profile's column
+ * budget; images rasterize to {@code GS v 0}; barcodes go through
+ * {@link BarcodeCommands}; tables are laid out on a character grid.
  */
 public final class EscPosRenderer {
 
   private static final String RULE_CHARACTER = "-";
   private static final int END_OF_JOB_FEED_LINES = 4;
+  private static final int TABLE_COLUMN_GUTTER = 1;
 
   private final PrinterProfile profile;
 
@@ -63,9 +72,10 @@ public final class EscPosRenderer {
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
 
     out.writeBytes(MiscellaneousCommands.INITIALIZE.getCode());
+    out.writeBytes(new byte[] { Code.ESC, 0x74, (byte) profile.codePage().id() }); // ESC t: select code page
 
-    // ESC @ resets the printer to exactly INITIAL, so that is where the
-    // tracked "already applied" style starts.
+    // ESC @ resets the printer to exactly INITIAL, so that is where the tracked
+    // "already applied" style starts.
     ComputedStyle current = ComputedStyle.INITIAL;
 
     for (Block block : blocks) {
@@ -77,8 +87,13 @@ public final class EscPosRenderer {
         out.writeBytes(PrintCommands.PRINT_AND_FEED_LINES.getCode(Lines.of(feed.lines())));
       } else if (block instanceof Cut cut) {
         out.writeBytes(cutCommand(cut.partial()));
+      } else if (block instanceof ImageBlock image) {
+        current = renderImage(out, current, image);
+      } else if (block instanceof Barcode barcode) {
+        current = renderBarcode(out, current, barcode);
+      } else if (block instanceof Table table) {
+        current = renderTable(out, current, table);
       } else {
-        // ImageBlock and Barcode arrive in a later milestone.
         throw new UnsupportedBlockException(block);
       }
     }
@@ -89,14 +104,19 @@ public final class EscPosRenderer {
 
   private ComputedStyle renderParagraph(ByteArrayOutputStream out, ComputedStyle current, Paragraph paragraph) {
     current = applyAlignment(out, current, paragraph.alignment());
-    for (TextRun run : paragraph.runs()) {
-      current = applyInlineStyle(out, current, run.style());
-      out.writeBytes(encode(run.text()));
+
+    final List<List<TextRun>> lines = TextWrapper.wrap(paragraph.runs(), profile.columns());
+    for (int i = 0; i < lines.size(); i++) {
+      for (TextRun segment : lines.get(i)) {
+        current = applyInlineStyle(out, current, segment.style());
+        out.writeBytes(encode(segment.text()));
+      }
+      if (i == lines.size() - 1) {
+        // Reset trailing inline state at the end of the paragraph.
+        current = clearInlineStyle(out, current);
+      }
+      out.writeBytes(PrintCommands.LINE_FEED.getCode());
     }
-    // Reset trailing inline state so it does not bleed into the next block,
-    // then advance the line.
-    current = clearInlineStyle(out, current);
-    out.writeBytes(PrintCommands.LINE_FEED.getCode());
     return current;
   }
 
@@ -107,9 +127,88 @@ public final class EscPosRenderer {
     return current;
   }
 
+  private ComputedStyle renderImage(ByteArrayOutputStream out, ComputedStyle current, ImageBlock image) {
+    current = clearInlineStyle(out, current);
+    current = applyAlignment(out, current, image.alignment());
+    out.writeBytes(ImageRasterizer.raster(image.image().load(), profile.dotsPerLine()));
+    return current;
+  }
+
+  private ComputedStyle renderBarcode(ByteArrayOutputStream out, ComputedStyle current, Barcode barcode) {
+    current = clearInlineStyle(out, current);
+    current = applyAlignment(out, current, barcode.alignment());
+    out.writeBytes(BarcodeCommands.encode(barcode.symbology(), barcode.data()));
+    out.writeBytes(PrintCommands.LINE_FEED.getCode());
+    return current;
+  }
+
+  private ComputedStyle renderTable(ByteArrayOutputStream out, ComputedStyle current, Table table) {
+    current = clearInlineStyle(out, current);
+    current = applyAlignment(out, current, Alignment.LEFT);
+
+    final int columnCount = table.rows().stream().mapToInt(List::size).max().orElse(0);
+    if (columnCount == 0) {
+      return current;
+    }
+    final int columnWidth = Math.max(1,
+        (profile.columns() - (columnCount - 1) * TABLE_COLUMN_GUTTER) / columnCount);
+
+    for (List<Cell> row : table.rows()) {
+      final List<List<List<TextRun>>> wrapped = new ArrayList<>();
+      for (int c = 0; c < columnCount; c++) {
+        final List<TextRun> content = c < row.size() ? row.get(c).content() : List.of();
+        wrapped.add(content.isEmpty() ? List.of() : TextWrapper.wrap(content, columnWidth));
+      }
+      int rowHeight = 1;
+      for (List<List<TextRun>> cellLines : wrapped) {
+        rowHeight = Math.max(rowHeight, cellLines.size());
+      }
+
+      for (int line = 0; line < rowHeight; line++) {
+        for (int c = 0; c < columnCount; c++) {
+          final List<List<TextRun>> cellLines = wrapped.get(c);
+          final List<TextRun> segments = line < cellLines.size() ? cellLines.get(line) : List.of();
+          final Alignment alignment = c < row.size() ? row.get(c).alignment() : Alignment.LEFT;
+          current = emitCell(out, current, segments, columnWidth, alignment);
+          if (c < columnCount - 1) {
+            current = clearInlineStyle(out, current);
+            out.writeBytes(encode(" ".repeat(TABLE_COLUMN_GUTTER)));
+          }
+        }
+        current = clearInlineStyle(out, current);
+        out.writeBytes(PrintCommands.LINE_FEED.getCode());
+      }
+    }
+    return current;
+  }
+
+  private ComputedStyle emitCell(ByteArrayOutputStream out, ComputedStyle current, List<TextRun> segments,
+      int columnWidth, Alignment alignment) {
+    int textWidth = 0;
+    for (TextRun segment : segments) {
+      textWidth += segment.text().length();
+    }
+    final int pad = Math.max(0, columnWidth - textWidth);
+    final int leftPad = alignment == Alignment.RIGHT ? pad : 0;
+    final int rightPad = pad - leftPad;
+
+    if (leftPad > 0) {
+      current = clearInlineStyle(out, current);
+      out.writeBytes(encode(" ".repeat(leftPad)));
+    }
+    for (TextRun segment : segments) {
+      current = applyInlineStyle(out, current, segment.style());
+      out.writeBytes(encode(segment.text()));
+    }
+    if (rightPad > 0) {
+      current = clearInlineStyle(out, current);
+      out.writeBytes(encode(" ".repeat(rightPad)));
+    }
+    return current;
+  }
+
   /**
-   * Alignment is a whole-line property ({@code ESC a}), emitted once per
-   * paragraph.
+   * Alignment is a whole-line property ({@code ESC a}), emitted once per block.
    */
   private ComputedStyle applyAlignment(ByteArrayOutputStream out, ComputedStyle current, Alignment alignment) {
     if (current.alignment() == alignment) {
@@ -174,8 +273,7 @@ public final class EscPosRenderer {
     };
   }
 
-  private static byte[] encode(String text) {
-    // Phase 1 targets ASCII; code-page selection for full Unicode is a later milestone.
-    return text.getBytes(StandardCharsets.US_ASCII);
+  private byte[] encode(String text) {
+    return text.getBytes(profile.codePage().charset());
   }
 }

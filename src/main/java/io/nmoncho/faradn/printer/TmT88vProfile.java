@@ -35,4 +35,9 @@ public final class TmT88vProfile implements PrinterProfile {
     return true;
   }
 
+  @Override
+  public CodePage codePage() {
+    return CodePage.PC437;
+  }
+
 }

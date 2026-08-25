@@ -81,6 +81,10 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
       barcodeData(el).ifPresent(data -> blocks
           .add(new Barcode(data, barcodeSymbology(el).orElse(null), styles.peek().alignment())));
       consumedSubtree = el;
+    } else if (tag.equals("table")) {
+      flushParagraph();
+      buildTable(el, styles.peek()).ifPresent(blocks::add);
+      consumedSubtree = el;
     } else if (tag.equals("img")) {
       flushParagraph();
       blocks.add(new ImageBlock(Image.fromNode(el), styles.peek().alignment()));
@@ -192,5 +196,30 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
         .map(name -> name.substring(BARCODE_CLASS_PREFIX.length()))
         .filter(name -> !name.isBlank())
         .findFirst();
+  }
+
+  private static Optional<Table> buildTable(Element table, ComputedStyle base) {
+    final List<List<Cell>> rows = new ArrayList<>();
+    for (Element tr : table.select("tr")) {
+      final List<Cell> cells = new ArrayList<>();
+      for (Element cell : tr.children()) {
+        final String tag = cell.normalName();
+        if (!tag.equals("td") && !tag.equals("th")) {
+          continue;
+        }
+        ComputedStyle style = base.process(cell);
+        if (tag.equals("th")) {
+          style = new ComputedStyle(true, style.underline(), style.widthMultiple(), style.heightMultiple(),
+              style.alignment(), style.invert());
+        }
+        final String text = cell.text().replaceAll("\\s+", " ").strip();
+        final List<TextRun> content = text.isEmpty() ? List.of() : List.of(new TextRun(text, style));
+        cells.add(new Cell(content, style.alignment()));
+      }
+      if (!cells.isEmpty()) {
+        rows.add(cells);
+      }
+    }
+    return rows.isEmpty() ? Optional.empty() : Optional.of(new Table(rows));
   }
 }

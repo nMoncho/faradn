@@ -40,7 +40,7 @@ public class Image {
    *
    * @return {@link BufferedImage} containing image data
    */
-  BufferedImage load() {
+  public BufferedImage load() {
     synchronized (this) {
       if (image == null) {
         image = supplier.get();
@@ -72,6 +72,17 @@ public class Image {
    */
   public static Image fromUrl(String url) {
     return new Image(urlLoader(url), Optional.empty(), Optional.empty());
+  }
+
+  /**
+   * Wraps an already-decoded image.
+   *
+   * @param image
+   *        the decoded image
+   * @return image element
+   */
+  public static Image of(BufferedImage image) {
+    return new Image(() -> image, Optional.empty(), Optional.empty());
   }
 
   /**
