@@ -91,7 +91,7 @@ jobs:
           cp "faradn-cli/target/${{ matrix.bin }}" "${{ matrix.asset }}"
           cp "faradn-ffi/target/${{ matrix.lib }}" "${{ matrix.libasset }}"
           shasum -a 256 "${{ matrix.asset }}" "${{ matrix.libasset }}" > "${{ matrix.asset }}.sha256"
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: |
             ${{ matrix.asset }}
