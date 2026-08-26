@@ -24,12 +24,12 @@ import io.nmoncho.faradn.transport.TransportException;
 
 /**
  * A small HTTP server that accepts print requests, built on the JDK's own
- * {@code com.sun.net.httpserver} — no web framework, so it stays native-image
+ * {@code com.sun.net.httpserver} - no web framework, so it stays native-image
  * friendly. Endpoints:
  * <ul>
- * <li>{@code POST /print} — render the HTML request body and print it;</li>
- * <li>{@code GET /printers} — list connected USB printers;</li>
- * <li>{@code GET /health} — liveness check.</li>
+ * <li>{@code POST /print} - render the HTML request body and print it;</li>
+ * <li>{@code GET /printers} - list connected USB printers;</li>
+ * <li>{@code GET /health} - liveness check.</li>
  * </ul>
  */
 public final class PrintServer {

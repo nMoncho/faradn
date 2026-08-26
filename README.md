@@ -8,9 +8,9 @@ paper.
 HTML is a widely used and understood format, and can easily be templated
 with tools such as [Mustache](https://mustache.github.io/).
 
-**Status.** The full pipeline works — HTML parsing, style resolution, the
+**Status.** The full pipeline works - HTML parsing, style resolution, the
 renderer (text with word-wrap, images, barcodes, QR, tables), and transports
-(USB and network) — plus a command line and HTTP server shipped as a GraalVM
+(USB and network) - plus a command line and HTTP server shipped as a GraalVM
 native binary. Pre-1.0: the public API is not yet stable.
 
 ## Requirements
@@ -34,8 +34,8 @@ try (Transport transport = new NetworkTransport("192.168.1.50")) {
 }
 ```
 
-You can also inspect the intermediate representation the renderer consumes — a
-flat, reading-order list of blocks with fully resolved styles — or render
+You can also inspect the intermediate representation the renderer consumes - a
+flat, reading-order list of blocks with fully resolved styles - or render
 straight to ESC/POS bytes:
 
 ```java
@@ -73,7 +73,7 @@ $ curl -X POST --data '<h1>Hi</h1>' http://localhost:8080/print
 {"status":"printed","bytes":123}
 ```
 
-The server has no authentication — keep it off untrusted networks (see
+The server has no authentication - keep it off untrusted networks (see
 [SECURITY.md](SECURITY.md)).
 
 ## Architecture
@@ -87,7 +87,7 @@ HTML ─jsoup─▶ DOM ─BlockBuilder─▶ List<Block> (IR) ─EscPosRenderer
 
 - **`ComputedStyle`** resolves tags and inline CSS into properties an ESC/POS
   printer can realize: bold, underline, width/height multiples (1x–8x),
-  alignment, inverted print. There is deliberately no italic — most ESC/POS
+  alignment, inverted print. There is deliberately no italic - most ESC/POS
   printers cannot print it.
 - **`Block`** is a sealed hierarchy shaped by the line-oriented nature of
   ESC/POS: `Paragraph`, `ImageBlock`, `Barcode`, `Rule`, `Feed`, `Cut`, and
@@ -110,8 +110,8 @@ golden-byte tests.
 
 ### Modules
 
-- **`faradn-core`** — the library (published to Maven Central).
-- **`faradn-cli`** — the command line and HTTP server, shipped as a GraalVM
+- **`faradn-core`** - the library (published to Maven Central).
+- **`faradn-cli`** - the command line and HTTP server, shipped as a GraalVM
   native binary and attached to GitHub Releases.
 
 ## Supported HTML
@@ -130,7 +130,7 @@ golden-byte tests.
 | `<br>`, `<hr>`                     | line break, horizontal rule                             |
 | `<table>`, `<tr>`, `<td>`, `<th>`  | character-grid table (`<th>` is bold)                   |
 | `<img>`                            | image (URL or Base64 `data:` URI; PNG, JPEG, BMP, WBMP) |
-| `<em>`, `<i>`                      | ignored — ESC/POS printers have no italic               |
+| `<em>`, `<i>`                      | ignored - ESC/POS printers have no italic               |
 
 **Inline CSS**
 

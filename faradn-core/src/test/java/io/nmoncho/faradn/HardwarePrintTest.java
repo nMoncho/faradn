@@ -27,7 +27,7 @@ import io.nmoncho.faradn.transport.NetworkTransport;
  * Both print a full receipt exercising the logo image, a table, a Code 128
  * barcode, a QR code and word-wrapped text (checkpoint 3), plus heading sizes,
  * bold, centering, alignment, underline and rules (checkpoint 1). Verify by eye
- * that it is legible, scan the barcode and QR, and — checkpoint 2 — pull the
+ * that it is legible, scan the barcode and QR, and - checkpoint 2 - pull the
  * paper roll to confirm the job fails rather than hangs.
  */
 @Tag("hardware")

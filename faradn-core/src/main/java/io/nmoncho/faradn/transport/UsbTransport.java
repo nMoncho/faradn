@@ -12,8 +12,8 @@ import io.nmoncho.faradn.printer.escpos.commands.StatusCommands;
 
 /**
  * Sends bytes to a USB printer. On construction it claims the printer interface
- * — force-claiming, which detaches the kernel driver (e.g. {@code usblp}) on
- * Linux — and opens the OUT pipe, plus the IN pipe for status when the printer
+ * force-claiming, which detaches the kernel driver (e.g. {@code usblp}) on
+ * Linux and opens the OUT pipe, plus the IN pipe for status when the printer
  * exposes one. {@link #close()} closes the pipes and releases the interface, so
  * use it with try-with-resources.
  * <p>

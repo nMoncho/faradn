@@ -58,5 +58,5 @@ hasn't been filed already. For security reports, see [SECURITY.md](SECURITY.md).
 
 Whenever submitting a PR, please make sure everything builds and tests pass
 locally. If you have a printer of your own, please attach screenshots or photos of
-the print tests — especially when implementing a new feature or adding a device to
+the print tests - especially when implementing a new feature or adding a device to
 the capability matrix.

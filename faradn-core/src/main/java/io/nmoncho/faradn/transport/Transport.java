@@ -2,7 +2,7 @@ package io.nmoncho.faradn.transport;
 
 /**
  * A byte sink to a printer, plus its real-time status channel. The delivery
- * mechanism — USB, a network socket, an in-memory buffer — is hidden behind
+ * mechanism - USB, a network socket, an in-memory buffer - is hidden behind
  * this interface so the rest of the library never depends on how bytes reach
  * paper.
  * <p>

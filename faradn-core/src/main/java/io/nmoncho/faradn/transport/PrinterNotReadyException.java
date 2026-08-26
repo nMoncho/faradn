@@ -4,9 +4,8 @@ import io.nmoncho.faradn.PrintingException;
 
 /**
  * Thrown when a pre-flight check finds the printer cannot accept a job
- * (offline,
- * cover open, out of paper, or in an error state). Carries the {@link
- * PrinterStatus} that caused the refusal.
+ * (offline, cover open, out of paper, or in an error state).
+ * Carries the {@link PrinterStatus} that caused the refusal.
  */
 public class PrinterNotReadyException extends PrintingException {
 

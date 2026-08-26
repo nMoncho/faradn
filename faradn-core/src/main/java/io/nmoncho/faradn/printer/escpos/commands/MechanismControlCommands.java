@@ -8,11 +8,11 @@ import io.nmoncho.faradn.printer.escpos.SimpleCode;
  */
 public class MechanismControlCommands {
 
-  /** {@code GS V 0} — full cut. */
+  /** {@code GS V 0} - full cut. */
   public static Code FULL_CUT = new SimpleCode("GS V", new byte[] { Code.GS, 0x56, 0x00 });
 
   /**
-   * {@code GS V 1} — partial cut, leaving a small bridge so the receipt stays
+   * {@code GS V 1} - partial cut, leaving a small bridge so the receipt stays
    * attached.
    */
   public static Code PARTIAL_CUT = new SimpleCode("GS V", new byte[] { Code.GS, 0x56, 0x01 });
