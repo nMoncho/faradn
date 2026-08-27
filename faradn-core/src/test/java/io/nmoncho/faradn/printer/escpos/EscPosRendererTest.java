@@ -5,9 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-import java.awt.Color;
-import java.awt.Graphics;
-import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -18,6 +15,7 @@ import org.junit.jupiter.api.Test;
 
 import io.nmoncho.faradn.Document;
 import io.nmoncho.faradn.Image;
+import io.nmoncho.faradn.RasterImage;
 import io.nmoncho.faradn.document.Barcode;
 import io.nmoncho.faradn.document.Cell;
 import io.nmoncho.faradn.document.ComputedStyle;
@@ -198,7 +196,7 @@ public class EscPosRendererTest {
 
   @Test
   void imageBlockRastersToGsV0() {
-    BufferedImage img = solid(8, 8, Color.BLACK);
+    RasterImage img = solid(8, 8, 0xFF000000);
     byte[] raster = ImageRasterizer.raster(img, TmT88vProfile.INSTANCE.dotsPerLine());
 
     byte[] out = renderer.render(List.of(new ImageBlock(Image.of(img), Alignment.LEFT)));
@@ -296,13 +294,10 @@ public class EscPosRendererTest {
     };
   }
 
-  private static BufferedImage solid(int width, int height, Color color) {
-    BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-    Graphics g = image.getGraphics();
-    g.setColor(color);
-    g.fillRect(0, 0, width, height);
-    g.dispose();
-    return image;
+  private static RasterImage solid(int width, int height, int argb) {
+    int[] pixels = new int[width * height];
+    Arrays.fill(pixels, argb);
+    return new RasterImage(width, height, pixels);
   }
 
   private static byte[] size(int width, int height) {

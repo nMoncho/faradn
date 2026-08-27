@@ -154,6 +154,11 @@ Supported symbologies: `code128`, `code39`, `code93`, `ean13`, `ean8`, `upca`,
 **Text encoding.** Text is encoded for the profile's code page (TM-T88V defaults
 to PC437); characters outside it fall back to `?`.
 
+**Images.** PNG is decoded in pure Java, so it works everywhere, including the
+GraalVM native binary. The JVM library (and `java -jar`) additionally reads JPEG,
+BMP and WBMP via `javax.imageio`; those formats are **not** available in the native
+binary, which has no AWT.
+
 ## Supported Devices
 
 This project aims to support as many devices as possible, not only ESC/POS

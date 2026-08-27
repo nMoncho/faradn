@@ -130,7 +130,7 @@ public final class EscPosRenderer {
   private ComputedStyle renderImage(ByteArrayOutputStream out, ComputedStyle current, ImageBlock image) {
     current = clearInlineStyle(out, current);
     current = applyAlignment(out, current, image.alignment());
-    out.writeBytes(ImageRasterizer.raster(image.image().load(), profile.dotsPerLine()));
+    out.writeBytes(ImageRasterizer.raster(image.image().raster(), profile.dotsPerLine()));
     return current;
   }
 

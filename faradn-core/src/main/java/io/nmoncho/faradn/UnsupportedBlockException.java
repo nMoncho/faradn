@@ -2,7 +2,9 @@ package io.nmoncho.faradn;
 
 import io.nmoncho.faradn.document.Block;
 
-/** Thrown when the renderer meets a {@link Block} it cannot yet turn into printer commands.
+/**
+ * Thrown when the renderer meets a {@link Block} it cannot yet turn into
+ * printer commands.
  */
 public class UnsupportedBlockException extends PrintingException {
 

@@ -1,9 +1,8 @@
 package io.nmoncho.faradn.printer.escpos;
 
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
-import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+
+import io.nmoncho.faradn.RasterImage;
 
 /**
  * Rasterizes an image into an ESC/POS raster bit image ({@code GS v 0}): it
@@ -11,8 +10,8 @@ import java.io.ByteArrayOutputStream;
  * Floyd–Steinberg error diffusion, and packs the pixels MSB-first, eight
  * horizontal dots per byte (a set bit prints as black).
  * <p>
- * This is the JVM path and uses {@code java.awt}. The native binary substitutes
- * a pure-Java decoder (see the plan), but the raster packing here is shared.
+ * It works on {@link RasterImage} pixels, not {@code java.awt}, so it runs
+ * unchanged in the native binary.
  */
 public final class ImageRasterizer {
 
@@ -25,22 +24,21 @@ public final class ImageRasterizer {
    * Rasterizes {@code image}, scaling it to at most {@code maxWidthDots} wide.
    *
    * @param image
-   *        the source image
+   *        the source pixels
    * @param maxWidthDots
    *        the printer's printable width in dots
    * @return the {@code GS v 0} command with its packed bitmap
    */
-  public static byte[] raster(BufferedImage image, int maxWidthDots) {
-    final BufferedImage scaled = scaleToWidth(image, maxWidthDots);
-    final int width = scaled.getWidth();
-    final int height = scaled.getHeight();
+  public static byte[] raster(RasterImage image, int maxWidthDots) {
+    final RasterImage scaled = scaleToWidth(image, maxWidthDots);
+    final int width = scaled.width();
+    final int height = scaled.height();
+    final int[] pixels = scaled.argb();
 
     // Grayscale, then Floyd–Steinberg dithering into a black/white mask.
     final int[] gray = new int[width * height];
-    for (int y = 0; y < height; y++) {
-      for (int x = 0; x < width; x++) {
-        gray[y * width + x] = luminance(scaled.getRGB(x, y));
-      }
+    for (int i = 0; i < gray.length; i++) {
+      gray[i] = luminance(pixels[i]);
     }
 
     final boolean[] black = new boolean[width * height];
@@ -86,18 +84,21 @@ public final class ImageRasterizer {
     return out.toByteArray();
   }
 
-  private static BufferedImage scaleToWidth(BufferedImage src, int maxWidth) {
-    if (src.getWidth() <= maxWidth) {
+  private static RasterImage scaleToWidth(RasterImage src, int maxWidth) {
+    if (src.width() <= maxWidth) {
       return src;
     }
     final int newWidth = maxWidth;
-    final int newHeight = Math.max(1, (int) Math.round(src.getHeight() * (maxWidth / (double) src.getWidth())));
-    final BufferedImage dst = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_ARGB);
-    final Graphics2D g = dst.createGraphics();
-    g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-    g.drawImage(src, 0, 0, newWidth, newHeight, null);
-    g.dispose();
-    return dst;
+    final int newHeight = Math.max(1, (int) Math.round(src.height() * (maxWidth / (double) src.width())));
+    final int[] out = new int[newWidth * newHeight];
+    for (int y = 0; y < newHeight; y++) {
+      final int sourceY = y * src.height() / newHeight;
+      for (int x = 0; x < newWidth; x++) {
+        final int sourceX = x * src.width() / newWidth;
+        out[y * newWidth + x] = src.argb()[sourceY * src.width() + sourceX];
+      }
+    }
+    return new RasterImage(newWidth, newHeight, out);
   }
 
   private static int luminance(int argb) {
