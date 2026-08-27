@@ -5,6 +5,11 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # Pinned to the GraalVM/JDK line: JDK 17 GraalVM is graal-sdk 23.0.x.
+      # Allow 23.0.x patches, block 23.1+/24+/25+ (they target newer JDKs).
+      - dependency-name: "org.graalvm.sdk:graal-sdk"
+        versions: [ ">=23.1.0" ]
     groups:
       maven-dependencies:
         patterns: [ "*" ]

@@ -5,13 +5,15 @@
   }, {
     "pattern":"\\Qjavax.usb.properties\\E"
   }, {
-    "pattern":"org/usb4java/.*/libusb4java\\..*"
+    "pattern":"\\Qorg/usb4java/darwin-aarch64/libusb4java.dylib\\E"
   }, {
     "pattern":"\\Qreference.conf\\E"
   }, {
     "pattern":"\\Qvendors.conf\\E"
   }, {
     "pattern":"java.base:\\Qsun/net/www/content-types.properties\\E"
+  }, {
+    "pattern":"org/usb4java/.*/libusb4java\\..*"
   }]},
   "bundles":[]
 }
