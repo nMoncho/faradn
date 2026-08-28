@@ -276,6 +276,16 @@ public class EscPosRendererTest {
   }
 
   @Test
+  void tableCenterAlignsCells() {
+    Cell centered = new Cell(List.of(new TextRun("ab", ComputedStyle.INITIAL)), Alignment.CENTER);
+    Table table = new Table(List.of(List.of(centered)));
+
+    byte[] out = new EscPosRenderer(profile(6, CodePage.PC437)).render(List.of(table));
+
+    assertBytes(cat(INIT, SELECT_PC437, "  ", "ab", "  ", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
   void nullProfileIsRejected() {
     assertThrows(IllegalArgumentException.class, () -> new EscPosRenderer(null));
   }

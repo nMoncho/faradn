@@ -192,7 +192,11 @@ public final class EscPosRenderer {
       textWidth += segment.text().length();
     }
     final int pad = Math.max(0, columnWidth - textWidth);
-    final int leftPad = alignment == Alignment.RIGHT ? pad : 0;
+    final int leftPad = switch (alignment) {
+      case RIGHT -> pad;
+      case CENTER -> pad / 2;
+      default -> 0;
+    };
     final int rightPad = pad - leftPad;
 
     if (leftPad > 0) {
