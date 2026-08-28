@@ -17,7 +17,6 @@ import io.nmoncho.faradn.document.Paragraph;
 import io.nmoncho.faradn.document.Rule;
 import io.nmoncho.faradn.document.Table;
 import io.nmoncho.faradn.document.TextRun;
-import io.nmoncho.faradn.printer.CodePage;
 import io.nmoncho.faradn.printer.PrinterProfile;
 import io.nmoncho.faradn.printer.escpos.commands.BarcodeCommands;
 import io.nmoncho.faradn.printer.escpos.commands.CharacterCommands;
@@ -78,9 +77,9 @@ public final class EscPosRenderer {
     out.writeBytes(MiscellaneousCommands.INITIALIZE.getCode());
     out.writeBytes(new byte[] { Code.ESC, 0x74, (byte) profile.codePage().id() }); // ESC t: select code page
 
-    // Text is encoded through this: it starts on the profile's page and switches
-    // pages inline (ESC t) for glyphs outside the current one.
-    final CodePageEncoder enc = new CodePageEncoder(out, profile.codePage(), List.of(CodePage.values()));
+    // Text is encoded through this: it starts on the profile's default page and
+    // switches inline (ESC t) among the profile's pages for glyphs outside it.
+    final CodePageEncoder enc = new CodePageEncoder(out, profile.codePage(), profile.codePages());
 
     // ESC @ resets the printer to exactly INITIAL, so that is where the tracked
     // "already applied" style starts.

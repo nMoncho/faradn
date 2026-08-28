@@ -3,7 +3,7 @@ package io.nmoncho.faradn.printer.escpos;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.CharsetEncoder;
 import java.util.ArrayList;
-import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -25,7 +25,7 @@ final class CodePageEncoder {
 
   private final ByteArrayOutputStream out;
   private final List<CodePage> candidates;
-  private final Map<CodePage, CharsetEncoder> encoders = new EnumMap<>(CodePage.class);
+  private final Map<CodePage, CharsetEncoder> encoders = new HashMap<>();
   private CodePage current;
 
   /**
@@ -69,7 +69,7 @@ final class CodePageEncoder {
       final int width = Character.charCount(codePoint);
       final String unit = text.substring(i, i + width);
       final CodePage page = choose(unit);
-      if (page != null && page != current) {
+      if (page != null && page.id() != current.id()) {
         out.writeBytes(new byte[] { Code.ESC, 0x74, (byte) page.id() });
         current = page;
       }
@@ -80,6 +80,12 @@ final class CodePageEncoder {
     }
   }
 
+  // TODO: this is a greedy, per-character choice that prefers the current page,
+  // so it minimizes switches locally but not globally. A future version could
+  // scan the whole text up front and pick, for each character, a page that
+  // minimizes the total number of ESC t switches (e.g. a shortest-path / DP
+  // over the set of pages each character can encode), trading a little compute
+  // for shorter output on mixed-script text.
   private CodePage choose(String unit) {
     if (canEncode(current, unit)) {
       return current;

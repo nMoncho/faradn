@@ -1,5 +1,9 @@
 package io.nmoncho.faradn.printer;
 
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -16,30 +20,26 @@ import com.typesafe.config.ConfigValueType;
  * database ({@code capabilities.conf}), matched case-insensitively by device
  * name (the profile's key or its {@code name} field).
  * <p>
- * A profile is only usable when the database gives both a printable width and a
- * Font&nbsp;A column budget; otherwise (e.g. the generic {@code default}
- * profile,
- * whose width is {@code "Unknown"}) the lookup reports the profile as not
- * found.
- * See {@code scripts/fetch_capabilities.py} for how the file is produced.
+ * A profile's {@code codePages} map is the printer's own {@code ESC t n} slot →
+ * encoding table, so it drives {@link PrinterProfile#codePages()} directly:
+ * every slot whose encoding resolves to a single-byte Java charset becomes a
+ * selectable page. A profile is only usable when the database gives a printable
+ * width and a Font&nbsp;A column budget; otherwise (e.g. the generic
+ * {@code default} profile, whose width is {@code "Unknown"}) the lookup reports
+ * it as not found. See {@code scripts/fetch_capabilities.py} for how the file
+ * is produced.
  */
 final class CapabilityProfiles {
 
   private static final String RESOURCE = "capabilities.conf";
 
-  // escpos-printer-db code-page names → the ESC/POS pages faradn can select.
-  private static final Map<String, CodePage> CODE_PAGES = Map.of(
-      "CP437", CodePage.PC437,
-      "CP1252", CodePage.WPC1252,
-      "CP850", CodePage.PC850,
-      "CP858", CodePage.PC858,
-      "CP852", CodePage.PC852,
-      "CP866", CodePage.PC866,
-      "CP860", CodePage.PC860,
-      "CP863", CodePage.PC863,
-      "CP865", CodePage.PC865);
+  /**
+   * Fallback when the database lists no page faradn can select (PC437 at slot 0).
+   */
+  private static final CodePage DEFAULT_PAGE = new CodePage(0, Charset.forName("IBM437"));
 
-  private CapabilityProfiles() { }
+  private CapabilityProfiles() {
+  }
 
   /** Parsed once, on first use. */
   private static final class Holder {
@@ -50,14 +50,11 @@ final class CapabilityProfiles {
     if (name == null || name.isBlank()) {
       return Optional.empty();
     }
-
     final String target = name.strip();
-
     for (Map.Entry<String, ConfigValue> entry : Holder.PROFILES.root().entrySet()) {
       final String key = entry.getKey();
       final Config profile = ((ConfigObject) entry.getValue()).toConfig();
       final String profileName = profile.hasPath("name") ? profile.getString("name") : key;
-
       if (key.equalsIgnoreCase(target) || profileName.equalsIgnoreCase(target)) {
         try {
           return build(key, profile);
@@ -66,33 +63,27 @@ final class CapabilityProfiles {
         }
       }
     }
-
     return Optional.empty();
   }
 
   private static Optional<PrinterProfile> build(String key, Config profile) {
     final OptionalInt dotsPerLine = intAt(profile, "media.width.pixels");
     final OptionalInt columns = fontAColumns(profile);
-
     if (dotsPerLine.isEmpty() || columns.isEmpty()) {
       return Optional.empty(); // width or column budget unknown: not renderable
     }
-
     final int dpi = intAt(profile, "media.dpi").orElse(0);
     final boolean supportsCut = flag(profile, "features.paperPartCut") || flag(profile, "features.paperFullCut");
-
     return Optional.of(PrinterProfile.of(displayName(key, profile), dotsPerLine.getAsInt(),
-        columns.getAsInt(), dpi, supportsCut, defaultCodePage(profile)));
+        columns.getAsInt(), dpi, supportsCut, codePages(profile)));
   }
 
   private static String displayName(String key, Config profile) {
     final String name = profile.hasPath("name") ? profile.getString("name") : key;
     final String vendor = profile.hasPath("vendor") ? profile.getString("vendor").strip() : "";
-
     if (vendor.isEmpty() || name.toLowerCase().startsWith(vendor.toLowerCase())) {
       return name;
     }
-
     return vendor + " " + name;
   }
 
@@ -101,44 +92,72 @@ final class CapabilityProfiles {
     if (!profile.hasPath("fonts")) {
       return OptionalInt.empty();
     }
-
     final ConfigValue fontA = profile.getObject("fonts").get("0");
     if (fontA instanceof ConfigObject font) {
       return intAt(font.toConfig(), "columns");
     }
-
     return OptionalInt.empty();
   }
 
   /**
-   * Slot {@code "0"} is the page selected at reset (ESC t 0); CP437 is the usual
-   * default.
+   * The printer's {@code ESC t} pages, from its {@code codePages} map (slot id →
+   * encoding name). Slots whose encoding faradn cannot select - unknown to Java,
+   * or multi-byte (e.g. Shift-JIS), which {@code ESC t} does not switch to - are
+   * dropped. Ordered by slot id so selection is deterministic.
    */
-  private static CodePage defaultCodePage(Config profile) {
-    if (profile.hasPath("codePages")) {
-      final ConfigValue slot0 = profile.getObject("codePages").get("0");
-      if (slot0 != null && slot0.valueType() == ConfigValueType.STRING) {
-        final CodePage mapped = CODE_PAGES.get((String) slot0.unwrapped());
-        if (mapped != null) {
-          return mapped;
-        }
-      }
+  private static List<CodePage> codePages(Config profile) {
+    if (!profile.hasPath("codePages")) {
+      return List.of(DEFAULT_PAGE);
     }
+    final List<CodePage> pages = new ArrayList<>();
+    for (Map.Entry<String, ConfigValue> slot : profile.getObject("codePages").entrySet()) {
+      final OptionalInt id = parseId(slot.getKey());
+      if (id.isEmpty() || slot.getValue().valueType() != ConfigValueType.STRING) {
+        continue;
+      }
+      charsetFor((String) slot.getValue().unwrapped())
+          .ifPresent(charset -> pages.add(new CodePage(id.getAsInt(), charset)));
+    }
+    if (pages.isEmpty()) {
+      return List.of(DEFAULT_PAGE);
+    }
+    pages.sort(Comparator.comparingInt(CodePage::id));
+    return List.copyOf(pages);
+  }
 
-    return CodePage.PC437;
+  /**
+   * A single-byte Java charset for the database encoding name, if one selectable
+   * via {@code ESC t} exists.
+   */
+  private static Optional<Charset> charsetFor(String dbName) {
+    try {
+      final Charset charset = Charset.forName(dbName);
+      // ESC t selects single-byte pages only; skip multi-byte encodings.
+      if (charset.newEncoder().maxBytesPerChar() <= 1.0f) {
+        return Optional.of(charset);
+      }
+    } catch (IllegalArgumentException unknownCharset) {
+      // Unknown or unsupported encoding name: not selectable.
+    }
+    return Optional.empty();
+  }
+
+  private static OptionalInt parseId(String key) {
+    try {
+      return OptionalInt.of(Integer.parseInt(key));
+    } catch (NumberFormatException e) {
+      return OptionalInt.empty();
+    }
   }
 
   private static OptionalInt intAt(Config config, String path) {
     if (!config.hasPath(path)) {
       return OptionalInt.empty();
     }
-
     final ConfigValue value = config.getValue(path);
-
     if (value.valueType() == ConfigValueType.NUMBER) {
       return OptionalInt.of(((Number) value.unwrapped()).intValue());
     }
-
     return OptionalInt.empty();
   }
 

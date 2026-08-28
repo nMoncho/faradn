@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
@@ -59,7 +60,16 @@ public class EscPosRendererTest {
 
   private static final PrinterProfile TM_T88V = PrinterProfile.load("TM-T88V").orElseThrow();
 
+  private static final CodePage PC437 = page(0, "IBM437");
+  private static final CodePage PC858 = page(19, "IBM00858");
+  private static final CodePage WPC1252 = page(16, "windows-1252");
+  private static final CodePage PC866 = page(17, "IBM866");
+  private static final CodePage PC852 = page(18, "IBM852");
+
   private final EscPosRenderer renderer = new EscPosRenderer(TM_T88V);
+  // A profile with a small, known code-page set for deterministic switching tests.
+  private final EscPosRenderer multiPage = new EscPosRenderer(
+      PrinterProfile.of("Multi-page", 512, 42, 180, true, List.of(PC437, WPC1252, PC866, PC852)));
 
   @Test
   void plainParagraph() {
@@ -190,7 +200,7 @@ public class EscPosRendererTest {
 
   @Test
   void selectsTheProfilesCodePage() {
-    byte[] out = new EscPosRenderer(profile(42, CodePage.PC858)).render(List.of(
+    byte[] out = new EscPosRenderer(profile(42, PC858)).render(List.of(
         new Paragraph(List.of(new TextRun("x", ComputedStyle.INITIAL)), Alignment.LEFT)));
 
     assertBytes(cat(INIT, new byte[] { ESC, 0x74, 0x13 }, "x", LF, FEED_4, PARTIAL_CUT), out);
@@ -222,7 +232,7 @@ public class EscPosRendererTest {
     Cell right = new Cell(List.of(new TextRun("cd", plain)), Alignment.RIGHT);
     Table table = new Table(List.of(List.of(left, right)));
 
-    byte[] out = new EscPosRenderer(profile(9, CodePage.PC437)).render(List.of(table));
+    byte[] out = new EscPosRenderer(profile(9, PC437)).render(List.of(table));
 
     // columnWidth = (9 - 1) / 2 = 4: "ab" + 2 pad, gutter, 2 pad + "cd"
     assertBytes(cat(INIT, SELECT_PC437, "ab", "  ", " ", "  ", "cd", LF, FEED_4, PARTIAL_CUT), out);
@@ -230,7 +240,7 @@ public class EscPosRendererTest {
 
   @Test
   void tableFromHtmlLeftAlignsCells() {
-    byte[] out = new EscPosRenderer(profile(9, CodePage.PC437))
+    byte[] out = new EscPosRenderer(profile(9, PC437))
         .render(Document.from("<table><tr><td>ab</td><td>cd</td></tr></table>").blocks());
 
     assertBytes(cat(INIT, SELECT_PC437, "ab", "  ", " ", "cd", "  ", LF, FEED_4, PARTIAL_CUT), out);
@@ -281,7 +291,7 @@ public class EscPosRendererTest {
     Cell centered = new Cell(List.of(new TextRun("ab", ComputedStyle.INITIAL)), Alignment.CENTER);
     Table table = new Table(List.of(List.of(centered)));
 
-    byte[] out = new EscPosRenderer(profile(6, CodePage.PC437)).render(List.of(table));
+    byte[] out = new EscPosRenderer(profile(6, PC437)).render(List.of(table));
 
     assertBytes(cat(INIT, SELECT_PC437, "  ", "ab", "  ", LF, FEED_4, PARTIAL_CUT), out);
   }
@@ -289,11 +299,11 @@ public class EscPosRendererTest {
   @Test
   void dynamicCodePageSwitchesForGlyphOutsideDefault() {
     // "a€b": the euro is absent from PC437, present in WPC1252 (id 16).
-    byte[] out = renderer.render(List.of(
+    byte[] out = multiPage.render(List.of(
         new Paragraph(List.of(new TextRun("a€b", ComputedStyle.INITIAL)), Alignment.LEFT)));
 
     byte[] selectWpc1252 = { ESC, 0x74, 16 };
-    byte[] euro = "€".getBytes(CodePage.WPC1252.charset());
+    byte[] euro = "€".getBytes(WPC1252.charset());
     // 'b' stays on WPC1252 (no needless switch back), still encoding to ASCII 0x62.
     assertBytes(cat(HEAD, "a", selectWpc1252, euro, "b", LF, FEED_4, PARTIAL_CUT), out);
   }
@@ -301,22 +311,22 @@ public class EscPosRendererTest {
   @Test
   void dynamicCodePageSwitchesOncePerRun() {
     // "Жи": both Cyrillic, only PC866 (id 17) encodes them - a single switch.
-    byte[] out = renderer.render(List.of(
+    byte[] out = multiPage.render(List.of(
         new Paragraph(List.of(new TextRun("Жи", ComputedStyle.INITIAL)), Alignment.LEFT)));
 
     byte[] selectPc866 = { ESC, 0x74, 17 };
-    byte[] cyrillic = "Жи".getBytes(CodePage.PC866.charset());
+    byte[] cyrillic = "Жи".getBytes(PC866.charset());
     assertBytes(cat(HEAD, selectPc866, cyrillic, LF, FEED_4, PARTIAL_CUT), out);
   }
 
   @Test
   void dynamicCodePageSwitchesBackWhenCurrentCannotEncode() {
     // "Жé": Cyrillic forces PC866, then 'é' (absent there) switches back to PC437.
-    byte[] out = renderer.render(List.of(
+    byte[] out = multiPage.render(List.of(
         new Paragraph(List.of(new TextRun("Жé", ComputedStyle.INITIAL)), Alignment.LEFT)));
 
-    byte[] cyrillic = "Ж".getBytes(CodePage.PC866.charset());
-    byte[] eAcute = "é".getBytes(CodePage.PC437.charset());
+    byte[] cyrillic = "Ж".getBytes(PC866.charset());
+    byte[] eAcute = "é".getBytes(PC437.charset());
     assertBytes(cat(HEAD, new byte[] { ESC, 0x74, 17 }, cyrillic, new byte[] { ESC, 0x74, 0 }, eAcute, LF,
         FEED_4, PARTIAL_CUT), out);
   }
@@ -324,7 +334,7 @@ public class EscPosRendererTest {
   @Test
   void unmappableGlyphFallsBackToReplacement() {
     // "中" is in none of the supported pages: it stays on PC437 and encodes to '?'.
-    byte[] out = renderer.render(List.of(
+    byte[] out = multiPage.render(List.of(
         new Paragraph(List.of(new TextRun("中", ComputedStyle.INITIAL)), Alignment.LEFT)));
 
     assertBytes(cat(HEAD, "?", LF, FEED_4, PARTIAL_CUT), out);
@@ -338,37 +348,11 @@ public class EscPosRendererTest {
   // ----- helpers -----
 
   private static PrinterProfile profile(int columns, CodePage codePage) {
-    return new PrinterProfile() {
-      @Override
-      public String name() {
-        return "test";
-      }
+    return PrinterProfile.of("test", 512, columns, 180, true, List.of(codePage));
+  }
 
-      @Override
-      public int dotsPerLine() {
-        return 512;
-      }
-
-      @Override
-      public int columns() {
-        return columns;
-      }
-
-      @Override
-      public int dpi() {
-        return 180;
-      }
-
-      @Override
-      public boolean supportsCut() {
-        return true;
-      }
-
-      @Override
-      public CodePage codePage() {
-        return codePage;
-      }
-    };
+  private static CodePage page(int id, String charset) {
+    return new CodePage(id, Charset.forName(charset));
   }
 
   private static RasterImage solid(int width, int height, int argb) {

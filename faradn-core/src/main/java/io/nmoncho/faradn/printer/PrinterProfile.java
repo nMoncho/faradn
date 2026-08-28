@@ -1,5 +1,6 @@
 package io.nmoncho.faradn.printer;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -25,8 +26,19 @@ public interface PrinterProfile {
   /** Whether the printer has an autocutter. */
   boolean supportsCut();
 
-  /** The character code page the renderer selects and encodes text for. */
+  /**
+   * The code page selected at reset (the initial {@code ESC t}); usually
+   * slot&nbsp;0.
+   */
   CodePage codePage();
+
+  /**
+   * The code pages this printer can switch to via {@code ESC t}, in selection
+   * preference order. The renderer switches among these per character so glyphs
+   * outside {@link #codePage()} still encode faithfully; {@link #codePage()} is
+   * one of them.
+   */
+  List<CodePage> codePages();
 
   /**
    * Loads a printer profile from the bundled escpos-printer-db capability
@@ -54,11 +66,18 @@ public interface PrinterProfile {
    *        Print resolution in dots per inch
    * @param supportsCut
    *        Whether the printer has an autocutter
-   * @param codePage
-   *        he character code page the renderer selects and encodes text for
-   * @return
+   * @param codePages
+   *        the code pages the printer can select, preference order (must be
+   *        non-empty); the default is the slot&nbsp;0 page, or the first
+   * @return a profile backed by the given values
    */
-  static PrinterProfile of(String name, int dotsPerLine, int columns, int dpi, boolean supportsCut, CodePage codePage) {
+  static PrinterProfile of(String name, int dotsPerLine, int columns, int dpi, boolean supportsCut,
+      List<CodePage> codePages) {
+    if (codePages == null || codePages.isEmpty()) {
+      throw new IllegalArgumentException("codePages must not be empty");
+    }
+    final List<CodePage> pages = List.copyOf(codePages);
+    final CodePage defaultPage = pages.stream().filter(page -> page.id() == 0).findFirst().orElse(pages.get(0));
     return new PrinterProfile() {
 
       @Override
@@ -88,7 +107,12 @@ public interface PrinterProfile {
 
       @Override
       public CodePage codePage() {
-        return codePage;
+        return defaultPage;
+      }
+
+      @Override
+      public List<CodePage> codePages() {
+        return pages;
       }
     };
   }

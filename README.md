@@ -177,14 +177,15 @@ Rendering is configurable per barcode through attributes:
 <bar-code symbology="qr" module="8" ec="h">https://example.com</bar-code>
 ```
 
-**Text encoding.** Text starts on the profile's code page (TM-T88V defaults to
+**Text encoding.** Text starts on the profile's default code page (TM-T88V's is
 PC437) and the renderer switches pages inline (`ESC t`) for glyphs outside the
 current one, so mixed-script receipts encode faithfully instead of collapsing to
-`?`. Supported pages cover Western European incl. the euro (WPC1252, PC850,
-PC858), Central European (PC852), Cyrillic (PC866), and Portuguese/French/Nordic
-(PC860/PC863/PC865). The current page is preferred, so a run of one script costs
-a single switch and ASCII never forces one; a glyph in none of the pages still
-falls back to `?`.
+`?`. The selectable pages are the printer's own `ESC t` slots, read from its
+capability-database profile (`PrinterProfile.codePages()`, single-byte pages
+only) rather than a fixed list, so each model switches only among the pages it
+actually has. The current page is preferred, so a run of one script costs a
+single switch and ASCII never forces one; a glyph in none of the printer's pages
+still falls back to `?`.
 
 **Images.** PNG is decoded in pure Java, so it works everywhere, including the
 GraalVM native binary. The JVM library (and `java -jar`) additionally reads JPEG,

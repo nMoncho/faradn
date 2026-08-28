@@ -1,7 +1,11 @@
 package io.nmoncho.faradn.printer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.nio.charset.Charset;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -16,7 +20,24 @@ class PrinterProfileLoadTest {
     assertEquals(42, profile.columns());
     assertEquals(180, profile.dpi());
     assertTrue(profile.supportsCut());
-    assertEquals(CodePage.PC437, profile.codePage());
+    assertEquals(0, profile.codePage().id());
+    assertEquals(Charset.forName("IBM437"), profile.codePage().charset());
+  }
+
+  @Test
+  void codePagesComeFromTheDatabaseAndExcludeMultibyte() {
+    PrinterProfile profile = PrinterProfile.load("TM-T88V").orElseThrow();
+    List<Integer> ids = profile.codePages().stream().map(CodePage::id).toList();
+
+    assertFalse(profile.codePages().isEmpty());
+    assertTrue(ids.contains(0), "default page (CP437, slot 0) is present");
+    assertTrue(ids.contains(16), "WPC1252 (slot 16) is present");
+    assertTrue(ids.contains(17), "PC866 (slot 17) is present");
+    assertFalse(ids.contains(1), "multi-byte CP932 (slot 1) is not selectable via ESC t");
+    assertTrue(profile.codePages().contains(profile.codePage()), "the default is one of the pages");
+    for (CodePage page : profile.codePages()) {
+      assertTrue(page.charset().newEncoder().maxBytesPerChar() <= 1.0f, "single-byte only: " + page);
+    }
   }
 
   @Test
