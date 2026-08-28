@@ -4,6 +4,7 @@ import javax.usb.UsbDevice;
 import javax.usb.UsbEndpoint;
 import javax.usb.UsbException;
 import javax.usb.UsbInterface;
+import javax.usb.UsbIrp;
 import javax.usb.UsbPipe;
 
 import io.nmoncho.faradn.printer.Devices;
@@ -23,11 +24,31 @@ import io.nmoncho.faradn.printer.escpos.commands.StatusCommands;
  */
 public final class UsbTransport implements Transport {
 
+  /** Default bound on a single {@code DLE EOT} status read, in milliseconds. */
+  public static final int DEFAULT_STATUS_TIMEOUT_MILLIS = 2000;
+
   private final UsbInterface iface;
   private final UsbPipe outPipe;
   private final UsbPipe inPipe; // null when the printer has no status endpoint
+  private final int statusTimeoutMillis;
 
   public UsbTransport(UsbDevice device) {
+    this(device, DEFAULT_STATUS_TIMEOUT_MILLIS);
+  }
+
+  /**
+   * @param device
+   *        the USB printer to open
+   * @param statusTimeoutMillis
+   *        how long a single {@link #status()} read waits for each response
+   *        byte before failing, so a silent printer cannot block the caller
+   */
+  public UsbTransport(UsbDevice device, int statusTimeoutMillis) {
+    if (statusTimeoutMillis < 1) {
+      throw new IllegalArgumentException("statusTimeoutMillis must be positive, got " + statusTimeoutMillis);
+    }
+
+    this.statusTimeoutMillis = statusTimeoutMillis;
     this.iface = Devices.findPrinterInterface(device)
         .orElseThrow(() -> new TransportException("Device has no USB printer interface"));
     final UsbEndpoint outEndpoint = Devices.findOutEndpoint(iface)
@@ -74,12 +95,40 @@ public final class UsbTransport implements Transport {
   }
 
   private byte query(Code command) throws UsbException {
-    outPipe.syncSubmit(command.getCode());
+    return readStatusByte(outPipe, inPipe, command, statusTimeoutMillis);
+  }
+
+  /**
+   * Sends a status command and reads one response byte, waiting at most
+   * {@code timeoutMillis} for it. The read uses the asynchronous IRP API so a
+   * printer that never answers cannot block the caller indefinitely, as the
+   * blocking {@link UsbPipe#syncSubmit(byte[])} would.
+   */
+  static byte readStatusByte(UsbPipe out, UsbPipe in, Code command, int timeoutMillis) throws UsbException {
+    out.syncSubmit(command.getCode());
+
     final byte[] buffer = new byte[1];
-    final int read = inPipe.syncSubmit(buffer);
-    if (read < 1) {
+    final UsbIrp irp = in.createUsbIrp();
+
+    irp.setData(buffer);
+    irp.setAcceptShortPacket(true);
+    in.asyncSubmit(irp);
+    irp.waitUntilComplete(timeoutMillis);
+
+    if (!irp.isComplete()) {
+      in.abortAllSubmissions();
+      throw new TransportException(
+          "Timed out after " + timeoutMillis + " ms waiting for a status byte from the printer");
+    }
+
+    if (irp.isUsbException()) {
+      throw irp.getUsbException();
+    }
+
+    if (irp.getActualLength() < 1) {
       throw new TransportException("No status byte returned by the printer");
     }
+
     return buffer[0];
   }
 
