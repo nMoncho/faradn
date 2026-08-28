@@ -44,6 +44,7 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
   private Element consumedSubtree = null;
   private final Deque<ListState> lists = new ArrayDeque<>();
   private String pendingMarker = null;
+  private int preDepth = 0;
 
   private BlockBuilder() {
     styles.push(ComputedStyle.INITIAL);
@@ -106,6 +107,9 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
       flushParagraph();
       final String marker = listMarker();
       pendingMarker = marker.isEmpty() ? null : marker;
+    } else if (tag.equals("pre")) {
+      flushParagraph();
+      preDepth++;
     } else if (tag.equals("br") || BLOCK_TAGS.contains(tag)) {
       flushParagraph();
     }
@@ -132,6 +136,8 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
       if (!lists.isEmpty()) {
         lists.pop();
       }
+    } else if (tag.equals("pre") && preDepth > 0) {
+      preDepth--;
     }
 
     if (BLOCK_TAGS.contains(tag)) {
@@ -141,6 +147,21 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
 
   private void appendText(TextNode text) {
     if (consumedSubtree != null) {
+      return;
+    }
+
+    if (preDepth > 0) {
+      // Preformatted: preserve whitespace, and break the block on each newline.
+      emitPendingMarker();
+      final String[] lines = text.getWholeText().split("\n", -1);
+      for (int i = 0; i < lines.length; i++) {
+        if (i > 0) {
+          flushParagraph();
+        }
+        if (!lines[i].isEmpty()) {
+          addRun(lines[i], styles.peek());
+        }
+      }
       return;
     }
 

@@ -269,6 +269,13 @@ public class EscPosRendererTest {
   }
 
   @Test
+  void preformattedPreservesWhitespace() {
+    byte[] out = renderer.render(Document.from("<pre>a  b\n  c</pre>").blocks());
+
+    assertBytes(cat(HEAD, "a  b", LF, "  c", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
   void nullProfileIsRejected() {
     assertThrows(IllegalArgumentException.class, () -> new EscPosRenderer(null));
   }
