@@ -286,6 +286,50 @@ public class EscPosRendererTest {
   }
 
   @Test
+  void dynamicCodePageSwitchesForGlyphOutsideDefault() {
+    // "a€b": the euro is absent from PC437, present in WPC1252 (id 16).
+    byte[] out = renderer.render(List.of(
+        new Paragraph(List.of(new TextRun("a€b", ComputedStyle.INITIAL)), Alignment.LEFT)));
+
+    byte[] selectWpc1252 = { ESC, 0x74, 16 };
+    byte[] euro = "€".getBytes(CodePage.WPC1252.charset());
+    // 'b' stays on WPC1252 (no needless switch back), still encoding to ASCII 0x62.
+    assertBytes(cat(HEAD, "a", selectWpc1252, euro, "b", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void dynamicCodePageSwitchesOncePerRun() {
+    // "Жи": both Cyrillic, only PC866 (id 17) encodes them - a single switch.
+    byte[] out = renderer.render(List.of(
+        new Paragraph(List.of(new TextRun("Жи", ComputedStyle.INITIAL)), Alignment.LEFT)));
+
+    byte[] selectPc866 = { ESC, 0x74, 17 };
+    byte[] cyrillic = "Жи".getBytes(CodePage.PC866.charset());
+    assertBytes(cat(HEAD, selectPc866, cyrillic, LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void dynamicCodePageSwitchesBackWhenCurrentCannotEncode() {
+    // "Жé": Cyrillic forces PC866, then 'é' (absent there) switches back to PC437.
+    byte[] out = renderer.render(List.of(
+        new Paragraph(List.of(new TextRun("Жé", ComputedStyle.INITIAL)), Alignment.LEFT)));
+
+    byte[] cyrillic = "Ж".getBytes(CodePage.PC866.charset());
+    byte[] eAcute = "é".getBytes(CodePage.PC437.charset());
+    assertBytes(cat(HEAD, new byte[] { ESC, 0x74, 17 }, cyrillic, new byte[] { ESC, 0x74, 0 }, eAcute, LF,
+        FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void unmappableGlyphFallsBackToReplacement() {
+    // "中" is in none of the supported pages: it stays on PC437 and encodes to '?'.
+    byte[] out = renderer.render(List.of(
+        new Paragraph(List.of(new TextRun("中", ComputedStyle.INITIAL)), Alignment.LEFT)));
+
+    assertBytes(cat(HEAD, "?", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
   void nullProfileIsRejected() {
     assertThrows(IllegalArgumentException.class, () -> new EscPosRenderer(null));
   }

@@ -17,6 +17,7 @@ import io.nmoncho.faradn.document.Paragraph;
 import io.nmoncho.faradn.document.Rule;
 import io.nmoncho.faradn.document.Table;
 import io.nmoncho.faradn.document.TextRun;
+import io.nmoncho.faradn.printer.CodePage;
 import io.nmoncho.faradn.printer.PrinterProfile;
 import io.nmoncho.faradn.printer.escpos.commands.BarcodeCommands;
 import io.nmoncho.faradn.printer.escpos.commands.CharacterCommands;
@@ -42,8 +43,11 @@ import io.nmoncho.faradn.printer.escpos.commands.PrintPositionCommands.Justifica
  * <p>
  * Every job is framed by {@code ESC @} (initialize) and an {@code ESC t} code
  * page selection at the start, and an end-of-job feed (and cut, if the profile
- * supports one) at the end. Paragraphs are word-wrapped to the profile's column
- * budget; images rasterize to {@code GS v 0}; barcodes go through
+ * supports one) at the end. Text is encoded through a {@link CodePageEncoder},
+ * which switches code pages inline for glyphs outside the current one instead
+ * of
+ * dropping them to {@code '?'}. Paragraphs are word-wrapped to the profile's
+ * column budget; images rasterize to {@code GS v 0}; barcodes go through
  * {@link BarcodeCommands}; tables are laid out on a character grid.
  */
 public final class EscPosRenderer {
@@ -74,15 +78,19 @@ public final class EscPosRenderer {
     out.writeBytes(MiscellaneousCommands.INITIALIZE.getCode());
     out.writeBytes(new byte[] { Code.ESC, 0x74, (byte) profile.codePage().id() }); // ESC t: select code page
 
+    // Text is encoded through this: it starts on the profile's page and switches
+    // pages inline (ESC t) for glyphs outside the current one.
+    final CodePageEncoder enc = new CodePageEncoder(out, profile.codePage(), List.of(CodePage.values()));
+
     // ESC @ resets the printer to exactly INITIAL, so that is where the tracked
     // "already applied" style starts.
     ComputedStyle current = ComputedStyle.INITIAL;
 
     for (Block block : blocks) {
       if (block instanceof Paragraph paragraph) {
-        current = renderParagraph(out, current, paragraph);
+        current = renderParagraph(out, enc, current, paragraph);
       } else if (block instanceof Rule) {
-        current = renderRule(out, current);
+        current = renderRule(out, enc, current);
       } else if (block instanceof Feed feed) {
         out.writeBytes(PrintCommands.PRINT_AND_FEED_LINES.getCode(Lines.of(feed.lines())));
       } else if (block instanceof Cut cut) {
@@ -92,7 +100,7 @@ public final class EscPosRenderer {
       } else if (block instanceof Barcode barcode) {
         current = renderBarcode(out, current, barcode);
       } else if (block instanceof Table table) {
-        current = renderTable(out, current, table);
+        current = renderTable(out, enc, current, table);
       } else {
         throw new UnsupportedBlockException(block);
       }
@@ -105,14 +113,15 @@ public final class EscPosRenderer {
     return out.toByteArray();
   }
 
-  private ComputedStyle renderParagraph(ByteArrayOutputStream out, ComputedStyle current, Paragraph paragraph) {
+  private ComputedStyle renderParagraph(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current,
+      Paragraph paragraph) {
     current = applyAlignment(out, current, paragraph.alignment());
 
     final List<List<TextRun>> lines = TextWrapper.wrap(paragraph.runs(), profile.columns());
     for (int i = 0; i < lines.size(); i++) {
       for (TextRun segment : lines.get(i)) {
         current = applyInlineStyle(out, current, segment.style());
-        out.writeBytes(encode(segment.text()));
+        enc.emit(segment.text());
       }
       if (i == lines.size() - 1) {
         // Reset trailing inline state at the end of the paragraph.
@@ -123,9 +132,9 @@ public final class EscPosRenderer {
     return current;
   }
 
-  private ComputedStyle renderRule(ByteArrayOutputStream out, ComputedStyle current) {
+  private ComputedStyle renderRule(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current) {
     current = clearInlineStyle(out, current);
-    out.writeBytes(encode(RULE_CHARACTER.repeat(profile.columns())));
+    enc.emit(RULE_CHARACTER.repeat(profile.columns()));
     out.writeBytes(PrintCommands.LINE_FEED.getCode());
     return current;
   }
@@ -145,7 +154,8 @@ public final class EscPosRenderer {
     return current;
   }
 
-  private ComputedStyle renderTable(ByteArrayOutputStream out, ComputedStyle current, Table table) {
+  private ComputedStyle renderTable(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current,
+      Table table) {
     current = clearInlineStyle(out, current);
     current = applyAlignment(out, current, Alignment.LEFT);
 
@@ -172,10 +182,10 @@ public final class EscPosRenderer {
           final List<List<TextRun>> cellLines = wrapped.get(c);
           final List<TextRun> segments = line < cellLines.size() ? cellLines.get(line) : List.of();
           final Alignment alignment = c < row.size() ? row.get(c).alignment() : Alignment.LEFT;
-          current = emitCell(out, current, segments, columnWidth, alignment);
+          current = emitCell(out, enc, current, segments, columnWidth, alignment);
           if (c < columnCount - 1) {
             current = clearInlineStyle(out, current);
-            out.writeBytes(encode(" ".repeat(TABLE_COLUMN_GUTTER)));
+            enc.emit(" ".repeat(TABLE_COLUMN_GUTTER));
           }
         }
         current = clearInlineStyle(out, current);
@@ -185,8 +195,8 @@ public final class EscPosRenderer {
     return current;
   }
 
-  private ComputedStyle emitCell(ByteArrayOutputStream out, ComputedStyle current, List<TextRun> segments,
-      int columnWidth, Alignment alignment) {
+  private ComputedStyle emitCell(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current,
+      List<TextRun> segments, int columnWidth, Alignment alignment) {
     int textWidth = 0;
     for (TextRun segment : segments) {
       textWidth += segment.text().length();
@@ -201,15 +211,15 @@ public final class EscPosRenderer {
 
     if (leftPad > 0) {
       current = clearInlineStyle(out, current);
-      out.writeBytes(encode(" ".repeat(leftPad)));
+      enc.emit(" ".repeat(leftPad));
     }
     for (TextRun segment : segments) {
       current = applyInlineStyle(out, current, segment.style());
-      out.writeBytes(encode(segment.text()));
+      enc.emit(segment.text());
     }
     if (rightPad > 0) {
       current = clearInlineStyle(out, current);
-      out.writeBytes(encode(" ".repeat(rightPad)));
+      enc.emit(" ".repeat(rightPad));
     }
     return current;
   }
@@ -284,7 +294,4 @@ public final class EscPosRenderer {
     };
   }
 
-  private byte[] encode(String text) {
-    return text.getBytes(profile.codePage().charset());
-  }
 }
