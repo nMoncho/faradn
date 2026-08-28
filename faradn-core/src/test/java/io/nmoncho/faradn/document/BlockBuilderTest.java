@@ -210,6 +210,48 @@ public class BlockBuilderTest {
   }
 
   @Test
+  void tableCellKeepsInlineStyledRuns() {
+    final List<Block> blocks = Document.from("<table><tr><td>a <b>b</b> c</td></tr></table>").blocks();
+
+    final Table table = assertInstanceOf(Table.class, blocks.get(0));
+    final Cell cell = table.rows().get(0).get(0);
+    // A collapsed space between runs attaches to the preceding run (as for paragraphs).
+    assertEquals(3, cell.content().size());
+    assertEquals("a ", cell.content().get(0).text());
+    assertFalse(cell.content().get(0).style().bold());
+    assertEquals("b ", cell.content().get(1).text());
+    assertTrue(cell.content().get(1).style().bold());
+    assertEquals("c", cell.content().get(2).text());
+    assertFalse(cell.content().get(2).style().bold());
+  }
+
+  @Test
+  void tableHeaderCellRunsAreBold() {
+    final List<Block> blocks = Document.from("<table><tr><th>Qty</th></tr></table>").blocks();
+
+    final Cell cell = assertInstanceOf(Table.class, blocks.get(0)).rows().get(0).get(0);
+    assertEquals(1, cell.content().size());
+    assertTrue(cell.content().get(0).style().bold());
+  }
+
+  @Test
+  void tableCellParsesColspan() {
+    final List<Block> blocks = Document
+        .from("<table><tr><td colspan=\"3\">wide</td></tr></table>").blocks();
+
+    final Cell cell = assertInstanceOf(Table.class, blocks.get(0)).rows().get(0).get(0);
+    assertEquals(3, cell.colSpan());
+  }
+
+  @Test
+  void tableCellDefaultsToSingleColumnSpan() {
+    final List<Block> blocks = Document.from("<table><tr><td>x</td></tr></table>").blocks();
+
+    final Cell cell = assertInstanceOf(Table.class, blocks.get(0)).rows().get(0).get(0);
+    assertEquals(1, cell.colSpan());
+  }
+
+  @Test
   void emptyDocumentYieldsNoBlocks() {
     assertTrue(Document.from("<div>   \n  </div>").blocks().isEmpty());
   }

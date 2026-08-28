@@ -107,8 +107,9 @@ HTML ─jsoup─▶ DOM ─BlockBuilder─▶ List<Block> (IR) ─EscPosRenderer
 - **`EscPosRenderer`** turns the IR into bytes: it diffs run styles, word-wraps
   to the profile's column budget, selects a code page (`ESC t`), rasterizes
   images to `GS v 0` with Floyd–Steinberg dithering, emits barcodes (`GS k`) and
-  QR/PDF417 (`GS ( k`), and lays tables out on a character grid. At end of job it
-  feeds and cuts, unless the document already ends with an explicit `Cut`.
+  QR/PDF417 (`GS ( k`), and lays tables out on a character grid with content-sized
+  columns, `colspan`, and inline-styled cells. At end of job it feeds and cuts, unless
+  the document already ends with an explicit `Cut`.
 - **`Transport`** decouples byte generation from delivery: `UsbTransport`,
   `NetworkTransport` (TCP 9100) and `DumpTransport`, each able to read real-time
   status (`DLE EOT`) so a job can be refused before printing to an offline,
@@ -140,7 +141,7 @@ golden-byte tests.
 | `<ul>`, `<ol>`, `<li>`            | list items with `- ` / `1. ` markers (nested indents)            |
 | `<pre>`                           | preformatted: whitespace and line breaks preserved               |
 | `<br>`, `<hr>`                    | line break, horizontal rule                                      |
-| `<table>`, `<tr>`, `<td>`, `<th>` | character-grid table (`<th>` is bold; cells honour `text-align`) |
+| `<table>`, `<tr>`, `<td>`, `<th>` | character-grid table: content-sized columns, `colspan`, per-cell `text-align`, inline styling, bold `<th>` |
 | `<img>`                           | image (URL or Base64 `data:` URI; PNG, JPEG, BMP, WBMP)          |
 | `<em>`, `<i>`                     | ignored - ESC/POS printers have no italic                        |
 

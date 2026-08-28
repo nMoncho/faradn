@@ -2,6 +2,7 @@ package io.nmoncho.faradn.printer.escpos;
 
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import io.nmoncho.faradn.UnsupportedBlockException;
@@ -158,31 +159,26 @@ public final class EscPosRenderer {
     current = clearInlineStyle(out, current);
     current = applyAlignment(out, current, Alignment.LEFT);
 
-    final int columnCount = table.rows().stream().mapToInt(List::size).max().orElse(0);
+    final int columnCount = columnCount(table);
     if (columnCount == 0) {
       return current;
     }
-    final int columnWidth = Math.max(1,
-        (profile.columns() - (columnCount - 1) * TABLE_COLUMN_GUTTER) / columnCount);
+    final int[] widths = columnWidths(table, columnCount);
 
     for (List<Cell> row : table.rows()) {
-      final List<List<List<TextRun>>> wrapped = new ArrayList<>();
-      for (int c = 0; c < columnCount; c++) {
-        final List<TextRun> content = c < row.size() ? row.get(c).content() : List.of();
-        wrapped.add(content.isEmpty() ? List.of() : TextWrapper.wrap(content, columnWidth));
-      }
+      final List<PlacedCell> placed = placeRow(row, widths, columnCount);
+
       int rowHeight = 1;
-      for (List<List<TextRun>> cellLines : wrapped) {
-        rowHeight = Math.max(rowHeight, cellLines.size());
+      for (PlacedCell cell : placed) {
+        rowHeight = Math.max(rowHeight, cell.lines().size());
       }
 
       for (int line = 0; line < rowHeight; line++) {
-        for (int c = 0; c < columnCount; c++) {
-          final List<List<TextRun>> cellLines = wrapped.get(c);
-          final List<TextRun> segments = line < cellLines.size() ? cellLines.get(line) : List.of();
-          final Alignment alignment = c < row.size() ? row.get(c).alignment() : Alignment.LEFT;
-          current = emitCell(out, enc, current, segments, columnWidth, alignment);
-          if (c < columnCount - 1) {
+        for (int i = 0; i < placed.size(); i++) {
+          final PlacedCell cell = placed.get(i);
+          final List<TextRun> segments = line < cell.lines().size() ? cell.lines().get(line) : List.of();
+          current = emitCell(out, enc, current, segments, cell.width(), cell.alignment());
+          if (i < placed.size() - 1) {
             current = clearInlineStyle(out, current);
             enc.emit(" ".repeat(TABLE_COLUMN_GUTTER));
           }
@@ -194,11 +190,155 @@ public final class EscPosRenderer {
     return current;
   }
 
+  /**
+   * A cell placed on the grid: its wrapped lines, the width it occupies, and its
+   * alignment.
+   */
+  private record PlacedCell(List<List<TextRun>> lines, int width, Alignment alignment) {
+  }
+
+  /**
+   * Places a row's cells across the grid, wrapping each to its (spanned) width;
+   * any columns the row leaves uncovered become empty cells so every line is the
+   * same width.
+   */
+  private List<PlacedCell> placeRow(List<Cell> row, int[] widths, int columnCount) {
+    final List<PlacedCell> placed = new ArrayList<>();
+    int col = 0;
+    for (Cell cell : row) {
+      if (col >= columnCount) {
+        break;
+      }
+      final int span = Math.min(cell.colSpan(), columnCount - col);
+      final int width = spannedWidth(widths, col, span);
+      final List<List<TextRun>> lines = cell.content().isEmpty()
+          ? List.of()
+          : TextWrapper.wrap(cell.content(), width);
+      placed.add(new PlacedCell(lines, width, cell.alignment()));
+      col += span;
+    }
+    while (col < columnCount) {
+      placed.add(new PlacedCell(List.of(), widths[col], Alignment.LEFT));
+      col++;
+    }
+    return placed;
+  }
+
+  private int columnCount(Table table) {
+    int max = 0;
+    for (List<Cell> row : table.rows()) {
+      int span = 0;
+      for (Cell cell : row) {
+        span += cell.colSpan();
+      }
+      max = Math.max(max, span);
+    }
+    return max;
+  }
+
+  /**
+   * Column widths sized to content: each column takes the widest content among
+   * the
+   * single-column cells in it, then the leftover is handed out proportionally to
+   * fill the line (or content is shrunk proportionally when it overflows the
+   * budget).
+   */
+  private int[] columnWidths(Table table, int columnCount) {
+    final int available = Math.max(columnCount, profile.columns() - (columnCount - 1) * TABLE_COLUMN_GUTTER);
+    final int[] natural = new int[columnCount];
+    for (List<Cell> row : table.rows()) {
+      int col = 0;
+      for (Cell cell : row) {
+        if (col >= columnCount) {
+          break;
+        }
+        final int span = Math.min(cell.colSpan(), columnCount - col);
+        if (span == 1) {
+          natural[col] = Math.max(natural[col], contentWidth(cell));
+        }
+        col += span;
+      }
+    }
+    return fit(natural, available);
+  }
+
+  private static int[] fit(int[] natural, int available) {
+    final int columnCount = natural.length;
+    int sum = 0;
+    for (int width : natural) {
+      sum += width;
+    }
+    final int[] widths = new int[columnCount];
+    if (sum == 0) {
+      // No content to measure: fall back to an even split.
+      Arrays.fill(widths, available / columnCount);
+      for (int c = 0; c < available % columnCount; c++) {
+        widths[c]++;
+      }
+      return ensureMin(widths);
+    }
+    if (sum <= available) {
+      final int leftover = available - sum;
+      for (int c = 0; c < columnCount; c++) {
+        widths[c] = natural[c] + (int) ((long) leftover * natural[c] / sum);
+      }
+    } else {
+      for (int c = 0; c < columnCount; c++) {
+        widths[c] = (int) ((long) natural[c] * available / sum);
+      }
+    }
+    distributeRemainder(widths, natural, available);
+    return ensureMin(widths);
+  }
+
+  /**
+   * Hands any rounding remainder to the widest column, keeping the total at
+   * {@code available}.
+   */
+  private static void distributeRemainder(int[] widths, int[] natural, int available) {
+    int used = 0;
+    for (int width : widths) {
+      used += width;
+    }
+    int widest = 0;
+    for (int c = 1; c < natural.length; c++) {
+      if (natural[c] > natural[widest]) {
+        widest = c;
+      }
+    }
+    widths[widest] += available - used;
+  }
+
+  private static int[] ensureMin(int[] widths) {
+    for (int c = 0; c < widths.length; c++) {
+      if (widths[c] < 1) {
+        widths[c] = 1;
+      }
+    }
+    return widths;
+  }
+
+  private static int spannedWidth(int[] widths, int col, int span) {
+    int width = (span - 1) * TABLE_COLUMN_GUTTER;
+    for (int c = col; c < col + span; c++) {
+      width += widths[c];
+    }
+    return width;
+  }
+
+  private static int contentWidth(Cell cell) {
+    int width = 0;
+    for (TextRun run : cell.content()) {
+      width += run.text().length() * run.style().widthMultiple();
+    }
+    return width;
+  }
+
   private ComputedStyle emitCell(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current,
       List<TextRun> segments, int columnWidth, Alignment alignment) {
     int textWidth = 0;
     for (TextRun segment : segments) {
-      textWidth += segment.text().length();
+      textWidth += segment.text().length() * segment.style().widthMultiple();
     }
     final int pad = Math.max(0, columnWidth - textWidth);
     final int leftPad = switch (alignment) {

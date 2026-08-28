@@ -24,21 +24,41 @@ import io.nmoncho.faradn.transport.NetworkTransport;
  * mvn test -Dfaradn.printer.host=192.168.1.50 -Dtest=HardwarePrintTest
  * }</pre>
  *
- * Both print a full receipt exercising the logo image, a table, a Code 128
- * barcode, a QR code and word-wrapped text (checkpoint 3), plus heading sizes,
- * bold, centering, alignment, underline and rules (checkpoint 1). Verify by eye
- * that it is legible, scan the barcode and QR, and - checkpoint 2 - pull the
- * paper roll to confirm the job fails rather than hangs.
+ * The receipt tests print a full receipt exercising the logo image, a table, a
+ * Code 128 barcode, a QR code and word-wrapped text (checkpoint 3), plus
+ * heading
+ * sizes, bold, centering, alignment, underline and rules (checkpoint 1). Verify
+ * by eye that it is legible, scan the barcode and QR, and - checkpoint 2 - pull
+ * the paper roll to confirm the job fails rather than hangs.
+ * <p>
+ * {@link #printsTableShowcaseOverUsb()} prints a separate document of several
+ * table types - content-sized columns, full-width and partial {@code colspan},
+ * inline-styled cells, and a four-column table - to check the character-grid
+ * layout on paper: verify each table's columns line up, spanning cells cover
+ * the
+ * right width, and narrow columns are not padded to an even split.
  */
 @Tag("hardware")
 public class HardwarePrintTest {
 
   private static final File RECEIPT = new File("src/test/resources/printjobs/receipt-full.html");
+  private static final File TABLES = new File("src/test/resources/printjobs/tables.html");
 
   @Test
   @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
   void printsTextReceiptOverUsb() {
     Document doc = Document.from(RECEIPT);
+
+    Optional<Printer> printer = Printer.from(0x04b8);
+    printer.ifPresentOrElse(
+        p -> p.print(doc, "TM-T88V"),
+        () -> fail("No Epson printer (USB vendor 0x04b8) found"));
+  }
+
+  @Test
+  @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
+  void printsTableShowcaseOverUsb() {
+    Document doc = Document.from(TABLES);
 
     Optional<Printer> printer = Printer.from(0x04b8);
     printer.ifPresentOrElse(

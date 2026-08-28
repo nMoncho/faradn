@@ -247,6 +247,50 @@ public class EscPosRendererTest {
   }
 
   @Test
+  void tableCellPreservesInlineStyling() {
+    byte[] out = new EscPosRenderer(profile(3, PC437))
+        .render(Document.from("<table><tr><td>a<b>b</b>c</td></tr></table>").blocks());
+
+    assertBytes(cat(HEAD, "a", BOLD_ON, "b", BOLD_OFF, "c", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void tableHeaderCellIsBold() {
+    byte[] out = new EscPosRenderer(profile(2, PC437))
+        .render(Document.from("<table><tr><th>ab</th></tr></table>").blocks());
+
+    assertBytes(cat(HEAD, BOLD_ON, "ab", BOLD_OFF, LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void tableCellSpansColumnsWithColspan() {
+    ComputedStyle plain = ComputedStyle.INITIAL;
+    List<Cell> header = List.of(
+        new Cell(List.of(new TextRun("ab", plain)), Alignment.LEFT),
+        new Cell(List.of(new TextRun("cd", plain)), Alignment.LEFT));
+    List<Cell> spanning = List.of(new Cell(List.of(new TextRun("wide", plain)), Alignment.LEFT, 2));
+    Table table = new Table(List.of(header, spanning));
+
+    byte[] out = new EscPosRenderer(profile(9, PC437)).render(List.of(table));
+
+    // Columns are 4 wide; the colspan=2 cell occupies both plus the gutter (9).
+    assertBytes(cat(HEAD, "ab", "  ", " ", "cd", "  ", LF, "wide", "     ", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void tableSizesColumnsToContent() {
+    ComputedStyle plain = ComputedStyle.INITIAL;
+    Cell wide = new Cell(List.of(new TextRun("xxxxx", plain)), Alignment.LEFT);
+    Cell narrow = new Cell(List.of(new TextRun("y", plain)), Alignment.RIGHT);
+    Table table = new Table(List.of(List.of(wide, narrow)));
+
+    byte[] out = new EscPosRenderer(profile(12, PC437)).render(List.of(table));
+
+    // Widths track content (10 vs 1), not an even split - the wide column fills the line.
+    assertBytes(cat(HEAD, "xxxxx", "     ", " ", "y", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
   void textReceiptFixtureRendersFramedJob() {
     byte[] out = renderer.render(
         Document.from(new File("src/test/resources/printjobs/receipt-text.html")).blocks());

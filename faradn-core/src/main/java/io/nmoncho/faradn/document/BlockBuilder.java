@@ -299,20 +299,92 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
         if (!tag.equals("td") && !tag.equals("th")) {
           continue;
         }
-        ComputedStyle style = base.process(cell);
-        if (tag.equals("th")) {
-          style = new ComputedStyle(true, style.underline(), style.widthMultiple(), style.heightMultiple(),
-              style.alignment(), style.invert());
-        }
-        final String text = cell.text().replaceAll("\\s+", " ").strip();
-        final List<TextRun> content = text.isEmpty() ? List.of() : List.of(new TextRun(text, style));
-        cells.add(new Cell(content, style.alignment()));
+        final ComputedStyle cellStyle = tag.equals("th") ? asHeader(base.process(cell)) : base.process(cell);
+        cells.add(new Cell(cellContent(cell, cellStyle), cellStyle.alignment(), colSpan(cell)));
       }
       if (!cells.isEmpty()) {
         rows.add(cells);
       }
     }
     return rows.isEmpty() ? Optional.empty() : Optional.of(new Table(rows));
+  }
+
+  /**
+   * {@code
+   * <th>} is bold; the rest of the cell's style carries through.
+   */
+  private static ComputedStyle asHeader(ComputedStyle style) {
+    return new ComputedStyle(true, style.underline(), style.widthMultiple(), style.heightMultiple(),
+        style.alignment(), style.invert());
+  }
+
+  private static int colSpan(Element cell) {
+    final String raw = cell.attr("colspan").strip();
+    if (raw.isEmpty()) {
+      return 1;
+    }
+    try {
+      return Math.max(1, Integer.parseInt(raw));
+    } catch (NumberFormatException ignored) {
+      return 1;
+    }
+  }
+
+  /**
+   * Builds a cell's content as styled runs, preserving inline spans
+   * ({@code <b>}, {@code <u>}, …) with the same whitespace collapsing and
+   * run-merging as paragraphs. Structural children are flattened; {@code <br>
+   * }
+   * becomes a space.
+   */
+  private static List<TextRun> cellContent(Element cell, ComputedStyle cellStyle) {
+    final List<TextRun> runs = new ArrayList<>();
+    collectInline(cell, cellStyle, runs, new boolean[] { false });
+    if (!runs.isEmpty()) {
+      final TextRun last = runs.remove(runs.size() - 1);
+      final String trimmed = last.text().stripTrailing();
+      if (!trimmed.isEmpty()) {
+        runs.add(new TextRun(trimmed, last.style()));
+      }
+    }
+    return List.copyOf(runs);
+  }
+
+  private static void collectInline(Node node, ComputedStyle style, List<TextRun> runs, boolean[] pendingSpace) {
+    for (Node child : node.childNodes()) {
+      if (child instanceof TextNode text) {
+        appendInline(text.getWholeText(), style, runs, pendingSpace);
+      } else if (child instanceof Element el) {
+        if (el.normalName().equals("br")) {
+          pendingSpace[0] = pendingSpace[0] || !runs.isEmpty();
+        } else {
+          collectInline(el, style.process(el), runs, pendingSpace);
+        }
+      }
+    }
+  }
+
+  private static void appendInline(String raw, ComputedStyle style, List<TextRun> runs, boolean[] pendingSpace) {
+    final String collapsed = raw.replaceAll("\\s+", " ");
+    if (collapsed.isEmpty()) {
+      return;
+    }
+    final String core = collapsed.strip();
+    if (core.isEmpty()) {
+      pendingSpace[0] = pendingSpace[0] || !runs.isEmpty();
+      return;
+    }
+    if ((pendingSpace[0] || collapsed.startsWith(" ")) && !runs.isEmpty()) {
+      final TextRun last = runs.remove(runs.size() - 1);
+      runs.add(new TextRun(last.text() + " ", last.style()));
+    }
+    if (!runs.isEmpty() && runs.get(runs.size() - 1).style().equals(style)) {
+      final TextRun last = runs.remove(runs.size() - 1);
+      runs.add(new TextRun(last.text() + core, style));
+    } else {
+      runs.add(new TextRun(core, style));
+    }
+    pendingSpace[0] = collapsed.endsWith(" ");
   }
 
   /**
