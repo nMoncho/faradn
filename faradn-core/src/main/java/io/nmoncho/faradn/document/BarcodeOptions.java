@@ -17,8 +17,10 @@ public record BarcodeOptions(int heightDots, int moduleSize, Hri hri, QrEc qrEc)
   }
 
   /**
-   * QR Code error-correction level, lowest ({@code L}, ~7%) to highest ({@code H}, ~30^).
-   * See <a href="https://en.wikipedia.org/wiki/QR_code#Error_correction">Error Correction</a>.
+   * QR Code error-correction level, lowest ({@code L}, ~7%) to highest
+   * ({@code H}, ~30^).
+   * See <a href="https://en.wikipedia.org/wiki/QR_code#Error_correction">Error
+   * Correction</a>.
    */
   public enum QrEc {
     L, M, Q, H

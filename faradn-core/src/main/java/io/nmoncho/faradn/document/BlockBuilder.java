@@ -83,12 +83,10 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
       flushParagraph();
       barcodeData(el).ifPresent(data -> blocks
           .add(new Barcode(
-            data,
-            barcodeSymbology(el).orElse(null),
-            styles.peek().alignment(),
-            barcodeOptions(el))
-          )
-      );
+              data,
+              barcodeSymbology(el).orElse(null),
+              styles.peek().alignment(),
+              barcodeOptions(el))));
       consumedSubtree = el;
     } else if (tag.equals("table")) {
       flushParagraph();
