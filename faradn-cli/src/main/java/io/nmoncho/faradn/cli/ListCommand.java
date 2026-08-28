@@ -1,6 +1,7 @@
 package io.nmoncho.faradn.cli;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 
 import javax.usb.UsbDevice;
@@ -28,7 +29,12 @@ final class ListCommand implements Callable<Integer> {
     System.out.println("USB printers:");
     for (UsbDevice printer : printers) {
       final UsbDeviceDescriptor descriptor = printer.getUsbDeviceDescriptor();
-      System.out.printf("  0x%04x:0x%04x%n", descriptor.idVendor() & 0xFFFF, descriptor.idProduct() & 0xFFFF);
+      final String vendor = Devices.findVendorName(descriptor.idVendor()).orElse("N/A");
+      System.out.printf(
+          "  0x%04x:0x%04x (%s)%n",
+          descriptor.idVendor() & 0xFFFF,
+          descriptor.idProduct() & 0xFFFF,
+          vendor);
     }
     return 0;
   }

@@ -26,4 +26,55 @@ public interface PrinterProfile {
   /** The character code page the renderer selects and encodes text for. */
   CodePage codePage();
 
+  /**
+   * Helper method to create a {@link PrinterProfile} on the fly.
+   *
+   * @param name
+   *        Human-readable profile name, e.g. {@code "Epson TM-T88V"}
+   * @param dotsPerLine
+   *        Printable width in dots (e.g. 512 for an 80&nbsp;mm TM-T88V)
+   * @param columns
+   *        Characters per line at the base font (Font A)
+   * @param dpi
+   *        Print resolution in dots per inch
+   * @param supportsCut
+   *        Whether the printer has an autocutter
+   * @param codePage
+   *        he character code page the renderer selects and encodes text for
+   * @return
+   */
+  static PrinterProfile of(String name, int dotsPerLine, int columns, int dpi, boolean supportsCut, CodePage codePage) {
+    return new PrinterProfile() {
+
+      @Override
+      public String name() {
+        return name;
+      }
+
+      @Override
+      public int dotsPerLine() {
+        return dotsPerLine;
+      }
+
+      @Override
+      public int columns() {
+        return columns;
+      }
+
+      @Override
+      public int dpi() {
+        return dpi;
+      }
+
+      @Override
+      public boolean supportsCut() {
+        return supportsCut;
+      }
+
+      @Override
+      public CodePage codePage() {
+        return codePage;
+      }
+    };
+  }
 }

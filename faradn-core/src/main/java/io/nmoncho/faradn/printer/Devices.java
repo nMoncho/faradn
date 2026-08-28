@@ -1,27 +1,17 @@
 package io.nmoncho.faradn.printer;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
-import java.util.function.Predicate;
-
-import javax.usb.UsbConst;
-import javax.usb.UsbDevice;
-import javax.usb.UsbDeviceDescriptor;
-import javax.usb.UsbEndpoint;
-import javax.usb.UsbException;
-import javax.usb.UsbHostManager;
-import javax.usb.UsbHub;
-import javax.usb.UsbInterface;
-
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-
+import io.nmoncho.faradn.PrintingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.usb4java.LibUsb;
 
-import io.nmoncho.faradn.PrintingException;
+import javax.usb.*;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Optional;
+import java.util.function.Predicate;
 
 public class Devices {
 
@@ -279,5 +269,16 @@ public class Devices {
         .stream()
         .filter(pred)
         .findFirst();
+  }
+
+  /**
+   * Finds the {@link Vendor} name for a given ID
+   *
+   * @param id
+   *        to search
+   * @return a vendor name, if exists in the internal database
+   */
+  public static Optional<String> findVendorName(short id) {
+    return vendors.stream().filter(v -> v.id == id).findFirst().map(v -> v.name);
   }
 }
