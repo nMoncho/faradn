@@ -25,7 +25,7 @@ import java.util.Optional;
 
 public class DevicesTest {
 
-  private final String vendorName = "Seiko Epson Corp";
+  private final String vendorName = "Seiko Epson Corp."; // as registered in vendors.conf
   private final short vendorId = 1208;
   private final short productId = 3586; // TM-T88V
 

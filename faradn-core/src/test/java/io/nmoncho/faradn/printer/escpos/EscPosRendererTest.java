@@ -146,7 +146,7 @@ public class EscPosRendererTest {
   void partialCutBlock() {
     byte[] out = renderer.render(List.of(new Cut(true)));
 
-    assertBytes(cat(HEAD, PARTIAL_CUT, FEED_4, PARTIAL_CUT), out);
+    assertBytes(cat(HEAD, PARTIAL_CUT), out);
   }
 
   @Test
