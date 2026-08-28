@@ -62,11 +62,11 @@ $ faradn serve --port 8080 --host 192.168.1.50    # run the HTTP print server
 
 `faradn serve` starts a small, dependency-free HTTP server:
 
-| Endpoint        | Description                                                   |
-|-----------------|---------------------------------------------------------------|
+| Endpoint        | Description                                                        |
+|-----------------|--------------------------------------------------------------------|
 | `POST /print`   | render the HTML request body and print it to the configured target |
-| `GET /printers` | list connected USB printers                                   |
-| `GET /health`   | liveness check                                                |
+| `GET /printers` | list connected USB printers                                        |
+| `GET /health`   | liveness check                                                     |
 
 ```console
 $ curl -X POST --data '<h1>Hi</h1>' http://localhost:8080/print
@@ -98,7 +98,8 @@ HTML ─jsoup─▶ DOM ─BlockBuilder─▶ List<Block> (IR) ─EscPosRenderer
 - **`EscPosRenderer`** turns the IR into bytes: it diffs run styles, word-wraps
   to the profile's column budget, selects a code page (`ESC t`), rasterizes
   images to `GS v 0` with Floyd–Steinberg dithering, emits barcodes (`GS k`) and
-  QR/PDF417 (`GS ( k`), and lays tables out on a character grid.
+  QR/PDF417 (`GS ( k`), and lays tables out on a character grid. At end of job it
+  feeds and cuts, unless the document already ends with an explicit `Cut`.
 - **`Transport`** decouples byte generation from delivery: `UsbTransport`,
   `NetworkTransport` (TCP 9100) and `DumpTransport`, each able to read real-time
   status (`DLE EOT`) so a job can be refused before printing to an offline,
@@ -118,19 +119,21 @@ golden-byte tests.
 
 **Tags**
 
-| Markup                             | Effect                                                  |
-|------------------------------------|---------------------------------------------------------|
-| `<b>`, `<strong>`                  | bold                                                    |
-| `<u>`                              | underline                                               |
-| `<h1>`                             | bold, double width and height                           |
-| `<h2>`                             | bold, double height                                     |
-| `<h3>`                             | bold                                                    |
-| `<center>`                         | centered                                                |
-| `<p>`, `<div>`, headings, lists, … | paragraph (block) boundaries                            |
-| `<br>`, `<hr>`                     | line break, horizontal rule                             |
-| `<table>`, `<tr>`, `<td>`, `<th>`  | character-grid table (`<th>` is bold)                   |
-| `<img>`                            | image (URL or Base64 `data:` URI; PNG, JPEG, BMP, WBMP) |
-| `<em>`, `<i>`                      | ignored - ESC/POS printers have no italic               |
+| Markup                            | Effect                                                           |
+|-----------------------------------|------------------------------------------------------------------|
+| `<b>`, `<strong>`                 | bold                                                             |
+| `<u>`                             | underline                                                        |
+| `<h1>`                            | bold, double width and height                                    |
+| `<h2>`                            | bold, double height                                              |
+| `<h3>`                            | bold                                                             |
+| `<center>`                        | centered                                                         |
+| `<p>`, `<div>`, headings          | paragraph (block) boundaries                                     |
+| `<ul>`, `<ol>`, `<li>`            | list items with `- ` / `1. ` markers (nested indents)            |
+| `<pre>`                           | preformatted: whitespace and line breaks preserved               |
+| `<br>`, `<hr>`                    | line break, horizontal rule                                      |
+| `<table>`, `<tr>`, `<td>`, `<th>` | character-grid table (`<th>` is bold; cells honour `text-align`) |
+| `<img>`                           | image (URL or Base64 `data:` URI; PNG, JPEG, BMP, WBMP)          |
+| `<em>`, `<i>`                     | ignored - ESC/POS printers have no italic                        |
 
 **Inline CSS**
 
@@ -150,6 +153,20 @@ Either a custom element or a `bar-code` class with a symbology modifier:
 
 Supported symbologies: `code128`, `code39`, `code93`, `ean13`, `ean8`, `upca`,
 `upce`, `itf`, `codabar` (1D), and `qr` / `pdf417` (2D).
+
+Rendering is configurable per barcode through attributes:
+
+| Attribute | Applies to | Values                              | Default       |
+|-----------|------------|-------------------------------------|---------------|
+| `height`  | 1D         | height in dots (1–255)              | `100`         |
+| `module`  | all        | module/bar width (1D 2–6; 2D 1–16)  | per symbology |
+| `hri`     | 1D         | `none`, `above`, `below`, `both`    | `below`       |
+| `ec`      | QR         | error correction `l`, `m`, `q`, `h` | `m`           |
+
+```html
+<bar-code symbology="ean13" height="80" module="3" hri="below">123456789012</bar-code>
+<bar-code symbology="qr" module="8" ec="h">https://example.com</bar-code>
+```
 
 **Text encoding.** Text is encoded for the profile's code page (TM-T88V defaults
 to PC437); characters outside it fall back to `?`.
@@ -207,7 +224,8 @@ The `macos-aarch64` Maven profile then wires it in automatically.
 - [x] Transports (USB and raw TCP 9100) with real-time status
 - [x] CLI and HTTP server as a GraalVM native binary
 - [ ] Publish `faradn-core` to Maven Central and native binaries to GitHub Releases
-- [ ] Per-run code page switching and richer table cells
+- [x] List markers, preformatted text, per-barcode options, aligned table cells
+- [ ] Per-run code page switching, table colspan and column widths
 - [ ] Printer capability database (see [escpos-printer-db](https://github.com/receipt-print-hq/escpos-printer-db))
 - [ ] Raster fallback for complex layouts
 
