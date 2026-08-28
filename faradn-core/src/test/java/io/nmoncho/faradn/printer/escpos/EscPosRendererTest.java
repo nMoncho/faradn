@@ -255,6 +255,20 @@ public class EscPosRendererTest {
   }
 
   @Test
+  void unorderedListEmitsMarkers() {
+    byte[] out = renderer.render(Document.from("<ul><li>a</li><li>b</li></ul>").blocks());
+
+    assertBytes(cat(HEAD, "- a", LF, "- b", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void orderedListNumbersItems() {
+    byte[] out = renderer.render(Document.from("<ol><li>a</li><li>b</li></ol>").blocks());
+
+    assertBytes(cat(HEAD, "1. a", LF, "2. b", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
   void nullProfileIsRejected() {
     assertThrows(IllegalArgumentException.class, () -> new EscPosRenderer(null));
   }

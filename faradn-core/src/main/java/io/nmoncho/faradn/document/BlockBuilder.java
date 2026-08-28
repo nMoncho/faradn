@@ -42,6 +42,8 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
 
   private boolean pendingSpace = false;
   private Element consumedSubtree = null;
+  private final Deque<ListState> lists = new ArrayDeque<>();
+  private String pendingMarker = null;
 
   private BlockBuilder() {
     styles.push(ComputedStyle.INITIAL);
@@ -97,6 +99,13 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
     } else if (tag.equals("hr")) {
       flushParagraph();
       blocks.add(new Rule());
+    } else if (tag.equals("ul") || tag.equals("ol")) {
+      flushParagraph();
+      lists.push(new ListState(tag.equals("ol")));
+    } else if (tag.equals("li")) {
+      flushParagraph();
+      final String marker = listMarker();
+      pendingMarker = marker.isEmpty() ? null : marker;
     } else if (tag.equals("br") || BLOCK_TAGS.contains(tag)) {
       flushParagraph();
     }
@@ -118,7 +127,14 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
 
     styles.pop();
 
-    if (BLOCK_TAGS.contains(el.normalName())) {
+    final String tag = el.normalName();
+    if (tag.equals("ul") || tag.equals("ol")) {
+      if (!lists.isEmpty()) {
+        lists.pop();
+      }
+    }
+
+    if (BLOCK_TAGS.contains(tag)) {
       flushParagraph();
     }
   }
@@ -145,8 +161,17 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
       runs.add(new TextRun(last.text() + " ", last.style()));
     }
 
+    emitPendingMarker();
     addRun(core, styles.peek());
     pendingSpace = collapsed.endsWith(" ");
+  }
+
+  /** Emits a pending list marker as the first run of the current item. */
+  private void emitPendingMarker() {
+    if (pendingMarker != null) {
+      addRun(pendingMarker, styles.peek());
+      pendingMarker = null;
+    }
   }
 
   private void addRun(String text, ComputedStyle style) {
@@ -269,5 +294,31 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
       }
     }
     return rows.isEmpty() ? Optional.empty() : Optional.of(new Table(rows));
+  }
+
+  /**
+   * The marker for the current list item: {@code "N. "} for ordered lists,
+   * {@code "- "} otherwise.
+   */
+  private String listMarker() {
+    if (lists.isEmpty()) {
+      return "";
+    }
+    final ListState top = lists.peek();
+    final String indent = "  ".repeat(Math.max(0, lists.size() - 1));
+    if (top.ordered) {
+      top.counter++;
+      return indent + top.counter + ". ";
+    }
+    return indent + "- ";
+  }
+
+  private static final class ListState {
+    private final boolean ordered;
+    private int counter;
+
+    private ListState(boolean ordered) {
+      this.ordered = ordered;
+    }
   }
 }
