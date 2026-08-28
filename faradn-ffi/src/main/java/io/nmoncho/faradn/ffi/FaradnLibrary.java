@@ -10,7 +10,6 @@ import org.graalvm.nativeimage.c.type.CTypeConversion;
 
 import io.nmoncho.faradn.Document;
 import io.nmoncho.faradn.printer.PrinterProfile;
-import io.nmoncho.faradn.printer.TmT88vProfile;
 import io.nmoncho.faradn.printer.escpos.EscPosRenderer;
 
 /**
@@ -68,12 +67,8 @@ public final class FaradnLibrary {
   }
 
   private static PrinterProfile profileFor(String name) {
-    if (name == null || name.isBlank()) {
-      return TmT88vProfile.INSTANCE;
-    }
-    return switch (name.toLowerCase()) {
-      case "tm-t88v", "tmt88v", "default" -> TmT88vProfile.INSTANCE;
-      default -> throw new IllegalArgumentException("Unknown profile: " + name);
-    };
+    final String target = (name == null || name.isBlank()) ? "TM-T88V" : name;
+    return PrinterProfile.load(target)
+        .orElseThrow(() -> new IllegalArgumentException("Unknown profile: " + target));
   }
 }

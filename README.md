@@ -25,14 +25,23 @@ Parse an HTML document and send it to a printer:
 ```java
 Document doc = Document.from("<h1>Receipt</h1><p>Total: <b>10,00</b></p>");
 
+// Printer profiles are loaded by device name from the bundled capability
+// database (escpos-printer-db); an unknown name yields an empty Optional.
+PrinterProfile profile = PrinterProfile.load("TM-T88V").orElseThrow();
+
 // Over USB, by the printer's USB vendor id (Epson is 0x04b8):
-Printer.from(0x04b8).ifPresent(printer -> printer.print(doc));
+Printer.from(0x04b8).ifPresent(printer -> printer.print(doc, "TM-T88V"));
 
 // Over Ethernet (raw TCP, port 9100), or any other Transport:
 try (Transport transport = new NetworkTransport("192.168.1.50")) {
-  Printer.print(transport, doc, TmT88vProfile.INSTANCE);
+  Printer.print(transport, doc, profile);
 }
 ```
+
+Profiles come from the bundled `capabilities.conf` (generated from
+[escpos-printer-db](https://github.com/receipt-print-hq/escpos-printer-db) by
+`scripts/fetch_capabilities.py`). `PrinterProfile.load(name)` matches the device
+name case-insensitively; a job fails if the name has no usable profile.
 
 You can also inspect the intermediate representation the renderer consumes - a
 flat, reading-order list of blocks with fully resolved styles - or render
@@ -233,7 +242,7 @@ The `macos-aarch64` Maven profile then wires it in automatically.
 - [x] List markers, preformatted text, per-barcode options, aligned table cells
 - [x] Per-run code page switching for mixed-script text
 - [ ] Table colspan and column widths
-- [ ] Printer capability database (see [escpos-printer-db](https://github.com/receipt-print-hq/escpos-printer-db))
+- [x] Printer capability database: load profiles by device name from [escpos-printer-db](https://github.com/receipt-print-hq/escpos-printer-db)
 - [ ] Raster fallback for complex layouts
 
 ## Contribution Guidelines

@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
-import io.nmoncho.faradn.printer.TmT88vProfile;
+import io.nmoncho.faradn.printer.PrinterProfile;
 import io.nmoncho.faradn.transport.NetworkTransport;
 
 /**
@@ -42,7 +42,7 @@ public class HardwarePrintTest {
 
     Optional<Printer> printer = Printer.from(0x04b8);
     printer.ifPresentOrElse(
-        p -> p.print(doc),
+        p -> p.print(doc, "TM-T88V"),
         () -> fail("No Epson printer (USB vendor 0x04b8) found"));
   }
 
@@ -53,7 +53,7 @@ public class HardwarePrintTest {
     String host = System.getProperty("faradn.printer.host");
 
     try (NetworkTransport transport = new NetworkTransport(host)) {
-      Printer.print(transport, doc, TmT88vProfile.INSTANCE);
+      Printer.print(transport, doc, PrinterProfile.load("TM-T88V").orElseThrow());
     }
   }
 }

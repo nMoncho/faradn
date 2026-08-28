@@ -29,7 +29,6 @@ import io.nmoncho.faradn.document.Table;
 import io.nmoncho.faradn.document.TextRun;
 import io.nmoncho.faradn.printer.CodePage;
 import io.nmoncho.faradn.printer.PrinterProfile;
-import io.nmoncho.faradn.printer.TmT88vProfile;
 import io.nmoncho.faradn.printer.escpos.commands.BarcodeCommands;
 
 /**
@@ -58,7 +57,9 @@ public class EscPosRendererTest {
   private static final byte[] PARTIAL_CUT = { GS, 0x56, 0x01 };
   private static final byte[] FULL_CUT = { GS, 0x56, 0x00 };
 
-  private final EscPosRenderer renderer = new EscPosRenderer(TmT88vProfile.INSTANCE);
+  private static final PrinterProfile TM_T88V = PrinterProfile.load("TM-T88V").orElseThrow();
+
+  private final EscPosRenderer renderer = new EscPosRenderer(TM_T88V);
 
   @Test
   void plainParagraph() {
@@ -124,7 +125,7 @@ public class EscPosRendererTest {
   void ruleFillsTheLineWidth() {
     byte[] out = renderer.render(List.of(new Rule()));
 
-    assertBytes(cat(HEAD, "-".repeat(TmT88vProfile.INSTANCE.columns()), LF, FEED_4, PARTIAL_CUT), out);
+    assertBytes(cat(HEAD, "-".repeat(TM_T88V.columns()), LF, FEED_4, PARTIAL_CUT), out);
   }
 
   @Test
@@ -198,7 +199,7 @@ public class EscPosRendererTest {
   @Test
   void imageBlockRastersToGsV0() {
     RasterImage img = solid(8, 8, 0xFF000000);
-    byte[] raster = ImageRasterizer.raster(img, TmT88vProfile.INSTANCE.dotsPerLine());
+    byte[] raster = ImageRasterizer.raster(img, TM_T88V.dotsPerLine());
 
     byte[] out = renderer.render(List.of(new ImageBlock(Image.of(img), Alignment.LEFT)));
 

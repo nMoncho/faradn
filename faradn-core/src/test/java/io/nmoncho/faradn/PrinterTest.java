@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.Test;
 
-import io.nmoncho.faradn.printer.TmT88vProfile;
+import io.nmoncho.faradn.printer.PrinterProfile;
 import io.nmoncho.faradn.printer.escpos.EscPosRenderer;
 import io.nmoncho.faradn.transport.DumpTransport;
 import io.nmoncho.faradn.transport.PrinterNotReadyException;
@@ -17,14 +17,16 @@ import io.nmoncho.faradn.transport.Transport;
 
 public class PrinterTest {
 
+  private static final PrinterProfile TM_T88V = PrinterProfile.load("TM-T88V").orElseThrow();
+
   @Test
   void printRendersAndWritesToTheTransport() {
     Document doc = Document.from("<h1>Hi</h1>");
     DumpTransport transport = new DumpTransport();
 
-    Printer.print(transport, doc, TmT88vProfile.INSTANCE);
+    Printer.print(transport, doc, TM_T88V);
 
-    byte[] expected = new EscPosRenderer(TmT88vProfile.INSTANCE).render(doc.blocks());
+    byte[] expected = new EscPosRenderer(TM_T88V).render(doc.blocks());
     assertArrayEquals(expected, transport.bytes());
   }
 
@@ -49,7 +51,7 @@ public class PrinterTest {
     };
 
     assertThrows(PrinterNotReadyException.class,
-        () -> Printer.print(notReady, Document.from("<p>x</p>"), TmT88vProfile.INSTANCE));
+        () -> Printer.print(notReady, Document.from("<p>x</p>"), TM_T88V));
     assertFalse(written.get(), "must not write when the printer is not ready");
   }
 }

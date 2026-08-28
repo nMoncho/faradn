@@ -1,5 +1,7 @@
 package io.nmoncho.faradn.printer;
 
+import java.util.Optional;
+
 /**
  * The realizable capabilities of a target printer that the renderer must
  * respect: how wide the paper is, how many characters fit on a line, its
@@ -25,6 +27,19 @@ public interface PrinterProfile {
 
   /** The character code page the renderer selects and encodes text for. */
   CodePage codePage();
+
+  /**
+   * Loads a printer profile from the bundled escpos-printer-db capability
+   * database, matched case-insensitively by device name (the database key or
+   * its {@code name} field, e.g. {@code "TM-T88V"}).
+   *
+   * @param name
+   *        the device name to look up
+   * @return the profile, or empty when no usable profile matches the name
+   */
+  static Optional<PrinterProfile> load(String name) {
+    return CapabilityProfiles.find(name);
+  }
 
   /**
    * Helper method to create a {@link PrinterProfile} on the fly.

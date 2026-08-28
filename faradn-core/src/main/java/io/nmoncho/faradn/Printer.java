@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 
 import io.nmoncho.faradn.printer.Devices;
 import io.nmoncho.faradn.printer.PrinterProfile;
-import io.nmoncho.faradn.printer.TmT88vProfile;
 import io.nmoncho.faradn.printer.escpos.EscPosRenderer;
 import io.nmoncho.faradn.transport.PrinterNotReadyException;
 import io.nmoncho.faradn.transport.PrinterStatus;
@@ -28,14 +27,20 @@ public class Printer {
   }
 
   /**
-   * Renders a {@link Document} for this printer's default profile and prints it
-   * over USB.
+   * Renders a {@link Document} for the named profile and prints it over USB.
+   * The profile is loaded from the capability database
+   * ({@link PrinterProfile#load(String)}); the job fails if no profile matches
+   * the name.
    *
    * @param doc
    *        document to print
+   * @param profileName
+   *        device name to look up, e.g. {@code "TM-T88V"}
+   * @throws IllegalArgumentException
+   *         if no profile matches {@code profileName}
    */
-  public void print(Document doc) {
-    print(doc, TmT88vProfile.INSTANCE);
+  public void print(Document doc, String profileName) {
+    print(doc, profile(profileName));
   }
 
   /**
@@ -81,6 +86,11 @@ public class Printer {
     final byte[] payload = new EscPosRenderer(profile).render(doc.blocks());
     ensureReady(transport);
     transport.write(payload);
+  }
+
+  private static PrinterProfile profile(String name) {
+    return PrinterProfile.load(name)
+        .orElseThrow(() -> new IllegalArgumentException("No printer profile found for '" + name + "'"));
   }
 
   /**

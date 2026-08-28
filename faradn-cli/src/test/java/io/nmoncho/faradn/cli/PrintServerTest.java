@@ -14,7 +14,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.nmoncho.faradn.printer.TmT88vProfile;
+import io.nmoncho.faradn.printer.PrinterProfile;
 import io.nmoncho.faradn.transport.DumpTransport;
 
 public class PrintServerTest {
@@ -25,7 +25,7 @@ public class PrintServerTest {
   @BeforeEach
   void setUp() throws IOException {
     transport = new DumpTransport();
-    server = new PrintServer(0, TmT88vProfile.INSTANCE, () -> transport);
+    server = new PrintServer(0, PrinterProfile.load("TM-T88V").orElseThrow(), () -> transport);
     server.start();
   }
 
