@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 
 import io.nmoncho.faradn.BarcodeException;
+import io.nmoncho.faradn.document.BarcodeOptions;
 import io.nmoncho.faradn.printer.escpos.Code;
 
 /**
@@ -15,9 +16,7 @@ public final class BarcodeCommands {
 
   private static final int GS = Code.GS;
 
-  private static final int DEFAULT_HEIGHT_DOTS = 100;
   private static final int DEFAULT_MODULE_WIDTH = 3;
-  private static final int HRI_BELOW = 2;
   private static final int HRI_FONT_A = 0;
   private static final int DEFAULT_QR_MODULE = 6;
   private static final int DEFAULT_PDF417_MODULE = 3;
@@ -48,15 +47,35 @@ public final class BarcodeCommands {
    *         if the symbology is unknown or the data is invalid for it
    */
   public static byte[] encode(String symbology, String data) {
+    return encode(symbology, data, BarcodeOptions.DEFAULT);
+  }
+
+  /**
+   * Encodes a barcode with explicit rendering options.
+   *
+   * @param symbology
+   *        symbology name, e.g. {@code "code128"}, {@code "ean13"}, {@code "qr"}
+   * @param data
+   *        the barcode payload
+   * @param options
+   *        height, module size, HRI position and QR error correction; a
+   *        module size of {@code 0} means the symbology's default
+   * @return the ESC/POS bytes
+   * @throws BarcodeException
+   *         if the symbology is unknown or the data is invalid for it
+   */
+  public static byte[] encode(String symbology, String data, BarcodeOptions options) {
     final String key = normalize(symbology);
+    final int module = options.moduleSize();
     return switch (key) {
-      case "qr", "qrcode" -> qr(data, DEFAULT_QR_MODULE);
-      case "pdf417" -> pdf417(data, DEFAULT_PDF417_MODULE);
-      default -> oneDimensional(symbologyOf(key), data);
+      case "qr", "qrcode" -> qr(data, module == 0 ? DEFAULT_QR_MODULE : module, qrEcCode(options.qrEc()));
+      case "pdf417" -> pdf417(data, module == 0 ? DEFAULT_PDF417_MODULE : module);
+      default -> oneDimensional(symbologyOf(key), data, options.heightDots(),
+          module == 0 ? DEFAULT_MODULE_WIDTH : module, hriCode(options.hri()));
     };
   }
 
-  private static byte[] oneDimensional(Symbology symbology, String data) {
+  private static byte[] oneDimensional(Symbology symbology, String data, int heightDots, int moduleWidth, int hri) {
     validate(symbology, data);
 
     final String payloadText = symbology == Symbology.CODE128 && !data.startsWith("{") ? "{B" + data : data;
@@ -66,21 +85,47 @@ public final class BarcodeCommands {
     }
 
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
-    out.writeBytes(new byte[] { (byte) GS, 0x48, (byte) HRI_BELOW }); // GS H: HRI below
+    out.writeBytes(new byte[] { (byte) GS, 0x48, (byte) hri }); // GS H: HRI position
     out.writeBytes(new byte[] { (byte) GS, 0x66, (byte) HRI_FONT_A }); // GS f: HRI font A
-    out.writeBytes(new byte[] { (byte) GS, 0x68, (byte) DEFAULT_HEIGHT_DOTS }); // GS h: height
-    out.writeBytes(new byte[] { (byte) GS, 0x77, (byte) DEFAULT_MODULE_WIDTH }); // GS w: module width
+    out.writeBytes(new byte[] { (byte) GS, 0x68, (byte) heightDots }); // GS h: height
+    out.writeBytes(new byte[] { (byte) GS, 0x77, (byte) moduleWidth }); // GS w: module width
     out.writeBytes(new byte[] { (byte) GS, 0x6B, (byte) symbology.code, (byte) payload.length }); // GS k m n
     out.writeBytes(payload);
     return out.toByteArray();
   }
 
-  private static byte[] qr(String data, int moduleSize) {
+  /**
+   * Maps an HRI position to the {@code GS H} parameter (0 none, 1 above, 2 below,
+   * 3 both).
+   */
+  private static int hriCode(BarcodeOptions.Hri hri) {
+    return switch (hri) {
+      case NONE -> 0;
+      case ABOVE -> 1;
+      case BELOW -> 2;
+      case BOTH -> 3;
+    };
+  }
+
+  /**
+   * Maps a QR error-correction level to the {@code GS ( k fn=69} parameter
+   * (48..51).
+   */
+  private static int qrEcCode(BarcodeOptions.QrEc ec) {
+    return switch (ec) {
+      case L -> 48;
+      case M -> 49;
+      case Q -> 50;
+      case H -> 51;
+    };
+  }
+
+  private static byte[] qr(String data, int moduleSize, int ecCode) {
     final byte[] bytes = data.getBytes(StandardCharsets.UTF_8);
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
     gsParenK(out, 49, 65, new byte[] { 50, 0 }); // select model 2
     gsParenK(out, 49, 67, new byte[] { (byte) moduleSize }); // module size
-    gsParenK(out, 49, 69, new byte[] { 49 }); // error correction level M
+    gsParenK(out, 49, 69, new byte[] { (byte) ecCode }); // error correction level
     final byte[] store = new byte[bytes.length + 1];
     store[0] = 48; // store function
     System.arraycopy(bytes, 0, store, 1, bytes.length);

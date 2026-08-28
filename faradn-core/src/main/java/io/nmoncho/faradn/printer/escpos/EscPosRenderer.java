@@ -140,7 +140,7 @@ public final class EscPosRenderer {
   private ComputedStyle renderBarcode(ByteArrayOutputStream out, ComputedStyle current, Barcode barcode) {
     current = clearInlineStyle(out, current);
     current = applyAlignment(out, current, barcode.alignment());
-    out.writeBytes(BarcodeCommands.encode(barcode.symbology(), barcode.data()));
+    out.writeBytes(BarcodeCommands.encode(barcode.symbology(), barcode.data(), barcode.options()));
     out.writeBytes(PrintCommands.LINE_FEED.getCode());
     return current;
   }

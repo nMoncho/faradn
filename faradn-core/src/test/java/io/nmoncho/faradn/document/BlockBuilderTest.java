@@ -174,6 +174,33 @@ public class BlockBuilderTest {
   }
 
   @Test
+  void barcodeDefaultsWhenNoOptionAttributes() {
+    final List<Block> blocks = Document.from("<bar-code>12345678</bar-code>").blocks();
+
+    final Barcode barcode = assertInstanceOf(Barcode.class, blocks.get(0));
+    assertEquals(BarcodeOptions.DEFAULT, barcode.options());
+  }
+
+  @Test
+  void barcodeParsesOptionAttributes() {
+    final List<Block> blocks = Document
+        .from("<bar-code symbology=\"qr\" height=\"60\" module=\"8\" hri=\"none\" ec=\"h\">hi</bar-code>")
+        .blocks();
+
+    final Barcode barcode = assertInstanceOf(Barcode.class, blocks.get(0));
+    assertEquals(new BarcodeOptions(60, 8, BarcodeOptions.Hri.NONE, BarcodeOptions.QrEc.H), barcode.options());
+  }
+
+  @Test
+  void barcodeClampsOutOfRangeOptionAttributes() {
+    final List<Block> blocks = Document.from("<bar-code height=\"9000\" module=\"-5\">12345678</bar-code>").blocks();
+
+    final Barcode barcode = assertInstanceOf(Barcode.class, blocks.get(0));
+    assertEquals(255, barcode.options().heightDots());
+    assertEquals(0, barcode.options().moduleSize());
+  }
+
+  @Test
   void barcodeTextIsNotAlsoAParagraph() {
     final List<Block> blocks = Document.from("<bar-code>12345678</bar-code><p>after</p>").blocks();
 

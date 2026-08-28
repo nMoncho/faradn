@@ -79,7 +79,13 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
     if (isBarcode(el)) {
       flushParagraph();
       barcodeData(el).ifPresent(data -> blocks
-          .add(new Barcode(data, barcodeSymbology(el).orElse(null), styles.peek().alignment())));
+          .add(new Barcode(
+            data,
+            barcodeSymbology(el).orElse(null),
+            styles.peek().alignment(),
+            barcodeOptions(el))
+          )
+      );
       consumedSubtree = el;
     } else if (tag.equals("table")) {
       flushParagraph();
@@ -196,6 +202,48 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
         .map(name -> name.substring(BARCODE_CLASS_PREFIX.length()))
         .filter(name -> !name.isBlank())
         .findFirst();
+  }
+
+  private static BarcodeOptions barcodeOptions(Element el) {
+    final int height = intAttr(el, "height", BarcodeOptions.DEFAULT.heightDots());
+    final int module = intAttr(el, "module", BarcodeOptions.DEFAULT.moduleSize());
+    // Clamp rather than reject: HTML attributes are lenient input.
+    return new BarcodeOptions(clamp(height, 1, 255), clamp(module, 0, 16),
+        hriOf(el.attr("hri")), qrEcOf(el.attr("ec")));
+  }
+
+  private static int intAttr(Element el, String name, int fallback) {
+    final String raw = el.attr(name).strip();
+    if (raw.isEmpty()) {
+      return fallback;
+    }
+    try {
+      return Integer.parseInt(raw);
+    } catch (NumberFormatException ignored) {
+      return fallback;
+    }
+  }
+
+  private static int clamp(int value, int min, int max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  private static BarcodeOptions.Hri hriOf(String raw) {
+    return switch (raw.strip().toLowerCase()) {
+      case "none", "off" -> BarcodeOptions.Hri.NONE;
+      case "above", "top" -> BarcodeOptions.Hri.ABOVE;
+      case "both" -> BarcodeOptions.Hri.BOTH;
+      default -> BarcodeOptions.Hri.BELOW;
+    };
+  }
+
+  private static BarcodeOptions.QrEc qrEcOf(String raw) {
+    return switch (raw.strip().toLowerCase()) {
+      case "l" -> BarcodeOptions.QrEc.L;
+      case "q" -> BarcodeOptions.QrEc.Q;
+      case "h" -> BarcodeOptions.QrEc.H;
+      default -> BarcodeOptions.QrEc.M;
+    };
   }
 
   private static Optional<Table> buildTable(Element table, ComputedStyle base) {
