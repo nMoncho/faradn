@@ -98,7 +98,10 @@ public final class EscPosRenderer {
       }
     }
 
-    endOfJob(out);
+    // Avoid double cutting if job already has a cut
+    final boolean endsWithCut = !blocks.isEmpty() && blocks.get(blocks.size() - 1) instanceof Cut;
+    endOfJob(out, endsWithCut);
+
     return out.toByteArray();
   }
 
@@ -249,7 +252,11 @@ public final class EscPosRenderer {
     return applyInlineStyle(out, current, cleared);
   }
 
-  private void endOfJob(ByteArrayOutputStream out) {
+  private void endOfJob(ByteArrayOutputStream out, boolean alreadyCut) {
+    // A document that ends with an explicit Cut has already framed its end.
+    if (alreadyCut) {
+      return;
+    }
     out.writeBytes(PrintCommands.PRINT_AND_FEED_LINES.getCode(Lines.of(END_OF_JOB_FEED_LINES)));
     if (profile.supportsCut()) {
       out.writeBytes(cutCommand(true));

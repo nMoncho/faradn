@@ -138,7 +138,8 @@ public class EscPosRendererTest {
   void fullCutBlock() {
     byte[] out = renderer.render(List.of(new Cut(false)));
 
-    assertBytes(cat(HEAD, FULL_CUT, FEED_4, PARTIAL_CUT), out);
+    // An explicit trailing Cut suppresses the renderer's own end-of-job cut.
+    assertBytes(cat(HEAD, FULL_CUT), out);
   }
 
   @Test
