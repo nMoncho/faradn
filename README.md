@@ -134,6 +134,7 @@ golden-byte tests.
 | `<b>`, `<strong>`                 | bold                                                                                                       |
 | `<u>`                             | underline                                                                                                  |
 | `<small>`                         | narrower Font B (`ESC M`) - more columns per line                                                          |
+| `<span>`                          | inline styling span - applies its inline CSS (below) to the enclosed text                                  |
 | `<h1>`                            | bold, double width and height                                                                              |
 | `<h2>`                            | bold, double height                                                                                        |
 | `<h3>`                            | bold                                                                                                       |
@@ -147,6 +148,10 @@ golden-byte tests.
 | `<em>`, `<i>`                     | ignored - ESC/POS printers have no italic                                                                  |
 
 **Inline CSS**
+
+Applies to any element (`<span style="…">` is the usual carrier for styling a section of
+text, but the same properties work on `<p>`, `<td>`, headings, and so on), and overrides
+the tag defaults:
 
 - `font-weight` (`bold`, `bolder`, `600`–`900` ⇒ bold; `normal` switches it off)
 - `text-decoration` / `text-decoration-line` (`underline`, `none`)

@@ -252,6 +252,47 @@ public class BlockBuilderTest {
   }
 
   @Test
+  void spanAppliesInlineStyleToASection() {
+    final List<Block> blocks = Document.from("<p>a<span style=\"font-weight: bold\">b</span>c</p>").blocks();
+
+    final Paragraph paragraph = assertInstanceOf(Paragraph.class, blocks.get(0));
+    assertEquals(3, paragraph.runs().size());
+    assertEquals("a", paragraph.runs().get(0).text());
+    assertFalse(paragraph.runs().get(0).style().bold());
+    assertEquals("b", paragraph.runs().get(1).text());
+    assertTrue(paragraph.runs().get(1).style().bold());
+    assertEquals("c", paragraph.runs().get(2).text());
+    assertFalse(paragraph.runs().get(2).style().bold());
+  }
+
+  @Test
+  void spanCanOverrideAnInheritedStyle() {
+    // A <span> can switch a style off again, e.g. un-bold a section inside a heading.
+    final List<Block> blocks = Document
+        .from("<h3>Title <span style=\"font-weight: normal\">sub</span></h3>").blocks();
+
+    final Paragraph paragraph = assertInstanceOf(Paragraph.class, blocks.get(0));
+    assertEquals(2, paragraph.runs().size());
+    assertEquals("Title ", paragraph.runs().get(0).text());
+    assertTrue(paragraph.runs().get(0).style().bold());
+    assertEquals("sub", paragraph.runs().get(1).text());
+    assertFalse(paragraph.runs().get(1).style().bold());
+  }
+
+  @Test
+  void spanInsideACellStylesPartOfItsContent() {
+    final List<Block> blocks = Document
+        .from("<table><tr><td>x<span style=\"text-decoration: underline\">y</span></td></tr></table>").blocks();
+
+    final Cell cell = assertInstanceOf(Table.class, blocks.get(0)).rows().get(0).get(0);
+    assertEquals(2, cell.content().size());
+    assertEquals("x", cell.content().get(0).text());
+    assertFalse(cell.content().get(0).style().underline());
+    assertEquals("y", cell.content().get(1).text());
+    assertTrue(cell.content().get(1).style().underline());
+  }
+
+  @Test
   void emptyDocumentYieldsNoBlocks() {
     assertTrue(Document.from("<div>   \n  </div>").blocks().isEmpty());
   }

@@ -186,6 +186,15 @@ public class EscPosRendererTest {
   }
 
   @Test
+  void spanStylesInlineSectionFromHtml() {
+    byte[] out = renderer.render(
+        Document.from("<p>a<span style=\"font-weight: bold; text-decoration: underline\">b</span>c</p>").blocks());
+
+    assertBytes(cat(HEAD, "a", BOLD_ON, UNDERLINE_ON, "b", BOLD_OFF, UNDERLINE_OFF, "c",
+        LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
   void longWordHardWrapsAtTheColumnBudget() {
     byte[] out = renderer.render(List.of(
         new Paragraph(List.of(new TextRun("x".repeat(50), ComputedStyle.INITIAL)), Alignment.LEFT)));
