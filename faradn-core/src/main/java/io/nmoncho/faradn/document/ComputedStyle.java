@@ -1,6 +1,7 @@
 package io.nmoncho.faradn.document;
 
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
 
 import org.jsoup.nodes.Element;
@@ -20,12 +21,26 @@ import io.nmoncho.faradn.Utils;
  * used to detect style transitions.
  */
 public record ComputedStyle(boolean bold, boolean underline, int widthMultiple, int heightMultiple,
-    Alignment alignment, boolean invert) {
+    Alignment alignment, boolean invert, int font) {
 
   public static final int MIN_SIZE_MULTIPLE = 1;
   public static final int MAX_SIZE_MULTIPLE = 8;
 
-  /** Style at the root of a document: plain left-aligned text at base size. */
+  /**
+   * Selected font, as an {@code ESC M} slot: 0 is Font&nbsp;A (the default), 1
+   * Font&nbsp;B, 2 Font&nbsp;C, and so on. Which slots a printer actually has,
+   * and their column budgets, are a profile concern; the style only records the
+   * choice. See {@link io.nmoncho.faradn.printer.Font}.
+   */
+  public static final int DEFAULT_FONT = 0;
+
+  /** The font slot {@code <small>} selects (Font B). */
+  private static final int SMALL_FONT = 1;
+
+  /**
+   * Style at the root of a document: plain left-aligned text at base size, Font
+   * A.
+   */
   public static final ComputedStyle INITIAL = new ComputedStyle(false, false, 1, 1, Alignment.LEFT, false);
 
   private static final Set<String> BOLD_TAGS = Set.of("b", "strong");
@@ -62,6 +77,15 @@ public record ComputedStyle(boolean bold, boolean underline, int widthMultiple, 
     if (alignment == null) {
       throw new IllegalArgumentException("alignment must not be null");
     }
+    if (font < 0) {
+      throw new IllegalArgumentException("font slot must be >= 0, got " + font);
+    }
+  }
+
+  /** A style at the base font (Font A). */
+  public ComputedStyle(boolean bold, boolean underline, int widthMultiple, int heightMultiple,
+      Alignment alignment, boolean invert) {
+    this(bold, underline, widthMultiple, heightMultiple, alignment, invert, DEFAULT_FONT);
   }
 
   /**
@@ -79,6 +103,7 @@ public record ComputedStyle(boolean bold, boolean underline, int widthMultiple, 
     int newWidth = widthMultiple;
     int newHeight = heightMultiple;
     Alignment newAlignment = alignment;
+    int newFont = font;
 
     // Tag defaults. <em>/<i> are deliberately absent: ESC/POS has no italic.
     final String tag = el.normalName();
@@ -97,6 +122,8 @@ public record ComputedStyle(boolean bold, boolean underline, int widthMultiple, 
       newBold = true;
     } else if (tag.equals("center")) {
       newAlignment = Alignment.CENTER;
+    } else if (tag.equals("small")) {
+      newFont = SMALL_FONT;
     }
 
     // Inline CSS overrides tag defaults
@@ -119,9 +146,35 @@ public record ComputedStyle(boolean bold, boolean underline, int widthMultiple, 
       newAlignment = textAlign.get();
     }
 
+    final Optional<String> fontFamily = Utils.findStyleValue(el, "font-family");
+    if (fontFamily.isPresent()) {
+      final OptionalInt slot = fontSlotFromCss(fontFamily.get());
+      if (slot.isPresent()) {
+        newFont = slot.getAsInt();
+      }
+    }
+
     final ComputedStyle computed = new ComputedStyle(newBold, newUnderline, newWidth, newHeight, newAlignment,
-        invert);
+        invert, newFont);
 
     return equals(computed) ? this : computed;
+  }
+
+  /**
+   * Maps a CSS {@code font-family} value to a font slot: {@code font-a} → 0,
+   * {@code font-b} → 1, {@code font-c} → 2, and so on. The first recognized
+   * family in the list wins; other names (real font stacks) are ignored.
+   */
+  private static OptionalInt fontSlotFromCss(String value) {
+    for (String token : value.toLowerCase().split(",")) {
+      final String name = token.strip().replace("\"", "").replace("'", "");
+      if (name.length() == 6 && name.startsWith("font-")) {
+        final char letter = name.charAt(5);
+        if (letter >= 'a' && letter <= 'z') {
+          return OptionalInt.of(letter - 'a');
+        }
+      }
+    }
+    return OptionalInt.empty();
   }
 }

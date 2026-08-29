@@ -17,8 +17,33 @@ public interface PrinterProfile {
   /** Printable width in dots (e.g. 512 for an 80&nbsp;mm TM-T88V). */
   int dotsPerLine();
 
-  /** Characters per line at the base font (Font A). */
-  int columns();
+  /**
+   * The fonts this printer offers, ascending by {@code ESC M} slot. Slot&nbsp;0
+   * (Font&nbsp;A) is always present; a printer may add Font&nbsp;B, Font&nbsp;C,
+   * and so on, each narrower (more columns) than the last.
+   */
+  List<Font> fonts();
+
+  /**
+   * The font for a given {@code ESC M} slot, or the default font when the printer
+   * has no such slot.
+   */
+  default Font font(int slot) {
+    return fonts().stream().filter(f -> f.id() == slot).findFirst().orElseGet(this::defaultFont);
+  }
+
+  /**
+   * The font selected at reset (slot&nbsp;0, Font&nbsp;A), or the lowest slot the
+   * printer has.
+   */
+  default Font defaultFont() {
+    return fonts().stream().filter(f -> f.id() == 0).findFirst().orElseGet(() -> fonts().get(0));
+  }
+
+  /** Characters per line at the base font (Font&nbsp;A). */
+  default int columns() {
+    return defaultFont().columns();
+  }
 
   /** Print resolution in dots per inch. */
   int dpi();
@@ -60,8 +85,9 @@ public interface PrinterProfile {
    *        Human-readable profile name, e.g. {@code "Epson TM-T88V"}
    * @param dotsPerLine
    *        Printable width in dots (e.g. 512 for an 80&nbsp;mm TM-T88V)
-   * @param columns
-   *        Characters per line at the base font (Font A)
+   * @param fonts
+   *        the printer's fonts, ascending by slot (must be non-empty and
+   *        include slot&nbsp;0, Font&nbsp;A)
    * @param dpi
    *        Print resolution in dots per inch
    * @param supportsCut
@@ -71,13 +97,19 @@ public interface PrinterProfile {
    *        non-empty); the default is the slot&nbsp;0 page, or the first
    * @return a profile backed by the given values
    */
-  static PrinterProfile of(String name, int dotsPerLine, int columns, int dpi, boolean supportsCut,
-      List<CodePage> codePages) {
+  static PrinterProfile of(String name, int dotsPerLine, List<Font> fonts, int dpi,
+      boolean supportsCut, List<CodePage> codePages) {
     if (codePages == null || codePages.isEmpty()) {
       throw new IllegalArgumentException("codePages must not be empty");
     }
+    if (fonts == null || fonts.isEmpty()) {
+      throw new IllegalArgumentException("fonts must not be empty");
+    }
+
     final List<CodePage> pages = List.copyOf(codePages);
+    final List<Font> fontList = List.copyOf(fonts);
     final CodePage defaultPage = pages.stream().filter(page -> page.id() == 0).findFirst().orElse(pages.get(0));
+
     return new PrinterProfile() {
 
       @Override
@@ -91,8 +123,8 @@ public interface PrinterProfile {
       }
 
       @Override
-      public int columns() {
-        return columns;
+      public List<Font> fonts() {
+        return fontList;
       }
 
       @Override

@@ -17,11 +17,25 @@ class PrinterProfileLoadTest {
 
     assertEquals("Epson TM-T88V", profile.name());
     assertEquals(512, profile.dotsPerLine());
-    assertEquals(42, profile.columns());
+    assertEquals(42, profile.columns()); // Font A
+    assertEquals(56, profile.font(1).columns()); // Font B
     assertEquals(180, profile.dpi());
     assertTrue(profile.supportsCut());
     assertEquals(0, profile.codePage().id());
     assertEquals(Charset.forName("IBM437"), profile.codePage().charset());
+  }
+
+  @Test
+  void loadsAllFontsFromTheDatabase() {
+    // The Citizen CT-S651 lists three fonts in the database (48 / 64 / 72 columns).
+    PrinterProfile profile = PrinterProfile.load("CT-S651").orElseThrow();
+
+    assertEquals(3, profile.fonts().size());
+    assertEquals(48, profile.font(0).columns()); // Font A
+    assertEquals(64, profile.font(1).columns()); // Font B
+    assertEquals(72, profile.font(2).columns()); // Font C
+    assertEquals(48, profile.columns()); // default is Font A
+    assertEquals(48, profile.font(99).columns()); // an absent slot falls back to the default font
   }
 
   @Test

@@ -29,6 +29,7 @@ import io.nmoncho.faradn.document.Rule;
 import io.nmoncho.faradn.document.Table;
 import io.nmoncho.faradn.document.TextRun;
 import io.nmoncho.faradn.printer.CodePage;
+import io.nmoncho.faradn.printer.Font;
 import io.nmoncho.faradn.printer.PrinterProfile;
 import io.nmoncho.faradn.printer.escpos.commands.BarcodeCommands;
 
@@ -57,6 +58,9 @@ public class EscPosRendererTest {
   private static final byte[] FEED_4 = { ESC, 0x64, 0x04 };
   private static final byte[] PARTIAL_CUT = { GS, 0x56, 0x01 };
   private static final byte[] FULL_CUT = { GS, 0x56, 0x00 };
+  private static final byte[] SELECT_FONT_B = { ESC, 0x4D, 0x01 };
+  private static final byte[] SELECT_FONT_A = { ESC, 0x4D, 0x00 };
+  private static final ComputedStyle FONT_B = new ComputedStyle(false, false, 1, 1, Alignment.LEFT, false, 1);
 
   private static final PrinterProfile TM_T88V = PrinterProfile.load("TM-T88V").orElseThrow();
 
@@ -69,7 +73,7 @@ public class EscPosRendererTest {
   private final EscPosRenderer renderer = new EscPosRenderer(TM_T88V);
   // A profile with a small, known code-page set for deterministic switching tests.
   private final EscPosRenderer multiPage = new EscPosRenderer(
-      PrinterProfile.of("Multi-page", 512, 42, 180, true, List.of(PC437, WPC1252, PC866, PC852)));
+      PrinterProfile.of("Multi-page", 512, List.of(new Font(0, 42)), 180, true, List.of(PC437, WPC1252, PC866, PC852)));
 
   @Test
   void plainParagraph() {
@@ -385,6 +389,63 @@ public class EscPosRendererTest {
   }
 
   @Test
+  void fontBParagraphSelectsFontAndWrapsWide() {
+    // Font B fits 8 columns where Font A fits 4, so the 8-char run stays on one line.
+    byte[] out = new EscPosRenderer(fontBProfile(4, 8)).render(List.of(
+        new Paragraph(List.of(new TextRun("abcdefgh", FONT_B)), Alignment.LEFT)));
+
+    assertBytes(cat(HEAD, SELECT_FONT_B, "abcdefgh", SELECT_FONT_A, LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void smallElementRendersInFontB() {
+    byte[] out = new EscPosRenderer(fontBProfile(42, 56))
+        .render(Document.from("<small>hi</small>").blocks());
+
+    assertBytes(cat(HEAD, SELECT_FONT_B, "hi", SELECT_FONT_A, LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void mixedFontParagraphSwitchesPerRun() {
+    byte[] out = new EscPosRenderer(fontBProfile(42, 56))
+        .render(Document.from("<p>a<small>b</small></p>").blocks());
+
+    assertBytes(cat(HEAD, "a", SELECT_FONT_B, "b", SELECT_FONT_A, LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void fontBTableUsesNarrowColumnBudget() {
+    // The cell is Font B, so the table uses the wider Font B budget (6, not 2):
+    // "abc" fits with three trailing pad instead of overflowing a 2-wide column.
+    byte[] out = new EscPosRenderer(fontBProfile(2, 6))
+        .render(Document.from("<table><tr><td><small>abc</small></td></tr></table>").blocks());
+
+    assertBytes(cat(HEAD, SELECT_FONT_B, "abc", SELECT_FONT_A, "   ", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void fontFamilyCssMakesWholeTableFontB() {
+    // font-family on the table applies Font B to every cell (which <small> can't wrap).
+    byte[] out = new EscPosRenderer(fontBProfile(2, 6))
+        .render(Document.from("<table style=\"font-family: font-b\"><tr><td>abc</td></tr></table>").blocks());
+
+    assertBytes(cat(HEAD, SELECT_FONT_B, "abc", SELECT_FONT_A, "   ", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void fontCSelectedByCssUsesItsColumnBudget() {
+    // A 3-font printer: font-c is slot 2 (ESC M 2) with a 10-column budget.
+    PrinterProfile threeFonts = PrinterProfile.of("three", 512,
+        List.of(new Font(0, 4), new Font(1, 6), new Font(2, 10)), 180, true, List.of(PC437));
+
+    byte[] out = new EscPosRenderer(threeFonts)
+        .render(Document.from("<p style=\"font-family: font-c\">abcdefghij</p>").blocks());
+
+    byte[] selectFontC = { ESC, 0x4D, 0x02 };
+    assertBytes(cat(HEAD, selectFontC, "abcdefghij", SELECT_FONT_A, LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
   void nullProfileIsRejected() {
     assertThrows(IllegalArgumentException.class, () -> new EscPosRenderer(null));
   }
@@ -392,7 +453,12 @@ public class EscPosRendererTest {
   // ----- helpers -----
 
   private static PrinterProfile profile(int columns, CodePage codePage) {
-    return PrinterProfile.of("test", 512, columns, 180, true, List.of(codePage));
+    return PrinterProfile.of("test", 512, List.of(new Font(0, columns)), 180, true, List.of(codePage));
+  }
+
+  private static PrinterProfile fontBProfile(int columns, int narrowColumns) {
+    return PrinterProfile.of("fontb", 512, List.of(new Font(0, columns), new Font(1, narrowColumns)), 180, true,
+        List.of(PC437));
   }
 
   private static CodePage page(int id, String charset) {

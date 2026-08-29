@@ -28,7 +28,8 @@ public class CharacterCommands {
   public static BooleanCode UNDERLINE = new BooleanCode(new byte[] { Code.ESC, 0x2D });
   public static BooleanCode EMPHASIZED = new BooleanCode(new byte[] { Code.ESC, 0x45 });
   public static BooleanCode DOUBLE_STRIKE = new BooleanCode(new byte[] { Code.ESC, 0x47 });
-  // TODO 'SELECT_FONT'
+  // ESC M n: select character font by slot (0 = Font A, 1 = Font B, 2 = Font C, …);
+  // emitted inline by the renderer since the slot is an arbitrary number, not a flag.
   // TODO 'SELECT_INTERNATIONAL_SET'
   public static BooleanCode TURN_UPSIDE = new BooleanCode(new byte[] { Code.ESC, 0x7B });
   public static BooleanCode REVERSE_BACKGROUND = new BooleanCode(new byte[] { Code.GS, 0x42 });

@@ -117,7 +117,7 @@ public final class EscPosRenderer {
       Paragraph paragraph) {
     current = applyAlignment(out, current, paragraph.alignment());
 
-    final List<List<TextRun>> lines = TextWrapper.wrap(paragraph.runs(), profile.columns());
+    final List<List<TextRun>> lines = TextWrapper.wrap(paragraph.runs(), effectiveColumns(paragraph.runs()));
     for (int i = 0; i < lines.size(); i++) {
       for (TextRun segment : lines.get(i)) {
         current = applyInlineStyle(out, current, segment.style());
@@ -163,7 +163,7 @@ public final class EscPosRenderer {
     if (columnCount == 0) {
       return current;
     }
-    final int[] widths = columnWidths(table, columnCount);
+    final int[] widths = columnWidths(table, columnCount, tableColumns(table));
 
     for (List<Cell> row : table.rows()) {
       final List<PlacedCell> placed = placeRow(row, widths, columnCount);
@@ -237,14 +237,47 @@ public final class EscPosRenderer {
   }
 
   /**
+   * The column budget for a run of text: the smallest column count among the
+   * fonts its runs use. A uniform-font run gets that font's full budget; a mixed
+   * one gets the narrowest-glyph (fewest-columns) font's budget, so it never
+   * overflows.
+   */
+  private int effectiveColumns(List<TextRun> runs) {
+    if (runs.isEmpty()) {
+      return profile.columns();
+    }
+    int columns = Integer.MAX_VALUE;
+    for (TextRun run : runs) {
+      columns = Math.min(columns, profile.font(run.style().font()).columns());
+    }
+    return columns;
+  }
+
+  /**
+   * A table's column budget is the smallest column count among the fonts its
+   * cells use.
+   */
+  private int tableColumns(Table table) {
+    int columns = Integer.MAX_VALUE;
+    for (List<Cell> row : table.rows()) {
+      for (Cell cell : row) {
+        for (TextRun run : cell.content()) {
+          columns = Math.min(columns, profile.font(run.style().font()).columns());
+        }
+      }
+    }
+    return columns == Integer.MAX_VALUE ? profile.columns() : columns;
+  }
+
+  /**
    * Column widths sized to content: each column takes the widest content among
    * the
    * single-column cells in it, then the leftover is handed out proportionally to
    * fill the line (or content is shrunk proportionally when it overflows the
    * budget).
    */
-  private int[] columnWidths(Table table, int columnCount) {
-    final int available = Math.max(columnCount, profile.columns() - (columnCount - 1) * TABLE_COLUMN_GUTTER);
+  private int[] columnWidths(Table table, int columnCount, int columns) {
+    final int available = Math.max(columnCount, columns - (columnCount - 1) * TABLE_COLUMN_GUTTER);
     final int[] natural = new int[columnCount];
     for (List<Cell> row : table.rows()) {
       int col = 0;
@@ -395,8 +428,11 @@ public final class EscPosRenderer {
           ? CharacterCommands.REVERSE_BACKGROUND.turnOn()
           : CharacterCommands.REVERSE_BACKGROUND.turnOff());
     }
+    if (current.font() != target.font()) {
+      out.writeBytes(new byte[] { Code.ESC, 0x4D, (byte) target.font() }); // ESC M: select font slot
+    }
     return new ComputedStyle(target.bold(), target.underline(), target.widthMultiple(), target.heightMultiple(),
-        current.alignment(), target.invert());
+        current.alignment(), target.invert(), target.font());
   }
 
   /** Turns off every per-run attribute, emitting only what is currently on. */
@@ -422,7 +458,7 @@ public final class EscPosRenderer {
 
   private static ComputedStyle withAlignment(ComputedStyle style, Alignment alignment) {
     return new ComputedStyle(style.bold(), style.underline(), style.widthMultiple(), style.heightMultiple(),
-        alignment, style.invert());
+        alignment, style.invert(), style.font());
   }
 
   private static Justification justification(Alignment alignment) {

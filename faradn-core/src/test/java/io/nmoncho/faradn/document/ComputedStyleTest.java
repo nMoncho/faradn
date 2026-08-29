@@ -40,6 +40,28 @@ public class ComputedStyleTest {
   }
 
   @Test
+  void smallTagSelectsFontB() {
+    assertEquals(0, ComputedStyle.INITIAL.font());
+    assertEquals(1, ComputedStyle.INITIAL.process(element("<small>x</small>")).font());
+  }
+
+  @Test
+  void fontFamilyCssSelectsFontSlot() {
+    assertEquals(1, ComputedStyle.INITIAL.process(element("<span style=\"font-family: font-b\">x</span>")).font());
+    assertEquals(0, ComputedStyle.INITIAL.process(element("<span style=\"font-family: font-a\">x</span>")).font());
+    assertEquals(2, ComputedStyle.INITIAL.process(element("<span style=\"font-family: font-c\">x</span>")).font());
+    // A quoted name inside a font stack still matches.
+    assertEquals(1,
+        ComputedStyle.INITIAL.process(element("<div style=\"font-family: 'font-b', monospace\">x</div>")).font());
+  }
+
+  @Test
+  void fontFamilyCssOverridesSmallTag() {
+    assertEquals(0,
+        ComputedStyle.INITIAL.process(element("<small style=\"font-family: font-a\">x</small>")).font());
+  }
+
+  @Test
   void headings() {
     final ComputedStyle h1 = ComputedStyle.INITIAL.process(element("<h1>x</h1>"));
     assertTrue(h1.bold());

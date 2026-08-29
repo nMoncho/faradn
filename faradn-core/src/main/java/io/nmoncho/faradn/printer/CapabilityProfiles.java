@@ -68,14 +68,18 @@ final class CapabilityProfiles {
 
   private static Optional<PrinterProfile> build(String key, Config profile) {
     final OptionalInt dotsPerLine = intAt(profile, "media.width.pixels");
-    final OptionalInt columns = fontAColumns(profile);
-    if (dotsPerLine.isEmpty() || columns.isEmpty()) {
-      return Optional.empty(); // width or column budget unknown: not renderable
+    final List<Font> fonts = fonts(profile);
+    final boolean hasFontA = fonts.stream().anyMatch(font -> font.id() == 0);
+
+    if (dotsPerLine.isEmpty() || !hasFontA) {
+      return Optional.empty(); // width or Font A column budget unknown: not renderable
     }
+
     final int dpi = intAt(profile, "media.dpi").orElse(0);
     final boolean supportsCut = flag(profile, "features.paperPartCut") || flag(profile, "features.paperFullCut");
+
     return Optional.of(PrinterProfile.of(displayName(key, profile), dotsPerLine.getAsInt(),
-        columns.getAsInt(), dpi, supportsCut, codePages(profile)));
+        fonts, dpi, supportsCut, codePages(profile)));
   }
 
   private static String displayName(String key, Config profile) {
@@ -84,19 +88,33 @@ final class CapabilityProfiles {
     if (vendor.isEmpty() || name.toLowerCase().startsWith(vendor.toLowerCase())) {
       return name;
     }
+
     return vendor + " " + name;
   }
 
-  /** Font A (slot {@code "0"}) sets the base column budget. */
-  private static OptionalInt fontAColumns(Config profile) {
-    if (!profile.hasPath("fonts")) {
-      return OptionalInt.empty();
+  /**
+   * The printer's fonts, from its {@code fonts} map (slot id → {@code columns}).
+   * Slot 0 is Font A, 1 Font B, 2 Font C, …; slots without a numeric column
+   * count are skipped. Ordered by slot id.
+   */
+  private static List<Font> fonts(Config profile) {
+    final List<Font> fonts = new ArrayList<>();
+
+    if (profile.hasPath("fonts")) {
+      for (Map.Entry<String, ConfigValue> slot : profile.getObject("fonts").entrySet()) {
+        final OptionalInt id = parseId(slot.getKey());
+
+        if (id.isEmpty() || !(slot.getValue() instanceof ConfigObject font)) {
+          continue;
+        }
+
+        intAt(font.toConfig(), "columns").ifPresent(columns -> fonts.add(new Font(id.getAsInt(), columns)));
+      }
     }
-    final ConfigValue fontA = profile.getObject("fonts").get("0");
-    if (fontA instanceof ConfigObject font) {
-      return intAt(font.toConfig(), "columns");
-    }
-    return OptionalInt.empty();
+
+    fonts.sort(Comparator.comparingInt(Font::id));
+
+    return List.copyOf(fonts);
   }
 
   /**

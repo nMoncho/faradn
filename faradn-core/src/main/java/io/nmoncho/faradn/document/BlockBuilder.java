@@ -315,7 +315,7 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
    */
   private static ComputedStyle asHeader(ComputedStyle style) {
     return new ComputedStyle(true, style.underline(), style.widthMultiple(), style.heightMultiple(),
-        style.alignment(), style.invert());
+        style.alignment(), style.invert(), style.font());
   }
 
   private static int colSpan(Element cell) {

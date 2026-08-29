@@ -129,27 +129,32 @@ golden-byte tests.
 
 **Tags**
 
-| Markup                            | Effect                                                           |
-|-----------------------------------|------------------------------------------------------------------|
-| `<b>`, `<strong>`                 | bold                                                             |
-| `<u>`                             | underline                                                        |
-| `<h1>`                            | bold, double width and height                                    |
-| `<h2>`                            | bold, double height                                              |
-| `<h3>`                            | bold                                                             |
-| `<center>`                        | centered                                                         |
-| `<p>`, `<div>`, headings          | paragraph (block) boundaries                                     |
-| `<ul>`, `<ol>`, `<li>`            | list items with `- ` / `1. ` markers (nested indents)            |
-| `<pre>`                           | preformatted: whitespace and line breaks preserved               |
-| `<br>`, `<hr>`                    | line break, horizontal rule                                      |
+| Markup                            | Effect                                                                                                     |
+|-----------------------------------|------------------------------------------------------------------------------------------------------------|
+| `<b>`, `<strong>`                 | bold                                                                                                       |
+| `<u>`                             | underline                                                                                                  |
+| `<small>`                         | narrower Font B (`ESC M`) - more columns per line                                                          |
+| `<h1>`                            | bold, double width and height                                                                              |
+| `<h2>`                            | bold, double height                                                                                        |
+| `<h3>`                            | bold                                                                                                       |
+| `<center>`                        | centered                                                                                                   |
+| `<p>`, `<div>`, headings          | paragraph (block) boundaries                                                                               |
+| `<ul>`, `<ol>`, `<li>`            | list items with `- ` / `1. ` markers (nested indents)                                                      |
+| `<pre>`                           | preformatted: whitespace and line breaks preserved                                                         |
+| `<br>`, `<hr>`                    | line break, horizontal rule                                                                                |
 | `<table>`, `<tr>`, `<td>`, `<th>` | character-grid table: content-sized columns, `colspan`, per-cell `text-align`, inline styling, bold `<th>` |
-| `<img>`                           | image (URL or Base64 `data:` URI; PNG, JPEG, BMP, WBMP)          |
-| `<em>`, `<i>`                     | ignored - ESC/POS printers have no italic                        |
+| `<img>`                           | image (URL or Base64 `data:` URI; PNG, JPEG, BMP, WBMP)                                                    |
+| `<em>`, `<i>`                     | ignored - ESC/POS printers have no italic                                                                  |
 
 **Inline CSS**
 
 - `font-weight` (`bold`, `bolder`, `600`–`900` ⇒ bold; `normal` switches it off)
 - `text-decoration` / `text-decoration-line` (`underline`, `none`)
 - `text-align` (`left`, `center`, `right`)
+- `font-family` (`font-a`, `font-b`, `font-c`, …): select a font by slot (`font-a` is
+  Font A, `font-b` Font B, and so on for printers with more fonts); unlike `<small>` it
+  works on blocks, so `<table style="font-family: font-b">` renders the whole table in that
+  font. The available fonts and their widths come from the capability database.
 
 **Barcodes**
 
@@ -243,7 +248,7 @@ The `macos-aarch64` Maven profile then wires it in automatically.
 - [ ] Publish `faradn-core` to Maven Central and native binaries to GitHub Releases
 - [x] List markers, preformatted text, per-barcode options, aligned table cells
 - [x] Per-run code page switching for mixed-script text
-- [ ] Table colspan and column widths
+- [x] Table colspan and column widths
 - [x] Printer capability database: load profiles by device name from [escpos-printer-db](https://github.com/receipt-print-hq/escpos-printer-db)
 - [ ] Raster fallback for complex layouts
 
