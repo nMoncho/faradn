@@ -30,6 +30,9 @@ public class CharacterCommands {
   public static BooleanCode DOUBLE_STRIKE = new BooleanCode(new byte[] { Code.ESC, 0x47 });
   // ESC M n: select character font by slot (0 = Font A, 1 = Font B, 2 = Font C, …);
   // emitted inline by the renderer since the slot is an arbitrary number, not a flag.
+  // ESC 4 / ESC 5: select / cancel italic (ESC/P); printers with italic honour it, the rest ignore it.
+  public static Code SELECT_ITALIC = new SimpleCode("ESC 4", new byte[] { Code.ESC, 0x34 });
+  public static Code CANCEL_ITALIC = new SimpleCode("ESC 5", new byte[] { Code.ESC, 0x35 });
   // TODO 'SELECT_INTERNATIONAL_SET'
   public static BooleanCode TURN_UPSIDE = new BooleanCode(new byte[] { Code.ESC, 0x7B });
   public static BooleanCode REVERSE_BACKGROUND = new BooleanCode(new byte[] { Code.GS, 0x42 });

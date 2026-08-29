@@ -311,11 +311,12 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
 
   /**
    * {@code
-   * <th>} is bold; the rest of the cell's style carries through.
+   *
+  <th>} is bold; the rest of the cell's style carries through.
    */
   private static ComputedStyle asHeader(ComputedStyle style) {
     return new ComputedStyle(true, style.underline(), style.widthMultiple(), style.heightMultiple(),
-        style.alignment(), style.invert(), style.font());
+        style.alignment(), style.invert(), style.font(), style.italic());
   }
 
   private static int colSpan(Element cell) {

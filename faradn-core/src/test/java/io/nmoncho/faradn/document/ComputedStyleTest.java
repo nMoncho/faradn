@@ -85,11 +85,23 @@ public class ComputedStyleTest {
   }
 
   @Test
-  void italicTagsHaveNoEffect() {
-    // ESC/POS has no italic: <em>/<i> must not change the style, and an
-    // unchanged style must be the same instance
-    assertSame(ComputedStyle.INITIAL, ComputedStyle.INITIAL.process(element("<em>x</em>")));
-    assertSame(ComputedStyle.INITIAL, ComputedStyle.INITIAL.process(element("<i>x</i>")));
+  void italicTags() {
+    assertTrue(ComputedStyle.INITIAL.process(element("<em>x</em>")).italic());
+    assertTrue(ComputedStyle.INITIAL.process(element("<i>x</i>")).italic());
+  }
+
+  @Test
+  void fontStyleCssSelectsItalic() {
+    assertTrue(ComputedStyle.INITIAL.process(element("<span style=\"font-style: italic\">x</span>")).italic());
+    assertTrue(ComputedStyle.INITIAL.process(element("<span style=\"font-style: oblique\">x</span>")).italic());
+    // font-style: normal switches italic off again inside an <em>
+    assertFalse(ComputedStyle.INITIAL.process(element("<em style=\"font-style: normal\">x</em>")).italic());
+  }
+
+  @Test
+  void unstyledElementReturnsTheSameInstance() {
+    // An element that changes nothing returns this, so identity detects transitions.
+    assertSame(ComputedStyle.INITIAL, ComputedStyle.INITIAL.process(element("<span>x</span>")));
   }
 
   @Test

@@ -11,17 +11,17 @@ import io.nmoncho.faradn.Utils;
 /**
  * Fully resolved, printer-realizable style for a run of text.
  * <p>
- * Every property maps to an ESC/POS capability: there is no italic (most
- * ESC/POS printers have no italic command) and sizes are integer multiples
- * of the base character cell ({@code GS !} supports 1x to 8x), not points
- * or pixels.
+ * Every property maps to an ESC/POS capability. Sizes are integer multiples
+ * of the base character cell ({@code GS !} supports 1x to 8x), not points or
+ * pixels. Italic uses the ESC/P {@code ESC 4}/{@code ESC 5} commands: printers
+ * that support italic render it, and the rest ignore the command.
  * <p>
  * Instances are immutable. {@link #process(Element)} returns {@code this}
  * when an element does not change the style, so identity comparison can be
  * used to detect style transitions.
  */
 public record ComputedStyle(boolean bold, boolean underline, int widthMultiple, int heightMultiple,
-    Alignment alignment, boolean invert, int font) {
+    Alignment alignment, boolean invert, int font, boolean italic) {
 
   public static final int MIN_SIZE_MULTIPLE = 1;
   public static final int MAX_SIZE_MULTIPLE = 8;
@@ -44,6 +44,7 @@ public record ComputedStyle(boolean bold, boolean underline, int widthMultiple, 
   public static final ComputedStyle INITIAL = new ComputedStyle(false, false, 1, 1, Alignment.LEFT, false);
 
   private static final Set<String> BOLD_TAGS = Set.of("b", "strong");
+  private static final Set<String> ITALIC_TAGS = Set.of("em", "i");
   private static final Set<String> BOLD_CSS_WEIGHTS = Set.of("bold", "bolder", "600", "700", "800", "900");
 
   public enum Alignment {
@@ -82,10 +83,16 @@ public record ComputedStyle(boolean bold, boolean underline, int widthMultiple, 
     }
   }
 
-  /** A style at the base font (Font A). */
+  /** A style at the base font (Font A), not italic. */
   public ComputedStyle(boolean bold, boolean underline, int widthMultiple, int heightMultiple,
       Alignment alignment, boolean invert) {
-    this(bold, underline, widthMultiple, heightMultiple, alignment, invert, DEFAULT_FONT);
+    this(bold, underline, widthMultiple, heightMultiple, alignment, invert, DEFAULT_FONT, false);
+  }
+
+  /** A style at the given font, not italic. */
+  public ComputedStyle(boolean bold, boolean underline, int widthMultiple, int heightMultiple,
+      Alignment alignment, boolean invert, int font) {
+    this(bold, underline, widthMultiple, heightMultiple, alignment, invert, font, false);
   }
 
   /**
@@ -104,11 +111,14 @@ public record ComputedStyle(boolean bold, boolean underline, int widthMultiple, 
     int newHeight = heightMultiple;
     Alignment newAlignment = alignment;
     int newFont = font;
+    boolean newItalic = italic;
 
-    // Tag defaults. <em>/<i> are deliberately absent: ESC/POS has no italic.
+    // Tag defaults.
     final String tag = el.normalName();
     if (BOLD_TAGS.contains(tag)) {
       newBold = true;
+    } else if (ITALIC_TAGS.contains(tag)) {
+      newItalic = true;
     } else if (tag.equals("u")) {
       newUnderline = true;
     } else if (tag.equals("h1")) {
@@ -154,8 +164,14 @@ public record ComputedStyle(boolean bold, boolean underline, int widthMultiple, 
       }
     }
 
+    final Optional<String> fontStyle = Utils.findStyleValue(el, "font-style");
+    if (fontStyle.isPresent()) {
+      final String value = fontStyle.get().toLowerCase();
+      newItalic = value.contains("italic") || value.contains("oblique");
+    }
+
     final ComputedStyle computed = new ComputedStyle(newBold, newUnderline, newWidth, newHeight, newAlignment,
-        invert, newFont);
+        invert, newFont, newItalic);
 
     return equals(computed) ? this : computed;
   }

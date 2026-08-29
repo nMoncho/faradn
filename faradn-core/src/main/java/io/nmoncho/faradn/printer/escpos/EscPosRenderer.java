@@ -431,8 +431,13 @@ public final class EscPosRenderer {
     if (current.font() != target.font()) {
       out.writeBytes(new byte[] { Code.ESC, 0x4D, (byte) target.font() }); // ESC M: select font slot
     }
+    if (current.italic() != target.italic()) {
+      out.writeBytes(target.italic()
+          ? CharacterCommands.SELECT_ITALIC.getCode()
+          : CharacterCommands.CANCEL_ITALIC.getCode());
+    }
     return new ComputedStyle(target.bold(), target.underline(), target.widthMultiple(), target.heightMultiple(),
-        current.alignment(), target.invert(), target.font());
+        current.alignment(), target.invert(), target.font(), target.italic());
   }
 
   /** Turns off every per-run attribute, emitting only what is currently on. */
@@ -458,7 +463,7 @@ public final class EscPosRenderer {
 
   private static ComputedStyle withAlignment(ComputedStyle style, Alignment alignment) {
     return new ComputedStyle(style.bold(), style.underline(), style.widthMultiple(), style.heightMultiple(),
-        alignment, style.invert(), style.font());
+        alignment, style.invert(), style.font(), style.italic());
   }
 
   private static Justification justification(Alignment alignment) {

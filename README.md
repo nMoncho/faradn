@@ -95,9 +95,9 @@ HTML ─jsoup─▶ DOM ─BlockBuilder─▶ List<Block> (IR) ─EscPosRenderer
 ```
 
 - **`ComputedStyle`** resolves tags and inline CSS into properties an ESC/POS
-  printer can realize: bold, underline, width/height multiples (1x–8x),
-  alignment, inverted print. There is deliberately no italic - most ESC/POS
-  printers cannot print it.
+  printer can realize: bold, italic, underline, width/height multiples (1x–8x),
+  alignment, inverted print. Italic uses the ESC/P `ESC 4`/`ESC 5` commands -
+  printers that support italic render it, and the rest ignore the command.
 - **`Block`** is a sealed hierarchy shaped by the line-oriented nature of
   ESC/POS: `Paragraph`, `ImageBlock`, `Barcode`, `Rule`, `Feed`, `Cut`, and
   `Table`. Every `TextRun` carries its fully resolved style, so renderers only
@@ -145,7 +145,7 @@ golden-byte tests.
 | `<br>`, `<hr>`                    | line break, horizontal rule                                                                                |
 | `<table>`, `<tr>`, `<td>`, `<th>` | character-grid table: content-sized columns, `colspan`, per-cell `text-align`, inline styling, bold `<th>` |
 | `<img>`                           | image (URL or Base64 `data:` URI; PNG, JPEG, BMP, WBMP)                                                    |
-| `<em>`, `<i>`                     | ignored - ESC/POS printers have no italic                                                                  |
+| `<em>`, `<i>`                     | italic (`ESC 4`/`ESC 5`); printers without italic ignore the command                                       |
 
 **Inline CSS**
 
@@ -154,6 +154,7 @@ text, but the same properties work on `<p>`, `<td>`, headings, and so on), and o
 the tag defaults:
 
 - `font-weight` (`bold`, `bolder`, `600`–`900` ⇒ bold; `normal` switches it off)
+- `font-style` (`italic`, `oblique` ⇒ italic; `normal` switches it off)
 - `text-decoration` / `text-decoration-line` (`underline`, `none`)
 - `text-align` (`left`, `center`, `right`)
 - `font-family` (`font-a`, `font-b`, `font-c`, …): select a font by slot (`font-a` is

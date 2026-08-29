@@ -113,12 +113,12 @@ public class BlockBuilderTest {
 
     assertEquals(5, blocks.size());
 
-    // <em>/<i> carry no printable style, so the first paragraph collapses
-    // into a single plain run
+    // <em>/<i> mark italic, splitting the first paragraph into alternating runs
     final Paragraph first = assertInstanceOf(Paragraph.class, blocks.get(0));
-    assertEquals(1, first.runs().size());
-    assertEquals("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec mollis hendrerit dui, sed congue.",
-        first.runs().get(0).text());
+    assertEquals(List.of(false, true, false, true, false),
+        first.runs().stream().map(run -> run.style().italic()).toList());
+    assertEquals("sit", first.runs().get(1).text().strip());
+    assertEquals("elit", first.runs().get(3).text().strip());
     assertFalse(first.runs().get(0).style().bold());
 
     // <b>/<strong> split the second paragraph into alternating runs
@@ -128,13 +128,15 @@ public class BlockBuilderTest {
     assertEquals("Nulla", second.runs().get(1).text().strip());
     assertEquals("Duis", second.runs().get(3).text().strip());
 
-    // Inline CSS on <span>: font-style is ignored, font-weight is honored
+    // Inline CSS on <span>: font-style italic and font-weight bold each split the run
     final Paragraph fifth = assertInstanceOf(Paragraph.class, blocks.get(4));
-    assertEquals(3, fifth.runs().size());
-    assertEquals("Mauris non nulla ", fifth.runs().get(0).text());
-    assertEquals("hendrerit", fifth.runs().get(1).text());
-    assertTrue(fifth.runs().get(1).style().bold());
-    assertEquals(", dignissim nisl vitae, venenatis arcu.", fifth.runs().get(2).text());
+    assertEquals(5, fifth.runs().size());
+    assertEquals("non", fifth.runs().get(1).text().strip());
+    assertTrue(fifth.runs().get(1).style().italic());
+    assertFalse(fifth.runs().get(1).style().bold());
+    assertEquals("hendrerit", fifth.runs().get(3).text().strip());
+    assertTrue(fifth.runs().get(3).style().bold());
+    assertFalse(fifth.runs().get(3).style().italic());
   }
 
   @Test

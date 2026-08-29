@@ -51,6 +51,8 @@ public class EscPosRendererTest {
   private static final byte[] BOLD_OFF = { ESC, 0x45, 0x00 };
   private static final byte[] UNDERLINE_ON = { ESC, 0x2D, 0x01 };
   private static final byte[] UNDERLINE_OFF = { ESC, 0x2D, 0x00 };
+  private static final byte[] ITALIC_ON = { ESC, 0x34 };
+  private static final byte[] ITALIC_OFF = { ESC, 0x35 };
   private static final byte[] INVERT_ON = { GS, 0x42, 0x01 };
   private static final byte[] INVERT_OFF = { GS, 0x42, 0x00 };
   private static final byte[] ALIGN_CENTER = { ESC, 0x61, 0x01 };
@@ -113,6 +115,23 @@ public class EscPosRendererTest {
         new Paragraph(List.of(new TextRun("x", underline)), Alignment.LEFT)));
 
     assertBytes(cat(HEAD, UNDERLINE_ON, "x", UNDERLINE_OFF, LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void italicTogglesAroundTheRun() {
+    ComputedStyle italic = new ComputedStyle(false, false, 1, 1, Alignment.LEFT, false, 0, true);
+
+    byte[] out = renderer.render(List.of(
+        new Paragraph(List.of(new TextRun("x", italic)), Alignment.LEFT)));
+
+    assertBytes(cat(HEAD, ITALIC_ON, "x", ITALIC_OFF, LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void italicFromEmTag() {
+    byte[] out = renderer.render(Document.from("<p>a<em>b</em>c</p>").blocks());
+
+    assertBytes(cat(HEAD, "a", ITALIC_ON, "b", ITALIC_OFF, "c", LF, FEED_4, PARTIAL_CUT), out);
   }
 
   @Test
