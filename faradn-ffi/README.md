@@ -44,6 +44,11 @@ with `graal_attach_thread` before they call in.
 
 ## Examples
 
+Runnable integrations, one per language, under [`examples`](examples) (see its
+[README](examples/README.md) for an overview):
+
 - [`examples/c`](examples/c) - render to stdout, pipe to the printer.
 - [`examples/rust`](examples/rust) - render and send to a network printer on
   port 9100.
+- [`examples/python`](examples/python) - render with `ctypes` (no install),
+  to stdout or straight to a network printer.
