@@ -13,6 +13,7 @@
   <artifactId>faradn-core</artifactId>
   <packaging>jar</packaging>
 
+  <name>Farad'n Core</name>
   <description>HTML-to-ESC/POS printing library.</description>
 
   <dependencies>
