@@ -121,9 +121,10 @@ golden-byte tests.
 
 ### Modules
 
-- **`faradn-core`** - the library (published to Maven Central).
-- **`faradn-cli`** - the command line and HTTP server, shipped as a GraalVM
+- **`faradn-core`**: the library (published to Maven Central).
+- **`faradn-cli`**: the command line and HTTP server, shipped as a GraalVM
   native binary and attached to GitHub Releases.
+- **`faradn-ffi`**: a native library that can be used with other languages, such as C or Rust.
 
 ## Supported HTML
 

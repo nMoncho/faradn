@@ -4,7 +4,7 @@ use std::os::raw::{c_char, c_int, c_longlong, c_void};
 use std::ptr;
 
 // Declared by hand for clarity; you can also generate these from
-// ../../target/faradn.h with bindgen.
+// ../../target/libfaradn.h with bindgen.
 extern "C" {
     fn graal_create_isolate(
         params: *const c_void,
