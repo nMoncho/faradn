@@ -4,7 +4,7 @@
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>io.nmoncho</groupId>
+  <groupId>net.nmoncho</groupId>
   <artifactId>faradn-parent</artifactId>
   <version>0.1.0-SNAPSHOT</version>
   <packaging>pom</packaging>
@@ -165,7 +165,7 @@
       Release artifacts: source + javadoc jars, GPG signatures, and publishing to
       Maven Central via the Sonatype Central Portal. Active only with -Prelease.
 
-      Before the first publish, confirm: (1) the io.nmoncho namespace is verified on
+      Before the first publish, confirm: (1) the net.nmoncho namespace is verified on
       central.sonatype.com; (2) a `central` server with a Central user token lives in
       settings.xml; (3) a GPG signing key is available. Then dry-run with
       `mvn -Prelease -DskipTests verify` before `deploy`.

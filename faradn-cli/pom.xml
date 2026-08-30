@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>io.nmoncho</groupId>
+    <groupId>net.nmoncho</groupId>
     <artifactId>faradn-parent</artifactId>
     <version>0.1.0-SNAPSHOT</version>
   </parent>
@@ -16,14 +16,14 @@
   <description>Command-line interface and HTTP server for Farad'n, built as a GraalVM native binary.</description>
 
   <properties>
-    <faradn.mainClass>io.nmoncho.faradn.cli.Faradn</faradn.mainClass>
+    <faradn.mainClass>net.nmoncho.faradn.cli.Faradn</faradn.mainClass>
     <!-- The CLI ships as a native binary on GitHub Releases, not to Maven Central. -->
     <maven.deploy.skip>true</maven.deploy.skip>
   </properties>
 
   <dependencies>
     <dependency>
-      <groupId>io.nmoncho</groupId>
+      <groupId>net.nmoncho</groupId>
       <artifactId>faradn-core</artifactId>
       <version>${project.version}</version>
     </dependency>

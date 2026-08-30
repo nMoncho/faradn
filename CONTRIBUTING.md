@@ -35,7 +35,7 @@ re-run the affected command under GraalVM's tracing agent and commit the merged
 config:
 
 ```console
-$ java -agentlib:native-image-agent=config-merge-dir=faradn-cli/src/main/resources/META-INF/native-image/io.nmoncho/faradn-cli \
+$ java -agentlib:native-image-agent=config-merge-dir=faradn-cli/src/main/resources/META-INF/native-image/net.nmoncho/faradn-cli \
     -jar faradn-cli/target/faradn-cli-*.jar <command>
 ```
 
