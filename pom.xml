@@ -64,7 +64,7 @@
     <usb4java.version>1.3.0</usb4java.version>
     <typesafeconfig.version>1.4.9</typesafeconfig.version>
     <slf4j.version>2.0.18</slf4j.version>
-    <jsoup.version>1.23.1</jsoup.version>
+    <jsoup.version>1.23.2</jsoup.version>
     <picocli.version>4.7.7</picocli.version>
     <junit.version>6.1.3</junit.version>
     <logback.version>1.6.3</logback.version>
