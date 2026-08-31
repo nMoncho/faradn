@@ -39,7 +39,7 @@ jobs:
         # the reactor is the reliable way to exclude them, because central-publishing
         # triggers the upload on the LAST reactor module — so maven.deploy.skip /
         # skipPublishing on cli/ffi (which are last) would skip the upload itself.
-        run: mvn -B --no-transfer-progress -Prelease -DskipTests -pl .,faradn-core deploy
+        run: mvn -B --no-transfer-progress -Prelease -DskipTests -pl .,faradn-core,faradn-cli deploy
         env:
           MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}

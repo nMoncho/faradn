@@ -13,12 +13,11 @@
   <artifactId>faradn-cli</artifactId>
   <packaging>jar</packaging>
 
+  <name>Farad'n CLI</name>
   <description>Command-line interface and HTTP server for Farad'n, built as a GraalVM native binary.</description>
 
   <properties>
     <faradn.mainClass>net.nmoncho.faradn.cli.Faradn</faradn.mainClass>
-    <!-- The CLI ships as a native binary on GitHub Releases, not to Maven Central. -->
-    <maven.deploy.skip>true</maven.deploy.skip>
   </properties>
 
   <dependencies>
