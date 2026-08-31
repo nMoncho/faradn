@@ -5,8 +5,9 @@ submit changes.
 
 ## Building and testing
 
-The project is a Maven multi-module build (`faradn-core` + `faradn-cli`); use the
-included wrapper so everyone builds with the same Maven version:
+The project is a Maven multi-module build (`faradn-core`, `faradn-cli`, and
+`faradn-ffi`); use the included wrapper so everyone builds with the same Maven
+version:
 
 ```console
 $ ./mvnw verify                                  # build and run the full test suite

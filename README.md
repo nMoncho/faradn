@@ -1,12 +1,15 @@
 # Farad'n
 
-Farad'n is an HTML-to-ESC/POS printing library for Java. The goal of this
-project is to be a one stop shop for your printing needs when dealing with
-ESC/POS (thermal receipt) printers: write your receipt as HTML, print it on
-paper.
+Farad'n is an HTML-to-ESC/POS printing library written in Java (but **not**
+limited to Java). The goal of this project is to be a one-stop shop for
+your printing needs when dealing with  ESC/POS (thermal receipt) printers:
+write your receipt as HTML, print it on paper.
 
 HTML is a widely used and understood format, and can easily be templated
 with tools such as [Mustache](https://mustache.github.io/).
+
+We also provide native binaries and FFI libraries so if you don't work with
+Java you can still use the project.
 
 **Status.** The full pipeline works - HTML parsing, style resolution, the
 renderer (text with word-wrap, images, barcodes, QR, tables), and transports
@@ -124,7 +127,8 @@ golden-byte tests.
 - **`faradn-core`**: the library (published to Maven Central).
 - **`faradn-cli`**: the command line and HTTP server, shipped as a GraalVM
   native binary and attached to GitHub Releases.
-- **`faradn-ffi`**: a native library that can be used with other languages, such as C or Rust.
+- **`faradn-ffi`**: a native library that can be used with other languages,
+  such as C or Rust.
 
 ## Supported HTML
 
@@ -257,7 +261,6 @@ The `macos-aarch64` Maven profile then wires it in automatically.
 - [x] Per-run code page switching for mixed-script text
 - [x] Table colspan and column widths
 - [x] Printer capability database: load profiles by device name from [escpos-printer-db](https://github.com/receipt-print-hq/escpos-printer-db)
-- [ ] Raster fallback for complex layouts
 
 ## Contribution Guidelines
 
