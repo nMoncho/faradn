@@ -83,7 +83,7 @@ public class Printer {
    *        capabilities of the target printer
    */
   public static void print(Transport transport, Document doc, PrinterProfile profile) {
-    final byte[] payload = new EscPosRenderer(profile).render(doc.blocks());
+    final byte[] payload = new EscPosRenderer(profile).render(doc.blocks(profile.dpi()));
     ensureReady(transport);
     transport.write(payload);
   }

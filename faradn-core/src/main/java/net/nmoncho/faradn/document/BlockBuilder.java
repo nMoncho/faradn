@@ -45,8 +45,10 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
   private final Deque<ListState> lists = new ArrayDeque<>();
   private String pendingMarker = null;
   private int preDepth = 0;
+  private final int dpi;
 
-  private BlockBuilder() {
+  private BlockBuilder(int dpi) {
+    this.dpi = dpi;
     styles.push(ComputedStyle.INITIAL);
   }
 
@@ -55,10 +57,13 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
    *
    * @param doc
    *        parsed document to translate
+   * @param dpi
+   *        printer resolution, used to resolve physical CSS lengths
+   *        ({@code mm}/{@code cm}) in page-mode layouts to dots
    * @return immutable list of blocks, in reading order
    */
-  public static List<Block> build(org.jsoup.nodes.Document doc) {
-    final BlockBuilder builder = new BlockBuilder();
+  public static List<Block> build(org.jsoup.nodes.Document doc, int dpi) {
+    final BlockBuilder builder = new BlockBuilder(dpi);
     doc.body().traverse(builder);
     builder.flushParagraph();
 
@@ -98,6 +103,10 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
     } else if (tag.equals("hr")) {
       flushParagraph();
       blocks.add(new Rule());
+    } else if (isCanvasContainer(el)) {
+      flushParagraph();
+      buildCanvas(el, styles.peek()).ifPresent(blocks::add);
+      consumedSubtree = el;
     } else if (tag.equals("ul") || tag.equals("ol")) {
       flushParagraph();
       lists.push(new ListState(tag.equals("ol")));

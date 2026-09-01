@@ -47,7 +47,7 @@ final class PrintCommand implements Callable<Integer> {
       for (File file : files) {
         final Document document = Document.from(file);
         if (dryRun) {
-          final byte[] payload = new EscPosRenderer(prof).render(document.blocks());
+          final byte[] payload = new EscPosRenderer(prof).render(document.blocks(prof.dpi()));
           for (int i = 0; i < copies; i++) {
             System.out.write(payload);
           }

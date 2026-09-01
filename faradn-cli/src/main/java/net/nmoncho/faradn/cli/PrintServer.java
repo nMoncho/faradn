@@ -86,7 +86,7 @@ public final class PrintServer {
     }
 
     final Document document = Document.from(new String(body, StandardCharsets.UTF_8));
-    final byte[] payload = new EscPosRenderer(profile).render(document.blocks());
+    final byte[] payload = new EscPosRenderer(profile).render(document.blocks(profile.dpi()));
 
     try (Transport transport = transports.get()) {
       final PrinterStatus status = statusOrNull(transport);

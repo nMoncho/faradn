@@ -12,6 +12,14 @@ import net.nmoncho.faradn.document.BlockBuilder;
 
 public class Document {
 
+  /**
+   * The resolution assumed when translating physical CSS lengths ({@code mm}/
+   * {@code cm}) without a printer profile. The print path passes the target
+   * profile's real dpi via {@link #blocks(int)}; {@code px} positions are exact
+   * regardless of this value.
+   */
+  private static final int DEFAULT_DPI = 203;
+
   private final org.jsoup.nodes.Document doc;
 
   private Document(org.jsoup.nodes.Document doc) {
@@ -30,7 +38,21 @@ public class Document {
    * @return immutable list of blocks
    */
   public List<Block> blocks() {
-    return BlockBuilder.build(doc);
+    return blocks(DEFAULT_DPI);
+  }
+
+  /**
+   * Translates this document into the intermediate representation, resolving
+   * physical CSS lengths ({@code mm}/{@code cm} in page-mode layouts) against the
+   * given resolution. The print path supplies the target profile's dpi so
+   * positions land on the right dots.
+   *
+   * @param dpi
+   *        the printer resolution in dots per inch
+   * @return immutable list of blocks
+   */
+  public List<Block> blocks(int dpi) {
+    return BlockBuilder.build(doc, dpi);
   }
 
   @Override
