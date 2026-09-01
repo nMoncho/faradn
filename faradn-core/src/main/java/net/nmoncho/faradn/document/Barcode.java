@@ -11,7 +11,8 @@ package net.nmoncho.faradn.document;
  */
 public record Barcode(String data, String symbology, ComputedStyle.Alignment alignment, BarcodeOptions options)
     implements
-      Block {
+      Block,
+      Placeable {
 
   public static final String DEFAULT_SYMBOLOGY = "code128";
 

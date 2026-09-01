@@ -8,7 +8,7 @@ import java.util.List;
  * Alignment is a block-level property (ESC/POS {@code ESC a} applies to
  * whole lines), so it lives here and not on the individual runs.
  */
-public record Paragraph(List<TextRun> runs, ComputedStyle.Alignment alignment) implements Block {
+public record Paragraph(List<TextRun> runs, ComputedStyle.Alignment alignment) implements Block, Placeable {
 
   public Paragraph {
     if (runs == null || runs.isEmpty()) {

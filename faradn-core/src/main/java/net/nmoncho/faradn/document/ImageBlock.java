@@ -5,7 +5,7 @@ import net.nmoncho.faradn.Image;
 /**
  * An image occupying its own vertical band of the receipt.
  */
-public record ImageBlock(Image image, ComputedStyle.Alignment alignment) implements Block {
+public record ImageBlock(Image image, ComputedStyle.Alignment alignment) implements Block, Placeable {
 
   public ImageBlock {
     if (image == null) {
