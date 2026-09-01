@@ -18,6 +18,7 @@ import net.nmoncho.faradn.Document;
 import net.nmoncho.faradn.Image;
 import net.nmoncho.faradn.RasterImage;
 import net.nmoncho.faradn.document.Barcode;
+import net.nmoncho.faradn.document.Canvas;
 import net.nmoncho.faradn.document.Cell;
 import net.nmoncho.faradn.document.ComputedStyle;
 import net.nmoncho.faradn.document.ComputedStyle.Alignment;
@@ -59,6 +60,10 @@ public class EscPosRendererTest {
   private static final byte[] ALIGN_RIGHT = { ESC, 0x61, 0x02 };
   private static final byte[] FEED_4 = { ESC, 0x64, 0x04 };
   private static final byte[] PARTIAL_CUT = { GS, 0x56, 0x01 };
+  private static final byte[] GS_P_180 = { GS, 0x50, (byte) 180, (byte) 180 };
+  private static final byte[] SELECT_PAGE_MODE = { ESC, 0x4C };
+  private static final byte[] ESC_T_0 = { ESC, 0x54, 0x00 };
+  private static final byte[] FF = { 0x0C };
   private static final byte[] FULL_CUT = { GS, 0x56, 0x00 };
   private static final byte[] SELECT_FONT_B = { ESC, 0x4D, 0x01 };
   private static final byte[] SELECT_FONT_A = { ESC, 0x4D, 0x00 };
@@ -474,11 +479,108 @@ public class EscPosRendererTest {
   }
 
   @Test
+  void canvasEmitsPageModeSequence() {
+    Canvas canvas = Canvas.of(512, 160)
+        .place(100, 40, new Paragraph(List.of(new TextRun("Hi", ComputedStyle.INITIAL)), Alignment.LEFT))
+        .build();
+
+    byte[] out = renderer.render(List.of(canvas));
+
+    // GS $ is y + one Font A cell (512/42 -> 12 wide, x2 = 24 tall) so the text's
+    // top - not its baseline - lands at y=40.
+    assertBytes(cat(HEAD, GS_P_180, SELECT_PAGE_MODE, escW(512, 160), ESC_T_0,
+        escDollar(100), gsDollar(64), "Hi", FF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void canvasPlacesEachChildAbsolutely() {
+    Canvas canvas = Canvas.of(384, 120)
+        .place(0, 0, new Paragraph(List.of(new TextRun("A", ComputedStyle.INITIAL)), Alignment.LEFT))
+        .place(200, 0, new Paragraph(List.of(new TextRun("B", ComputedStyle.INITIAL)), Alignment.LEFT))
+        .build();
+
+    byte[] out = renderer.render(List.of(canvas));
+
+    // Both texts sit at y=0; GS $ = 0 + 24 (one Font A cell) drops the baseline.
+    assertBytes(cat(HEAD, GS_P_180, SELECT_PAGE_MODE, escW(384, 120), ESC_T_0,
+        escDollar(0), gsDollar(24), "A",
+        escDollar(200), gsDollar(24), "B",
+        FF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void canvasResetsInlineStyleBetweenPlacements() {
+    ComputedStyle bold = new ComputedStyle(true, false, 1, 1, Alignment.LEFT, false);
+    Canvas canvas = Canvas.of(384, 120)
+        .place(0, 0, new Paragraph(List.of(new TextRun("A", bold)), Alignment.LEFT))
+        .place(0, 40, new Paragraph(List.of(new TextRun("b", ComputedStyle.INITIAL)), Alignment.LEFT))
+        .build();
+
+    byte[] out = renderer.render(List.of(canvas));
+
+    // "A" turns bold on; the next placement clears it before "b".
+    // GS $ carries the +24 (one Font A cell) baseline drop on both texts.
+    assertBytes(cat(HEAD, GS_P_180, SELECT_PAGE_MODE, escW(384, 120), ESC_T_0,
+        escDollar(0), gsDollar(24), BOLD_ON, "A",
+        escDollar(0), gsDollar(64), BOLD_OFF, "b",
+        FF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void canvasPlacesImageAndBarcode() {
+    RasterImage img = solid(8, 8, 0xFF000000);
+    byte[] raster = ImageRasterizer.raster(img, 512);
+    byte[] barcode = BarcodeCommands.encode("code128", "12345678");
+
+    Canvas canvas = Canvas.of(512, 200)
+        .place(0, 0, new ImageBlock(Image.of(img), Alignment.LEFT))
+        .place(0, 96, new Barcode("12345678", "code128", Alignment.LEFT))
+        .build();
+
+    byte[] out = renderer.render(List.of(canvas));
+
+    assertBytes(cat(HEAD, GS_P_180, SELECT_PAGE_MODE, escW(512, 200), ESC_T_0,
+        escDollar(0), gsDollar(0), raster,
+        escDollar(0), gsDollar(96), barcode,
+        FF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void canvasBaselineDropScalesWithFontAndHeight() {
+    // Double-height Font A: cell = (512/42 -> 12) x 2 x heightMultiple(2) = 48.
+    ComputedStyle tall = new ComputedStyle(false, false, 1, 2, Alignment.LEFT, false, 0);
+    byte[] tallOut = renderer.render(List.of(Canvas.of(512, 200)
+        .place(0, 0, new Paragraph(List.of(new TextRun("T", tall)), Alignment.LEFT)).build()));
+    assertBytes(cat(HEAD, GS_P_180, SELECT_PAGE_MODE, escW(512, 200), ESC_T_0,
+        escDollar(0), gsDollar(48), size(1, 2), "T", size(1, 1), FF, FEED_4, PARTIAL_CUT), tallOut);
+
+    // Font B is narrower: cell = (512/56 -> 9) x 2 = 18.
+    byte[] fontBOut = renderer.render(List.of(Canvas.of(512, 200)
+        .place(0, 0, new Paragraph(List.of(new TextRun("b", FONT_B)), Alignment.LEFT)).build()));
+    assertBytes(cat(HEAD, GS_P_180, SELECT_PAGE_MODE, escW(512, 200), ESC_T_0,
+        escDollar(0), gsDollar(18), SELECT_FONT_B, "b", SELECT_FONT_A, FF, FEED_4, PARTIAL_CUT), fontBOut);
+  }
+
+  @Test
   void nullProfileIsRejected() {
     assertThrows(IllegalArgumentException.class, () -> new EscPosRenderer(null));
   }
 
   // ----- helpers -----
+
+  private static byte[] escDollar(int value) {
+    return new byte[] { ESC, 0x24, (byte) (value & 0xFF), (byte) ((value >> 8) & 0xFF) };
+  }
+
+  private static byte[] gsDollar(int value) {
+    return new byte[] { GS, 0x24, (byte) (value & 0xFF), (byte) ((value >> 8) & 0xFF) };
+  }
+
+  private static byte[] escW(int width, int height) {
+    return new byte[] { ESC, 0x57, 0, 0, 0, 0,
+        (byte) (width & 0xFF), (byte) ((width >> 8) & 0xFF),
+        (byte) (height & 0xFF), (byte) ((height >> 8) & 0xFF) };
+  }
 
   private static PrinterProfile profile(int columns, CodePage codePage) {
     return PrinterProfile.of("test", 512, List.of(new Font(0, columns)), 180, true, List.of(codePage));

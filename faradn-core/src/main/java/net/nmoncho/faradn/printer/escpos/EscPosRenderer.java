@@ -8,6 +8,7 @@ import java.util.List;
 import net.nmoncho.faradn.UnsupportedBlockException;
 import net.nmoncho.faradn.document.Barcode;
 import net.nmoncho.faradn.document.Block;
+import net.nmoncho.faradn.document.Canvas;
 import net.nmoncho.faradn.document.Cell;
 import net.nmoncho.faradn.document.ComputedStyle;
 import net.nmoncho.faradn.document.ComputedStyle.Alignment;
@@ -15,6 +16,8 @@ import net.nmoncho.faradn.document.Cut;
 import net.nmoncho.faradn.document.Feed;
 import net.nmoncho.faradn.document.ImageBlock;
 import net.nmoncho.faradn.document.Paragraph;
+import net.nmoncho.faradn.document.Placeable;
+import net.nmoncho.faradn.document.Placement;
 import net.nmoncho.faradn.document.Rule;
 import net.nmoncho.faradn.document.Table;
 import net.nmoncho.faradn.document.TextRun;
@@ -23,11 +26,14 @@ import net.nmoncho.faradn.printer.escpos.commands.BarcodeCommands;
 import net.nmoncho.faradn.printer.escpos.commands.CharacterCommands;
 import net.nmoncho.faradn.printer.escpos.commands.CharacterCommands.CharacterSize;
 import net.nmoncho.faradn.printer.escpos.commands.CharacterCommands.Lines;
+import net.nmoncho.faradn.printer.escpos.commands.CharacterCommands.MotionUnit2D;
 import net.nmoncho.faradn.printer.escpos.commands.MechanismControlCommands;
 import net.nmoncho.faradn.printer.escpos.commands.MiscellaneousCommands;
 import net.nmoncho.faradn.printer.escpos.commands.PrintCommands;
 import net.nmoncho.faradn.printer.escpos.commands.PrintPositionCommands;
 import net.nmoncho.faradn.printer.escpos.commands.PrintPositionCommands.Justification;
+import net.nmoncho.faradn.printer.escpos.commands.PrintPositionCommands.PrintArea;
+import net.nmoncho.faradn.printer.escpos.commands.PrintPositionCommands.Word16;
 
 /**
  * Renders the intermediate representation ({@code List<Block>}) into ESC/POS
@@ -101,6 +107,8 @@ public final class EscPosRenderer {
         current = renderBarcode(out, current, barcode);
       } else if (block instanceof Table table) {
         current = renderTable(out, enc, current, table);
+      } else if (block instanceof Canvas canvas) {
+        current = renderCanvas(out, enc, current, canvas);
       } else {
         throw new UnsupportedBlockException(block);
       }
@@ -152,6 +160,97 @@ public final class EscPosRenderer {
     out.writeBytes(BarcodeCommands.encode(barcode.symbology(), barcode.data(), barcode.options()));
     out.writeBytes(PrintCommands.LINE_FEED.getCode());
     return current;
+  }
+
+  /**
+   * Renders a {@link Canvas} via ESC/POS page mode: enter page mode, set the
+   * print area and direction, place each child at its absolute dot position,
+   * then print the buffered page and return to standard mode ({@code FF}).
+   */
+  private ComputedStyle renderCanvas(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current,
+      Canvas canvas) {
+    current = clearInlineStyle(out, current);
+
+    // Pin the motion unit to the profile's dpi so positions in dots map 1:1.
+    // GS P takes a single-byte denominator, so this only applies for dpi <= 255
+    // (true for ESC/POS receipt printers, e.g. the TM-T88V at 180).
+    final int dpi = profile.dpi();
+    if (dpi >= 1 && dpi <= 255) {
+      out.writeBytes(PrintPositionCommands.SET_MOTION_UNITS.getCode(new MotionUnit2D(dpi, dpi))); // GS P
+    }
+    out.writeBytes(PrintCommands.SELECT_PAGE_MODE.getCode()); // ESC L (must be at a line start)
+    out.writeBytes(PrintPositionCommands.SET_PRINT_AREA
+        .getCode(new PrintArea(0, 0, canvas.widthDots(), canvas.heightDots()))); // ESC W
+    out.writeBytes(PrintPositionCommands.SELECT_PRINT_DIRECTION.getCode(direction(canvas.direction()))); // ESC T
+
+    for (Placement placement : canvas.placements()) {
+      // Placement (x, y) is the top-left of the content, but in page mode GS $
+      // anchors text at its *baseline* (the glyph is drawn upward from there),
+      // while images and barcodes develop downward from the position. So push
+      // the vertical position of text down by one character cell; leave images
+      // and barcodes at y.
+      int yDots = placement.yDots();
+      if (placement.content() instanceof Paragraph paragraph) {
+        yDots += textCellHeightDots(paragraph);
+      }
+      out.writeBytes(PrintPositionCommands.SET_ABSOLUTE_PRINT_POSITION.getCode(new Word16(placement.xDots()))); // ESC $
+      out.writeBytes(PrintPositionCommands.SET_ABSOLUTE_VERTICAL_PRINT_POSITION.getCode(new Word16(yDots))); // GS $
+      current = renderPlacement(out, enc, current, placement, canvas.widthDots());
+    }
+
+    current = clearInlineStyle(out, current);
+    out.writeBytes(PrintCommands.PRINT_AND_GOTO_STANDARD.getCode()); // FF: print the page + return to standard mode
+    return current;
+  }
+
+  /**
+   * Renders one positioned child. The cursor is already at the placement's
+   * {@code (x, y)}; text flows and wraps within the print area, so no word-wrap
+   * or block alignment is applied here.
+   */
+  private ComputedStyle renderPlacement(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current,
+      Placement placement, int areaWidthDots) {
+    current = clearInlineStyle(out, current); // each placement starts from a clean style
+    final Placeable content = placement.content();
+    if (content instanceof Paragraph paragraph) {
+      for (TextRun segment : paragraph.runs()) {
+        current = applyInlineStyle(out, current, segment.style());
+        enc.emit(segment.text());
+      }
+    } else if (content instanceof ImageBlock image) {
+      out.writeBytes(ImageRasterizer.raster(image.image().raster(), Math.max(1, areaWidthDots - placement.xDots())));
+    } else if (content instanceof Barcode barcode) {
+      out.writeBytes(BarcodeCommands.encode(barcode.symbology(), barcode.data(), barcode.options()));
+    }
+    return current;
+  }
+
+  /**
+   * The height in dots of the tallest character cell in a paragraph, used to
+   * drop text's page-mode baseline so the placement's {@code y} lands at the top
+   * of the text. ESC/POS has no command to query glyph height, so it is derived
+   * from the font's on-paper character width (cells are ~2:1 - Font&nbsp;A is
+   * 12&times;24, Font&nbsp;B 9&times;17) and scaled by the run's height
+   * multiplier.
+   */
+  private int textCellHeightDots(Paragraph paragraph) {
+    int max = 0;
+    for (TextRun run : paragraph.runs()) {
+      int columns = profile.font(run.style().font()).columns();
+      int charWidthDots = Math.max(1, Math.round((float) profile.dotsPerLine() / columns));
+      max = Math.max(max, charWidthDots * 2 * run.style().heightMultiple());
+    }
+    return max;
+  }
+
+  /** Maps a canvas direction to the {@code ESC T} print direction. */
+  private static PrintPositionCommands.Direction direction(Canvas.Direction direction) {
+    return switch (direction) {
+      case NORMAL -> PrintPositionCommands.Direction.LEFT_TO_RIGHT;
+      case ROTATE_90_CW -> PrintPositionCommands.Direction.TOP_TO_BOTTOM;
+      case ROTATE_180 -> PrintPositionCommands.Direction.RIGHT_TO_LEFT;
+      case ROTATE_90_CCW -> PrintPositionCommands.Direction.BOTTOM_TO_TOP;
+    };
   }
 
   private ComputedStyle renderTable(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current,
