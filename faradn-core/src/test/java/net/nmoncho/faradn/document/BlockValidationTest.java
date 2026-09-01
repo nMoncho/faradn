@@ -89,4 +89,32 @@ public class BlockValidationTest {
     assertTrue(new Cut(true).partial());
     assertFalse(new Cut(false).partial());
   }
+
+  @Test
+  void placementRejectsNegativePositionAndMissingContent() {
+    Paragraph content = new Paragraph(List.of(RUN), Alignment.LEFT);
+    assertThrows(IllegalArgumentException.class, () -> new Placement(-1, 0, content));
+    assertThrows(IllegalArgumentException.class, () -> new Placement(0, -1, content));
+    assertThrows(IllegalArgumentException.class, () -> new Placement(0, 0, null));
+  }
+
+  @Test
+  void canvasRejectsNonPositiveSizeAndNulls() {
+    assertThrows(IllegalArgumentException.class, () -> new Canvas(0, 100, Canvas.Direction.NORMAL, List.of()));
+    assertThrows(IllegalArgumentException.class, () -> new Canvas(100, 0, Canvas.Direction.NORMAL, List.of()));
+    assertThrows(IllegalArgumentException.class, () -> new Canvas(100, 100, null, List.of()));
+    assertThrows(IllegalArgumentException.class, () -> new Canvas(100, 100, Canvas.Direction.NORMAL, null));
+  }
+
+  @Test
+  void canvasBuilderCollectsPlacements() {
+    Paragraph a = new Paragraph(List.of(RUN), Alignment.LEFT);
+    Barcode b = new Barcode("12345678", "code128", Alignment.LEFT);
+    Canvas canvas = Canvas.of(512, 160).place(10, 20, a).place(30, 40, b).build();
+
+    assertEquals(512, canvas.widthDots());
+    assertEquals(160, canvas.heightDots());
+    assertEquals(Canvas.Direction.NORMAL, canvas.direction());
+    assertEquals(List.of(new Placement(10, 20, a), new Placement(30, 40, b)), canvas.placements());
+  }
 }
