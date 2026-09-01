@@ -57,12 +57,17 @@ import net.nmoncho.faradn.transport.UsbTransport;
  * {@code (x, y)} say - e.g. two labels on the same row at different x, and a
  * line
  * lower down - and that the region prints as one block.
+ * <p>
+ * {@link #printsPageModeHtmlOverUsb()} prints the same coupon through the full
+ * HTML pipeline (a {@code position: relative} container with {@code position:
+ * absolute} children), verifying the CSS-to-page-mode mapping end to end.
  */
 @Tag("hardware")
 public class HardwarePrintTest {
 
   private static final File RECEIPT = new File("src/test/resources/printjobs/receipt-full.html");
   private static final File TABLES = new File("src/test/resources/printjobs/tables.html");
+  private static final File PAGE_MODE = new File("src/test/resources/printjobs/page-mode.html");
 
   @Test
   @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
@@ -108,6 +113,19 @@ public class HardwarePrintTest {
         transport.write(job);
       }
     }, () -> fail("No Epson printer (USB vendor 0x04b8) found"));
+  }
+
+  @Test
+  @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
+  void printsPageModeHtmlOverUsb() {
+    // The full HTML -> IR -> page-mode path: same coupon as the programmatic
+    // test, driven from position:relative / position:absolute CSS.
+    Document doc = Document.from(PAGE_MODE);
+
+    Optional<Printer> printer = Printer.from(0x04b8);
+    printer.ifPresentOrElse(
+        p -> p.print(doc, "TM-T88V"),
+        () -> fail("No Epson printer (USB vendor 0x04b8) found"));
   }
 
   @Test
