@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Farad'n print-job preview</title>
+    <!-- The one line you add to any print job to preview it in a browser: -->
+    <link rel="stylesheet" href="faradn-preview.css">
+</head>
+<body>
+    <h1>FARAD'N CAFE</h1>
+    <center>Westblaak 86<br>3012 KM Rotterdam</center>
+    <center><small>VAT NL-8100.42.001.B01</small></center>
+    <hr>
+
+    <h2>Order #0042</h2>
+    <table>
+        <tr><th>Item</th><th style="text-align: center">Qty</th><th>Price</th></tr>
+        <tr><td>Flat white</td><td style="text-align: center">1</td><td style="text-align: right">3,20</td></tr>
+        <tr><td>Croissant</td><td style="text-align: center">2</td><td style="text-align: right">4,30</td></tr>
+    </table>
+    <hr>
+    <p style="text-align: right"><b>TOTAL  €7,50</b></p>
+
+    <h3>Your order includes</h3>
+    <ul>
+        <li>Oat milk (no charge)</li>
+        <li>Extra espresso shot
+            <ul>
+                <li>Double, <em>extra hot</em></li>
+            </ul>
+        </li>
+    </ul>
+
+    <h3>Earn a free coffee</h3>
+    <ol>
+        <li>Scan the loyalty code below</li>
+        <li>Buy nine drinks</li>
+        <li>The tenth is <b>on us</b></li>
+    </ol>
+
+    <p><b>Opening hours</b></p>
+    <pre>Mon-Fri   07:00 - 18:00
+Sat       08:00 - 17:00
+Sun       09:00 - 16:00</pre>
+
+    <hr>
+    <p>Thank you for visiting us today. This sentence is intentionally long so that
+       it demonstrates automatic word wrapping across the full width of the receipt.</p>
+    <center><i>Merci / Grazie / Спасибо / Děkujeme</i></center>
+
+    <center><bar-code symbology="code128" height="60" module="2" hri="below">FARADN-0042</bar-code></center>
+    <center><bar-code symbology="qr" module="6" ec="q">https://nmoncho.io/faradn</bar-code></center>
+
+    <center><u>See you soon!</u></center>
+</body>
+</html>

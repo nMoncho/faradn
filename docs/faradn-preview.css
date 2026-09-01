@@ -1,0 +1,240 @@
+/* ===========================================================================
+ * faradn-preview.css
+ *
+ * A "what will this look like on the printer?" stylesheet for Farad'n print-job
+ * HTML. Drop it into any print job and open the file in a browser to preview
+ * roughly how the receipt will come out: a narrow monospace paper roll, with
+ * every supported tag mapped to the visual the ESC/POS renderer produces.
+ *
+ * Usage — add one line to the <head> of your print job (or paste the file into
+ * a <style> block):
+ *
+ *     <link rel="stylesheet" href="faradn-preview.css">
+ *
+ * It only styles the tags Farad'n understands, so what you see is a faithful-ish
+ * approximation, not a pixel emulator. Notes on the deliberate approximations
+ * are inline below.
+ *
+ * Tweak the two knobs at the top: --columns (paper width in characters) and
+ * --font-size. 42 columns ≈ an 80mm printer in Font A; use 32 for 58mm.
+ * ======================================================================== */
+
+:root {
+  /* ---- knobs ---- */
+  --columns: 42;            /* printable columns (Font A): 42 = 80mm, 32 = 58mm */
+  --font-size: 15px;        /* on-screen size of one character cell            */
+
+  /* ---- palette (thermal paper is monochrome) ---- */
+  --ink: #14110f;           /* the "black" the print head lays down            */
+  --paper: #fbfaf7;         /* thermal paper white, a touch warm               */
+  --desk: #c9c6c0;          /* the surface the receipt lies on                 */
+  --faint: #b9b4ab;         /* hairlines / separators                          */
+
+  /* ---- the monospace face; every glyph is one cell wide ---- */
+  --mono: ui-monospace, "SF Mono", "Menlo", "Consolas", "DejaVu Sans Mono",
+          "Liberation Mono", monospace;
+
+  --tear: 9px;              /* height of the torn top/bottom edge              */
+}
+
+/* The desk the receipt sits on. */
+html {
+  background: var(--desk);
+  /* a faint vignette so the paper reads as lying on a surface */
+  background-image: radial-gradient(120% 60% at 50% 0%, #d7d4ce 0%, var(--desk) 60%);
+  min-height: 100%;
+}
+
+/* -------------------------------------------------------------------------
+ * The paper roll. The <body> of the print job IS the receipt: a fixed number
+ * of character columns wide, monospace, black on white, centered on the desk.
+ * Because the font is monospace, `ch` == one character cell, so `--columns` ch
+ * gives exactly the printable width and tables/pre line up on the same grid the
+ * printer uses.
+ * ---------------------------------------------------------------------- */
+body {
+  box-sizing: content-box;                 /* width == exactly the columns */
+  width: calc(var(--columns) * 1ch);
+  margin: 28px auto;
+  padding: 18px 14px;
+
+  font-family: var(--mono);
+  font-size: var(--font-size);
+  line-height: 1.32;                        /* receipts print tight */
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: none;             /* crisp, dot-matrix-ish glyphs */
+
+  box-shadow: 0 1px 0 rgba(0, 0, 0, .04), 0 10px 24px rgba(0, 0, 0, .22);
+  position: relative;
+}
+
+/* Torn top and bottom edges — purely decorative paper triangles standing out
+ * over the desk. If they render oddly in some browser, the receipt itself is
+ * unaffected; delete this block to get clean straight edges. */
+body::before,
+body::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: var(--tear);
+  background:
+    linear-gradient(45deg,  var(--paper) 50%, transparent 51%) 0 0 / var(--tear) var(--tear) repeat-x,
+    linear-gradient(-45deg, var(--paper) 50%, transparent 51%) 0 0 / var(--tear) var(--tear) repeat-x;
+}
+body::before { top: calc(-1 * var(--tear) + 1px); transform: scaleY(-1); }
+body::after  { bottom: calc(-1 * var(--tear) + 1px); }
+
+/* -------------------------------------------------------------------------
+ * Inline character styles. Farad'n reads these straight from the tags / inline
+ * CSS and toggles the matching ESC/POS attribute.
+ * ---------------------------------------------------------------------- */
+b, strong                                     { font-weight: 700; }
+i, em                                         { font-style: italic; }
+u                                             { text-decoration: underline; }
+
+/* <span> just carries inline CSS (font-weight / font-style / text-decoration /
+ * text-align / font-family) — the browser already applies those, nothing to do. */
+
+/* Font selection. On the printer, Font B (and C) are narrower faces that fit
+ * more characters per line; <small> selects Font B. We keep everything
+ * monospace (so columns stay aligned) and shrink to suggest the denser face.
+ * The [style*="font-b"] rules also rescue an inline `font-family: font-b`,
+ * which would otherwise drop the browser to a non-monospace default. */
+small,
+[style*="font-b" i]                           { font-family: var(--mono) !important; font-size: .84em; }
+[style*="font-c" i]                           { font-family: var(--mono) !important; font-size: .72em; }
+[style*="font-a" i]                           { font-family: var(--mono) !important; font-size: 1em;  }
+
+/* -------------------------------------------------------------------------
+ * Headings. The printer scales the character cell itself:
+ *   h1 → double width AND double height (2× cell in both axes)
+ *   h2 → double height only (same width, twice as tall)
+ *   h3 → bold, normal size
+ * Monospace makes h1 faithful with a plain 2em; h2 is stretched vertically.
+ * ---------------------------------------------------------------------- */
+h1, h2, h3 { font-weight: 700; margin: .5em 0 .35em; }
+
+h1 { font-size: 2em; line-height: 1.1; }      /* 2× width + 2× height */
+
+h2 {                                          /* 2× height, 1× width */
+  display: table;                             /* shrink box to the text */
+  transform: scaleY(2);
+  transform-origin: left top;
+  margin-bottom: 1.3em;                       /* reserve room for the stretch */
+}
+
+h3 { font-size: 1em; }                        /* bold only */
+
+/* -------------------------------------------------------------------------
+ * Blocks & flow.
+ * ---------------------------------------------------------------------- */
+p, div { margin: 0 0 .5em; }
+p:last-child, div:last-child { margin-bottom: 0; }
+
+/* <center> and CSS text-align — the printer justifies the whole line. */
+center { display: block; text-align: center; }
+
+/* <pre> — preformatted, whitespace preserved on the same grid. */
+pre {
+  margin: .4em 0;
+  white-space: pre;
+  overflow-x: auto;                           /* never widen the paper */
+}
+
+/* <br> — a plain line break, browser default. */
+
+/* <hr> — Farad'n prints a full-width row of dashes; a dashed rule matches it. */
+hr {
+  border: none;
+  border-top: 1px dashed var(--ink);
+  margin: .6em 0;
+}
+
+/* -------------------------------------------------------------------------
+ * Lists. Farad'n renders "- " for <ul> and "1. " for <ol>, inline with the
+ * text, indenting nested lists by two columns.
+ * ---------------------------------------------------------------------- */
+ul, ol { margin: .4em 0; padding-left: 0; }
+li     { list-style-position: inside; }        /* marker is part of the line */
+ul               { list-style: none; }
+ul > li::before  { content: "- "; }
+ol               { list-style: decimal; }      /* "1." "2." … */
+li ul, li ol     { margin: 0; padding-left: 2ch; }  /* nested → indent 2 cols */
+
+/* -------------------------------------------------------------------------
+ * Tables. Farad'n lays tables on the character grid: columns sized to their
+ * content, the remainder distributed to fill the paper width, per-cell
+ * alignment honored, and <th> bold. A monospace auto-layout table at 100%
+ * width reproduces that closely.
+ * ---------------------------------------------------------------------- */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: .4em 0;
+  table-layout: auto;                          /* size columns to content */
+}
+th, td {
+  padding: 0 1ch 0 0;                          /* one-space gutter between cols */
+  text-align: left;                            /* Farad'n's default; inline wins */
+  vertical-align: top;
+}
+th { font-weight: 700; }
+th:last-child, td:last-child { padding-right: 0; }
+
+/* If the print job asks for borders (border attribute or inline border CSS),
+ * show a hairline so the preview matches. */
+table[border] th, table[border] td { border: 1px solid var(--faint); padding: 0 1ch; }
+
+/* -------------------------------------------------------------------------
+ * Images. Farad'n dithers to 1-bit and scales to the paper width, so preview
+ * them monochrome, hard-edged, and never wider than the paper.
+ * ---------------------------------------------------------------------- */
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  filter: grayscale(1) contrast(1.35) brightness(1.02);
+  image-rendering: pixelated;                  /* suggest the dithered raster */
+}
+
+/* -------------------------------------------------------------------------
+ * <bar-code> — Farad'n's custom element. In a browser it is an unknown inline
+ * element showing its own text, so we dress it up: a striped bar (1D) or a
+ * code block (2D: qr / pdf417) with the data as a caption underneath.
+ * Works for both <bar-code>…</bar-code> and <div class="bar-code">.
+ * ---------------------------------------------------------------------- */
+bar-code, .bar-code {
+  display: block;
+  margin: .6em auto;
+  text-align: center;
+  font-size: .82em;
+  letter-spacing: .12em;
+  word-break: break-all;
+}
+bar-code::before, .bar-code::before {
+  content: "";
+  display: block;
+  width: 88%;
+  height: 3em;
+  margin: 0 auto .25em;
+  /* uneven vertical bars ≈ a 1D barcode */
+  background: repeating-linear-gradient(90deg,
+      var(--ink) 0 2px, transparent 2px 3px,
+      var(--ink) 3px 5px, transparent 5px 9px,
+      var(--ink) 9px 10px, transparent 10px 13px);
+}
+
+/* 2D codes: a square module grid instead of stripes. */
+bar-code[symbology="qr" i]::before,
+bar-code[symbology="pdf417" i]::before,
+.bar-code--qr::before,
+.bar-code--pdf417::before {
+  width: 5.5em;
+  height: 5.5em;
+  box-sizing: border-box;
+  border: 3px solid var(--ink);
+  background:
+    repeating-conic-gradient(var(--ink) 0 25%, transparent 0 50%) 0 0 / .8em .8em;
+}

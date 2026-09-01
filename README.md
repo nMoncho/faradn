@@ -209,6 +209,30 @@ GraalVM native binary. The JVM library (and `java -jar`) additionally reads JPEG
 BMP and WBMP via `javax.imageio`; those formats are **not** available in the native
 binary, which has no AWT.
 
+## Previewing print jobs
+
+Thermal output is hard to picture from HTML alone, so this repo provides a stylesheet
+that renders a print job in a browser roughly the way it will come off the printer:
+a narrow monospace paper roll on a character grid, with each supported tag mapped to
+the visual the ESC/POS renderer produces (double-size headings, `- `/`1.` list
+markers, dashed rules, content-sized table columns, 1D/2D barcode placeholders).
+
+Add this line to the `<head>` of any print job and open it in a browser:
+
+```html
+<link rel="stylesheet" href="docs/faradn-preview.css">
+```
+
+- **[`docs/faradn-preview.css`](docs/faradn-preview.css)** — the stylesheet. Two
+  knobs at the top: `--columns` (paper width in characters — `42` ≈ 80mm, `32` ≈
+  58mm) and `--font-size`.
+- **[`docs/preview-demo.html`](docs/preview-demo.html)** — a sample receipt that
+  exercises every supported feature; open it to see the whole vocabulary at once.
+
+This is an approximation, not an emulator: word-wrap points, exact column widths and
+image dithering are the browser's, not the printer's. It conveys the feel and catches
+layout mistakes early, but is not byte-accurate — the printer is the source of truth.
+
 ## Supported Devices
 
 This project aims to support as many devices as possible, not only ESC/POS
