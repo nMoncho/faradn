@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
 
 import org.jsoup.nodes.Element;
@@ -12,6 +13,7 @@ import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 
 import net.nmoncho.faradn.Image;
+import net.nmoncho.faradn.Utils;
 
 /**
  * Builds the IR ({@code List<Block>}) from a jsoup document.
@@ -297,6 +299,97 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
       case "h" -> BarcodeOptions.QrEc.H;
       default -> BarcodeOptions.QrEc.M;
     };
+  }
+
+  /**
+   * A page-mode container: a {@code position: relative} (or {@code absolute})
+   * element with an explicit, positive {@code width} and {@code height}. Its
+   * {@code position: absolute} children become {@link Placement}s in a
+   * {@link Canvas} (see {@link #buildCanvas}).
+   */
+  private boolean isCanvasContainer(Element el) {
+    final Optional<String> position = Utils.findStyleValue(el, "position");
+    if (position.isEmpty()) {
+      return false;
+    }
+    final String p = position.get().strip().toLowerCase();
+    if (!p.equals("relative") && !p.equals("absolute")) {
+      return false;
+    }
+    return canvasSize(el).isPresent();
+  }
+
+  /**
+   * The container's {@code [widthDots, heightDots]} when both are present and
+   * positive.
+   */
+  private Optional<int[]> canvasSize(Element el) {
+    final OptionalInt width = styleLength(el, "width", 0);
+    final OptionalInt height = styleLength(el, "height", 0);
+    if (width.isPresent() && height.isPresent() && width.getAsInt() > 0 && height.getAsInt() > 0) {
+      return Optional.of(new int[] { width.getAsInt(), height.getAsInt() });
+    }
+    return Optional.empty();
+  }
+
+  /**
+   * Resolves a CSS length property on an element to dots, if present and valid.
+   */
+  private OptionalInt styleLength(Element el, String property, int referenceDots) {
+    final Optional<String> raw = Utils.findStyleValue(el, property);
+    return raw.isPresent() ? Utils.lengthToDots(raw.get(), dpi, referenceDots) : OptionalInt.empty();
+  }
+
+  /**
+   * Translates a sized, positioned container into a {@link Canvas}: each
+   * {@code position: absolute} child is placed at its {@code left}/{@code top}
+   * (dots from the top-left, {@code %} relative to the area, missing → 0).
+   * Non-positioned children are ignored in this version; rotation is not yet
+   * mapped (always {@link Canvas.Direction#NORMAL}).
+   */
+  private Optional<Canvas> buildCanvas(Element container, ComputedStyle base) {
+    final Optional<int[]> size = canvasSize(container);
+    if (size.isEmpty()) {
+      return Optional.empty();
+    }
+    final int widthDots = size.get()[0];
+    final int heightDots = size.get()[1];
+
+    final List<Placement> placements = new ArrayList<>();
+    for (Element child : container.children()) {
+      if (!isAbsolutelyPositioned(child)) {
+        Utils.log.debug("Ignoring non-absolutely-positioned <{}> in page-mode container", child.normalName());
+        continue;
+      }
+      final ComputedStyle childStyle = base.process(child);
+      final int x = Math.max(0, styleLength(child, "left", widthDots).orElse(0));
+      final int y = Math.max(0, styleLength(child, "top", heightDots).orElse(0));
+      placeableOf(child, childStyle).ifPresent(content -> placements.add(new Placement(x, y, content)));
+    }
+    return Optional.of(new Canvas(widthDots, heightDots, Canvas.Direction.NORMAL, placements));
+  }
+
+  private static boolean isAbsolutelyPositioned(Element el) {
+    return Utils.findStyleValue(el, "position")
+        .map(p -> p.strip().equalsIgnoreCase("absolute"))
+        .orElse(false);
+  }
+
+  /**
+   * Maps a positioned child element to the content it holds: a barcode, an
+   * image, or otherwise a paragraph of its inline text. Empty when the child has
+   * no printable content.
+   */
+  private static Optional<Placeable> placeableOf(Element el, ComputedStyle style) {
+    if (isBarcode(el)) {
+      return barcodeData(el).<Placeable>map(data -> new Barcode(
+          data, barcodeSymbology(el).orElse(null), style.alignment(), barcodeOptions(el)));
+    }
+    if (el.normalName().equals("img")) {
+      return Optional.of(new ImageBlock(Image.fromNode(el), style.alignment()));
+    }
+    final List<TextRun> runs = cellContent(el, style);
+    return runs.isEmpty() ? Optional.empty() : Optional.of(new Paragraph(runs, style.alignment()));
   }
 
   private static Optional<Table> buildTable(Element table, ComputedStyle base) {

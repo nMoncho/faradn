@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Optional;
+import java.util.OptionalInt;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
@@ -73,5 +74,40 @@ public class UtilsTest {
   void malformedDeclarationsAreSkipped() {
     assertEquals(Optional.of("bold"),
         Utils.findStyleValue(withStyle("nonsense; : orphan; font-weight: bold"), "font-weight"));
+  }
+
+  @Test
+  void lengthPxMapsOneToOneToDots() {
+    assertEquals(OptionalInt.of(512), Utils.lengthToDots("512px", 180, 0));
+    assertEquals(OptionalInt.of(-10), Utils.lengthToDots("-10px", 180, 0)); // caller clamps
+    assertEquals(OptionalInt.of(13), Utils.lengthToDots("12.6px", 180, 0)); // rounded
+  }
+
+  @Test
+  void lengthMmAndCmUseDpi() {
+    assertEquals(OptionalInt.of(567), Utils.lengthToDots("80mm", 180, 0)); // 80*180/25.4
+    assertEquals(OptionalInt.of(213), Utils.lengthToDots("3cm", 180, 0)); // 30*180/25.4
+    assertEquals(OptionalInt.of(7), Utils.lengthToDots("1mm", 180, 0)); // 180/25.4 -> 7
+    assertEquals(OptionalInt.of(630), Utils.lengthToDots("80mm", 200, 0)); // dpi matters
+  }
+
+  @Test
+  void lengthPercentIsFractionOfReference() {
+    assertEquals(OptionalInt.of(200), Utils.lengthToDots("50%", 180, 400));
+    assertEquals(OptionalInt.of(0), Utils.lengthToDots("50%", 180, 0));
+  }
+
+  @Test
+  void lengthUnitIsCaseInsensitive() {
+    assertEquals(OptionalInt.of(567), Utils.lengthToDots("80MM", 180, 0));
+  }
+
+  @Test
+  void lengthRejectsUnitlessNullBlankAndUnparseable() {
+    assertTrue(Utils.lengthToDots("512", 180, 0).isEmpty()); // no unit
+    assertTrue(Utils.lengthToDots(null, 180, 0).isEmpty());
+    assertTrue(Utils.lengthToDots("  ", 180, 0).isEmpty());
+    assertTrue(Utils.lengthToDots("abcpx", 180, 0).isEmpty());
+    assertTrue(Utils.lengthToDots("10em", 180, 0).isEmpty()); // unsupported unit
   }
 }

@@ -562,6 +562,22 @@ public class EscPosRendererTest {
   }
 
   @Test
+  void htmlPositionedContainerRendersPageMode() {
+    // End-to-end: HTML position:relative container + absolute children -> Canvas -> page mode.
+    byte[] out = renderer.render(Document.from(
+        "<div style=\"position: relative; width: 512px; height: 120px\">"
+            + "<span style=\"position: absolute; left: 0; top: 0\">A</span>"
+            + "<span style=\"position: absolute; left: 200px; top: 60px\">B</span>"
+            + "</div>")
+        .blocks(180));
+
+    assertBytes(cat(HEAD, GS_P_180, SELECT_PAGE_MODE, escW(512, 120), ESC_T_0,
+        escDollar(0), gsDollar(24), "A", // y=0 + one Font A cell (24)
+        escDollar(200), gsDollar(84), "B", // y=60 + 24
+        FF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
   void nullProfileIsRejected() {
     assertThrows(IllegalArgumentException.class, () -> new EscPosRenderer(null));
   }

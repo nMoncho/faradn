@@ -194,6 +194,29 @@ Rendering is configurable per barcode through attributes:
 <bar-code symbology="qr" module="8" ec="h">https://example.com</bar-code>
 ```
 
+**Positioned layout (page mode).** Most receipts flow top to bottom, but a bounded region -
+a header, a coupon, a label - can place its pieces at exact coordinates using ESC/POS *page
+mode*. A sized, `position: relative` container with `position: absolute` children maps to such
+a region: each child is drawn at its `left`/`top`, and the whole area prints at once.
+
+```html
+<div style="position: relative; width: 512px; height: 160px">
+  <span style="position: absolute; left: 0;    top: 0">Order #42</span>
+  <span style="position: absolute; left: 320px; top: 0">Table 7</span>
+  <img   style="position: absolute; left: 0;    top: 40px" src="data:image/png;base64,…">
+  <bar-code style="position: absolute; left: 0; top: 96px" symbology="qr">…</bar-code>
+</div>
+```
+
+- The container needs `position: relative` (or `absolute`) **and** an explicit `width` and
+  `height`; without both it stays a normal flowing block.
+- Positioned children may hold text (`<span>`/`<p>`/…), an `<img>`, or a `<bar-code>`. Lengths
+  accept `px` (1 px = 1 dot), `mm`/`cm` (converted with the printer's dpi), and `%` (of the
+  area); `left`/`top` default to `0`.
+- Children *without* `position: absolute` are ignored inside the container. Content past the
+  area is clipped by the printer, so give the container enough height. Rotation
+  (`transform: rotate(…)`) is not mapped yet.
+
 **Text encoding.** Text starts on the profile's default code page (TM-T88V's is
 PC437) and the renderer switches pages inline (`ESC t`) for glyphs outside the
 current one, so mixed-script receipts encode faithfully instead of collapsing to

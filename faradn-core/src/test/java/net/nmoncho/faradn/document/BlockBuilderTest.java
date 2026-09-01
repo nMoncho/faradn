@@ -298,4 +298,140 @@ public class BlockBuilderTest {
   void emptyDocumentYieldsNoBlocks() {
     assertTrue(Document.from("<div>   \n  </div>").blocks().isEmpty());
   }
+
+  // ----- page mode: position:relative container -> Canvas -----
+
+  private static final String IMG_SRC = "data:image/png;base64,AAAA";
+
+  @Test
+  void positionedContainerBecomesCanvas() {
+    final List<Block> blocks = Document.from(
+        "<div style=\"position: relative; width: 512px; height: 160px\">"
+            + "<span style=\"position: absolute; left: 0; top: 0\">Order #42</span>"
+            + "<span style=\"position: absolute; left: 320px; top: 40px\">Table 7</span>"
+            + "</div>")
+        .blocks();
+
+    assertEquals(1, blocks.size());
+    final Canvas canvas = assertInstanceOf(Canvas.class, blocks.get(0));
+    assertEquals(512, canvas.widthDots());
+    assertEquals(160, canvas.heightDots());
+    assertEquals(Canvas.Direction.NORMAL, canvas.direction());
+    assertEquals(2, canvas.placements().size());
+
+    final Placement first = canvas.placements().get(0);
+    assertEquals(0, first.xDots());
+    assertEquals(0, first.yDots());
+    assertEquals("Order #42", assertInstanceOf(Paragraph.class, first.content()).runs().get(0).text());
+
+    final Placement second = canvas.placements().get(1);
+    assertEquals(320, second.xDots());
+    assertEquals(40, second.yDots());
+    assertEquals("Table 7", assertInstanceOf(Paragraph.class, second.content()).runs().get(0).text());
+  }
+
+  @Test
+  void absolutePositionedContainerAlsoBecomesCanvas() {
+    final List<Block> blocks = Document.from(
+        "<div style=\"position: absolute; width: 200px; height: 80px\">"
+            + "<span style=\"position: absolute; left: 5px; top: 5px\">x</span></div>")
+        .blocks();
+
+    assertInstanceOf(Canvas.class, blocks.get(0));
+  }
+
+  @Test
+  void canvasResolvesMmAndCmWithDpi() {
+    final List<Block> blocks = Document.from(
+        "<div style=\"position: relative; width: 80mm; height: 40mm\">"
+            + "<span style=\"position: absolute; left: 1cm; top: 2cm\">x</span></div>")
+        .blocks(180);
+
+    final Canvas canvas = assertInstanceOf(Canvas.class, blocks.get(0));
+    assertEquals(567, canvas.widthDots()); // 80 * 180 / 25.4
+    assertEquals(283, canvas.heightDots()); // 40 * 180 / 25.4
+    final Placement p = canvas.placements().get(0);
+    assertEquals(71, p.xDots()); // 10mm -> 10 * 180 / 25.4
+    assertEquals(142, p.yDots()); // 20mm -> 20 * 180 / 25.4
+  }
+
+  @Test
+  void canvasResolvesPercentAgainstArea() {
+    final List<Block> blocks = Document.from(
+        "<div style=\"position: relative; width: 400px; height: 200px\">"
+            + "<span style=\"position: absolute; left: 50%; top: 25%\">x</span></div>")
+        .blocks();
+
+    final Placement p = assertInstanceOf(Canvas.class, blocks.get(0)).placements().get(0);
+    assertEquals(200, p.xDots()); // 50% of 400
+    assertEquals(50, p.yDots()); // 25% of 200
+  }
+
+  @Test
+  void canvasChildTypesMapToPlaceables() {
+    final List<Block> blocks = Document.from(
+        "<div style=\"position: relative; width: 512px; height: 200px\">"
+            + "<img style=\"position: absolute; left: 0; top: 0\" width=\"8\" height=\"8\" src=\"" + IMG_SRC + "\">"
+            + "<bar-code style=\"position: absolute; left: 0; top: 100px\" symbology=\"code128\">FARADN</bar-code>"
+            + "<span style=\"position: absolute; left: 0; top: 150px\">hi</span>"
+            + "</div>")
+        .blocks();
+
+    final Canvas canvas = assertInstanceOf(Canvas.class, blocks.get(0));
+    assertEquals(3, canvas.placements().size());
+    assertInstanceOf(ImageBlock.class, canvas.placements().get(0).content());
+    final Barcode barcode = assertInstanceOf(Barcode.class, canvas.placements().get(1).content());
+    assertEquals("FARADN", barcode.data());
+    assertEquals("code128", barcode.symbology());
+    assertInstanceOf(Paragraph.class, canvas.placements().get(2).content());
+  }
+
+  @Test
+  void canvasChildMissingLeftTopDefaultsToZero() {
+    final List<Block> blocks = Document.from(
+        "<div style=\"position: relative; width: 300px; height: 100px\">"
+            + "<span style=\"position: absolute\">x</span></div>")
+        .blocks();
+
+    final Placement p = assertInstanceOf(Canvas.class, blocks.get(0)).placements().get(0);
+    assertEquals(0, p.xDots());
+    assertEquals(0, p.yDots());
+  }
+
+  @Test
+  void canvasIgnoresNonAbsolutelyPositionedChildren() {
+    final List<Block> blocks = Document.from(
+        "<div style=\"position: relative; width: 300px; height: 100px\">"
+            + "<span style=\"position: absolute; left: 10px; top: 10px\">keep</span>"
+            + "<span>drop</span>"
+            + "<span style=\"position: relative\">also drop</span>"
+            + "</div>")
+        .blocks();
+
+    final Canvas canvas = assertInstanceOf(Canvas.class, blocks.get(0));
+    assertEquals(1, canvas.placements().size());
+    assertEquals("keep",
+        assertInstanceOf(Paragraph.class, canvas.placements().get(0).content()).runs().get(0).text());
+  }
+
+  @Test
+  void canvasClampsNegativePositionsToZero() {
+    final List<Block> blocks = Document.from(
+        "<div style=\"position: relative; width: 300px; height: 100px\">"
+            + "<span style=\"position: absolute; left: -20px; top: -5px\">x</span></div>")
+        .blocks();
+
+    final Placement p = assertInstanceOf(Canvas.class, blocks.get(0)).placements().get(0);
+    assertEquals(0, p.xDots());
+    assertEquals(0, p.yDots());
+  }
+
+  @Test
+  void relativeContainerWithoutSizeIsNotCanvas() {
+    final List<Block> blocks = Document.from(
+        "<div style=\"position: relative\"><span>hi</span></div>").blocks();
+
+    assertTrue(blocks.stream().noneMatch(b -> b instanceof Canvas));
+    assertEquals("hi", assertInstanceOf(Paragraph.class, blocks.get(0)).runs().get(0).text());
+  }
 }
