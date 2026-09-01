@@ -434,4 +434,37 @@ public class BlockBuilderTest {
     assertTrue(blocks.stream().noneMatch(b -> b instanceof Canvas));
     assertEquals("hi", assertInstanceOf(Paragraph.class, blocks.get(0)).runs().get(0).text());
   }
+
+  private static Canvas.Direction canvasDirection(String extraStyle) {
+    final List<Block> blocks = Document.from(
+        "<div style=\"position: relative; width: 300px; height: 100px" + extraStyle + "\">"
+            + "<span style=\"position: absolute; left: 0; top: 0\">x</span></div>")
+        .blocks();
+    return assertInstanceOf(Canvas.class, blocks.get(0)).direction();
+  }
+
+  @Test
+  void canvasRotationFromCssTransform() {
+    assertEquals(Canvas.Direction.NORMAL, canvasDirection(""));
+    assertEquals(Canvas.Direction.ROTATE_90_CW, canvasDirection("; transform: rotate(90deg)"));
+    assertEquals(Canvas.Direction.ROTATE_180, canvasDirection("; transform: rotate(180deg)"));
+    assertEquals(Canvas.Direction.ROTATE_90_CCW, canvasDirection("; transform: rotate(270deg)"));
+  }
+
+  @Test
+  void canvasRotationNormalizesNegativeAndFullTurns() {
+    assertEquals(Canvas.Direction.ROTATE_90_CCW, canvasDirection("; transform: rotate(-90deg)"));
+    assertEquals(Canvas.Direction.ROTATE_90_CW, canvasDirection("; transform: rotate(-270deg)"));
+    assertEquals(Canvas.Direction.NORMAL, canvasDirection("; transform: rotate(0deg)"));
+    assertEquals(Canvas.Direction.NORMAL, canvasDirection("; transform: rotate(360deg)"));
+  }
+
+  @Test
+  void canvasRotationSnapsToNearestRightAngleAndIgnoresOther() {
+    assertEquals(Canvas.Direction.ROTATE_90_CW, canvasDirection("; transform: rotate(88deg)")); // -> 90
+    assertEquals(Canvas.Direction.NORMAL, canvasDirection("; transform: rotate(30deg)")); // -> 0
+    assertEquals(Canvas.Direction.NORMAL, canvasDirection("; transform: scale(2)")); // no rotate()
+    assertEquals(Canvas.Direction.ROTATE_90_CW,
+        canvasDirection("; transform: translate(4px, 4px) rotate(90deg)")); // combined
+  }
 }

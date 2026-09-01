@@ -63,6 +63,9 @@ public class EscPosRendererTest {
   private static final byte[] GS_P_180 = { GS, 0x50, (byte) 180, (byte) 180 };
   private static final byte[] SELECT_PAGE_MODE = { ESC, 0x4C };
   private static final byte[] ESC_T_0 = { ESC, 0x54, 0x00 };
+  private static final byte[] ESC_T_1 = { ESC, 0x54, 0x01 };
+  private static final byte[] ESC_T_2 = { ESC, 0x54, 0x02 };
+  private static final byte[] ESC_T_3 = { ESC, 0x54, 0x03 };
   private static final byte[] FF = { 0x0C };
   private static final byte[] FULL_CUT = { GS, 0x56, 0x00 };
   private static final byte[] SELECT_FONT_B = { ESC, 0x4D, 0x01 };
@@ -575,6 +578,76 @@ public class EscPosRendererTest {
         escDollar(0), gsDollar(24), "A", // y=0 + one Font A cell (24)
         escDollar(200), gsDollar(84), "B", // y=60 + 24
         FF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void canvasDirectionSelectsEscT() {
+    assertEscTForDirection(Canvas.Direction.NORMAL, ESC_T_0);
+    assertEscTForDirection(Canvas.Direction.ROTATE_90_CW, ESC_T_3);
+    assertEscTForDirection(Canvas.Direction.ROTATE_180, ESC_T_2);
+    assertEscTForDirection(Canvas.Direction.ROTATE_90_CCW, ESC_T_1);
+  }
+
+  private void assertEscTForDirection(Canvas.Direction direction, byte[] escT) {
+    byte[] out = renderer.render(List.of(Canvas.of(512, 120).direction(direction)
+        .place(0, 0, new Paragraph(List.of(new TextRun("X", ComputedStyle.INITIAL)), Alignment.LEFT)).build()));
+    assertBytes(cat(HEAD, GS_P_180, SELECT_PAGE_MODE, escW(512, 120), escT,
+        escDollar(0), gsDollar(24), "X", FF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void canvasStillRendersOnProfileWithoutPageMode() {
+    // supportsPageMode() == false only warns; the page-mode bytes are still emitted (best effort).
+    EscPosRenderer noPageMode = new EscPosRenderer(withoutPageMode(TM_T88V));
+    byte[] out = noPageMode.render(List.of(Canvas.of(512, 120)
+        .place(0, 0, new Paragraph(List.of(new TextRun("X", ComputedStyle.INITIAL)), Alignment.LEFT)).build()));
+
+    assertBytes(cat(HEAD, GS_P_180, SELECT_PAGE_MODE, escW(512, 120), ESC_T_0,
+        escDollar(0), gsDollar(24), "X", FF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  private static PrinterProfile withoutPageMode(PrinterProfile base) {
+    return new PrinterProfile() {
+      @Override
+      public String name() {
+        return base.name();
+      }
+
+      @Override
+      public int dotsPerLine() {
+        return base.dotsPerLine();
+      }
+
+      @Override
+      public List<Font> fonts() {
+        return base.fonts();
+      }
+
+      @Override
+      public int dpi() {
+        return base.dpi();
+      }
+
+      @Override
+      public boolean supportsCut() {
+        return base.supportsCut();
+      }
+
+      @Override
+      public CodePage codePage() {
+        return base.codePage();
+      }
+
+      @Override
+      public List<CodePage> codePages() {
+        return base.codePages();
+      }
+
+      @Override
+      public boolean supportsPageMode() {
+        return false;
+      }
+    };
   }
 
   @Test

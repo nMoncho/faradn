@@ -5,6 +5,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import net.nmoncho.faradn.UnsupportedBlockException;
 import net.nmoncho.faradn.document.Barcode;
 import net.nmoncho.faradn.document.Block;
@@ -57,6 +60,8 @@ import net.nmoncho.faradn.printer.escpos.commands.PrintPositionCommands.Word16;
  * {@link BarcodeCommands}; tables are laid out on a character grid.
  */
 public final class EscPosRenderer {
+
+  private static final Logger log = LoggerFactory.getLogger(EscPosRenderer.class);
 
   private static final String RULE_CHARACTER = "-";
   private static final int END_OF_JOB_FEED_LINES = 4;
@@ -169,6 +174,12 @@ public final class EscPosRenderer {
    */
   private ComputedStyle renderCanvas(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current,
       Canvas canvas) {
+    if (!profile.supportsPageMode()) {
+      // Best effort: still emit the page-mode sequence, but warn - the region may
+      // print blank or garbled on a model that does not support it.
+      log.warn("Profile [{}] does not support page mode; the positioned region may not print correctly",
+          profile.name());
+    }
     current = clearInlineStyle(out, current);
 
     // Pin the motion unit to the profile's dpi so positions in dots map 1:1.

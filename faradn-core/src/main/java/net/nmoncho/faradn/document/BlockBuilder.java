@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
@@ -366,7 +368,34 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
       final int y = Math.max(0, styleLength(child, "top", heightDots).orElse(0));
       placeableOf(child, childStyle).ifPresent(content -> placements.add(new Placement(x, y, content)));
     }
-    return Optional.of(new Canvas(widthDots, heightDots, Canvas.Direction.NORMAL, placements));
+    return Optional.of(new Canvas(widthDots, heightDots, directionOf(container), placements));
+  }
+
+  /**
+   * {@code transform: rotate(90|180|270deg)} on the container becomes a canvas
+   * {@link Canvas.Direction}.
+   */
+  private static final Pattern ROTATE = Pattern.compile(
+      "rotate\\(\\s*(-?\\d+(?:\\.\\d+)?)\\s*(?:deg)?\\s*\\)", Pattern.CASE_INSENSITIVE);
+
+  private static Canvas.Direction directionOf(Element container) {
+    final Optional<String> transform = Utils.findStyleValue(container, "transform");
+    if (transform.isEmpty()) {
+      return Canvas.Direction.NORMAL;
+    }
+    final Matcher matcher = ROTATE.matcher(transform.get());
+    if (!matcher.find()) {
+      return Canvas.Direction.NORMAL;
+    }
+    // Snap to the nearest right angle and normalize to [0, 360). CSS rotation is
+    // clockwise, so 90deg = a clockwise quarter turn.
+    final int degrees = ((int) Math.round(Double.parseDouble(matcher.group(1)) / 90.0) * 90 % 360 + 360) % 360;
+    return switch (degrees) {
+      case 90 -> Canvas.Direction.ROTATE_90_CW;
+      case 180 -> Canvas.Direction.ROTATE_180;
+      case 270 -> Canvas.Direction.ROTATE_90_CCW;
+      default -> Canvas.Direction.NORMAL;
+    };
   }
 
   private static boolean isAbsolutelyPositioned(Element el) {

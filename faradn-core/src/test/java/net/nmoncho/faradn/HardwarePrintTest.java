@@ -68,6 +68,7 @@ public class HardwarePrintTest {
   private static final File RECEIPT = new File("src/test/resources/printjobs/receipt-full.html");
   private static final File TABLES = new File("src/test/resources/printjobs/tables.html");
   private static final File PAGE_MODE = new File("src/test/resources/printjobs/page-mode.html");
+  private static final File PAGE_MODE_ROTATED = new File("src/test/resources/printjobs/page-mode-rotated.html");
 
   @Test
   @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
@@ -121,6 +122,18 @@ public class HardwarePrintTest {
     // The full HTML -> IR -> page-mode path: same coupon as the programmatic
     // test, driven from position:relative / position:absolute CSS.
     Document doc = Document.from(PAGE_MODE);
+
+    Optional<Printer> printer = Printer.from(0x04b8);
+    printer.ifPresentOrElse(
+        p -> p.print(doc, "TM-T88V"),
+        () -> fail("No Epson printer (USB vendor 0x04b8) found"));
+  }
+
+  @Test
+  @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
+  void printsRotatedPageModeOverUsb() {
+    // transform: rotate(180deg) -> ESC T; the coupon should print upside down.
+    Document doc = Document.from(PAGE_MODE_ROTATED);
 
     Optional<Printer> printer = Printer.from(0x04b8);
     printer.ifPresentOrElse(

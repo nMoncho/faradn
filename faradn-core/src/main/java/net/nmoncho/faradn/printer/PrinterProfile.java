@@ -52,6 +52,17 @@ public interface PrinterProfile {
   boolean supportsCut();
 
   /**
+   * Whether the printer supports ESC/POS page mode ({@code ESC L … FF}), which
+   * the renderer uses for positioned {@code Canvas} regions. The capability
+   * database carries no such flag, so this defaults to {@code true} (all TM-class
+   * and the vast majority of ESC/POS printers support it); override it to
+   * {@code false} for a known-unsupported model so the renderer can warn.
+   */
+  default boolean supportsPageMode() {
+    return true;
+  }
+
+  /**
    * The code page selected at reset (the initial {@code ESC t}); usually
    * slot&nbsp;0.
    */

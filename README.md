@@ -214,8 +214,9 @@ a region: each child is drawn at its `left`/`top`, and the whole area prints at 
   accept `px` (1 px = 1 dot), `mm`/`cm` (converted with the printer's dpi), and `%` (of the
   area); `left`/`top` default to `0`.
 - Children *without* `position: absolute` are ignored inside the container. Content past the
-  area is clipped by the printer, so give the container enough height. Rotation
-  (`transform: rotate(…)`) is not mapped yet.
+  area is clipped by the printer, so give the container enough height.
+- `transform: rotate(90deg | 180deg | 270deg)` on the container rotates the whole region
+  (mapped to the ESC/POS print direction); other angles snap to the nearest right angle.
 
 **Text encoding.** Text starts on the profile's default code page (TM-T88V's is
 PC437) and the renderer switches pages inline (`ESC t`) for glyphs outside the
