@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Page mode (QR)</title>
+</head>
+<!-- Diagnostic for 2D (QR) vertical anchoring in page mode. The QR is placed at
+     top:56px, with a marker line just above it (top:0) and one well below
+     (top:260px).
+
+     Expected if 2D develops DOWNWARD from the position (what the renderer
+     assumes): reading top-to-bottom = "ABOVE QR", the QR block, "BELOW QR", and
+     the QR sits clearly between the two markers.
+
+     If instead the QR were baseline-anchored like a 1D barcode (drawn UPWARD), it
+     would rise above / collide with the "ABOVE QR" marker - that would mean 2D
+     needs the same height offset the renderer applies to 1D barcodes. -->
+<body style="width: 512px; height: 320px">
+    <span style="position: absolute; left: 0; top: 0"><b>ABOVE QR (top=0)</b></span>
+    <bar-code style="position: absolute; left: 0; top: 56px" symbology="qr" module="6" ec="m">https://nmoncho.io/faradn</bar-code>
+    <span style="position: absolute; left: 0; top: 260px">BELOW QR (top=260)</span>
+</body>
+</html>

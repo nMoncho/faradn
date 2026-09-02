@@ -61,6 +61,14 @@ import net.nmoncho.faradn.transport.UsbTransport;
  * {@link #printsPageModeHtmlOverUsb()} prints the same coupon through the full
  * HTML pipeline (a {@code position: relative} container with {@code position:
  * absolute} children), verifying the CSS-to-page-mode mapping end to end.
+ * <p>
+ * {@link #printsRotatedPageModeOverUsb()} prints a {@code transform:
+ * rotate(180deg)} coupon (it should come out upside down), and
+ * {@link #printsLabelOverUsb()} prints a whole-job label from a sized
+ * {@code <body>} - a badge with a name, a role, and a scannable barcode.
+ * <p>
+ * {@link #printsQrPageModeOverUsb()} is a diagnostic for 2D (QR) vertical
+ * anchoring in page mode: the QR should land between two marker lines and scan.
  */
 @Tag("hardware")
 public class HardwarePrintTest {
@@ -69,6 +77,8 @@ public class HardwarePrintTest {
   private static final File TABLES = new File("src/test/resources/printjobs/tables.html");
   private static final File PAGE_MODE = new File("src/test/resources/printjobs/page-mode.html");
   private static final File PAGE_MODE_ROTATED = new File("src/test/resources/printjobs/page-mode-rotated.html");
+  private static final File LABEL = new File("src/test/resources/printjobs/label.html");
+  private static final File PAGE_MODE_QR = new File("src/test/resources/printjobs/page-mode-qr.html");
 
   @Test
   @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
@@ -134,6 +144,33 @@ public class HardwarePrintTest {
   void printsRotatedPageModeOverUsb() {
     // transform: rotate(180deg) -> ESC T; the coupon should print upside down.
     Document doc = Document.from(PAGE_MODE_ROTATED);
+
+    Optional<Printer> printer = Printer.from(0x04b8);
+    printer.ifPresentOrElse(
+        p -> p.print(doc, "TM-T88V"),
+        () -> fail("No Epson printer (USB vendor 0x04b8) found"));
+  }
+
+  @Test
+  @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
+  void printsLabelOverUsb() {
+    // Whole-job label: a sized <body> renders as one page-mode area with a name,
+    // a role, and a Code 128 barcode. Verify the layout and scan the barcode.
+    Document doc = Document.from(LABEL);
+
+    Optional<Printer> printer = Printer.from(0x04b8);
+    printer.ifPresentOrElse(
+        p -> p.print(doc, "TM-T88V"),
+        () -> fail("No Epson printer (USB vendor 0x04b8) found"));
+  }
+
+  @Test
+  @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
+  void printsQrPageModeOverUsb() {
+    // Diagnostic: is a QR anchored top-down (renderer's assumption) in page mode?
+    // The QR (top:56) should sit between the "ABOVE QR" (top:0) and "BELOW QR"
+    // (top:260) markers; scan it to confirm 2D renders correctly under ESC L.
+    Document doc = Document.from(PAGE_MODE_QR);
 
     Optional<Printer> printer = Printer.from(0x04b8);
     printer.ifPresentOrElse(

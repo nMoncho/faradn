@@ -467,4 +467,59 @@ public class BlockBuilderTest {
     assertEquals(Canvas.Direction.ROTATE_90_CW,
         canvasDirection("; transform: translate(4px, 4px) rotate(90deg)")); // combined
   }
+
+  // ----- whole-job labels: a sized <body> becomes one Canvas -----
+
+  @Test
+  void sizedBodyBecomesWholeJobCanvas() {
+    final List<Block> blocks = Document.from(
+        "<body style=\"width: 400px; height: 600px\">"
+            + "<span style=\"position: absolute; left: 10px; top: 20px\">Name</span>"
+            + "<bar-code style=\"position: absolute; left: 10px; top: 300px\" symbology=\"qr\">ID-42</bar-code>"
+            + "</body>")
+        .blocks();
+
+    assertEquals(1, blocks.size());
+    final Canvas canvas = assertInstanceOf(Canvas.class, blocks.get(0));
+    assertEquals(400, canvas.widthDots());
+    assertEquals(600, canvas.heightDots());
+    assertEquals(Canvas.Direction.NORMAL, canvas.direction());
+    assertEquals(2, canvas.placements().size());
+    assertEquals(10, canvas.placements().get(0).xDots());
+    assertEquals(20, canvas.placements().get(0).yDots());
+    assertEquals("Name",
+        assertInstanceOf(Paragraph.class, canvas.placements().get(0).content()).runs().get(0).text());
+    assertInstanceOf(Barcode.class, canvas.placements().get(1).content());
+  }
+
+  @Test
+  void sizedBodyRotates() {
+    final List<Block> blocks = Document.from(
+        "<body style=\"width: 400px; height: 600px; transform: rotate(180deg)\">"
+            + "<span style=\"position: absolute; left: 0; top: 0\">x</span></body>")
+        .blocks();
+
+    assertEquals(Canvas.Direction.ROTATE_180, assertInstanceOf(Canvas.class, blocks.get(0)).direction());
+  }
+
+  @Test
+  void sizedBodyIgnoresNonPositionedContent() {
+    final List<Block> blocks = Document.from(
+        "<body style=\"width: 300px; height: 200px\"><p>flow</p>"
+            + "<span style=\"position: absolute; left: 5px; top: 5px\">placed</span></body>")
+        .blocks();
+
+    final Canvas canvas = assertInstanceOf(Canvas.class, blocks.get(0));
+    assertEquals(1, canvas.placements().size());
+    assertEquals("placed",
+        assertInstanceOf(Paragraph.class, canvas.placements().get(0).content()).runs().get(0).text());
+  }
+
+  @Test
+  void unsizedBodyStaysStandardFlow() {
+    final List<Block> blocks = Document.from("<body><p>hi</p></body>").blocks();
+
+    assertTrue(blocks.stream().noneMatch(b -> b instanceof Canvas));
+    assertEquals("hi", assertInstanceOf(Paragraph.class, blocks.get(0)).runs().get(0).text());
+  }
 }

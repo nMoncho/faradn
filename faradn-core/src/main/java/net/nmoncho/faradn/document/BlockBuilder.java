@@ -68,10 +68,33 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
    */
   public static List<Block> build(org.jsoup.nodes.Document doc, int dpi) {
     final BlockBuilder builder = new BlockBuilder(dpi);
-    doc.body().traverse(builder);
+    final Element body = doc.body();
+
+    // A sized <body> turns the whole job into a single page-mode label area
+    // (fixed-size badge / ticket) instead of the standard-mode receipt flow.
+    final Optional<Canvas> label = builder.labelBody(body);
+    if (label.isPresent()) {
+      return List.of(label.get());
+    }
+
+    body.traverse(builder);
     builder.flushParagraph();
 
     return List.copyOf(builder.blocks);
+  }
+
+  /**
+   * Treats a {@code <body>} with an explicit, positive {@code width} and
+   * {@code height} as one whole-job {@link Canvas}: its
+   * {@code position: absolute}
+   * children become placements (like any page-mode container, but spanning the
+   * entire document). Empty when the body carries no size.
+   */
+  private Optional<Canvas> labelBody(Element body) {
+    if (canvasSize(body).isEmpty()) {
+      return Optional.empty();
+    }
+    return buildCanvas(body, ComputedStyle.INITIAL.process(body));
   }
 
   @Override

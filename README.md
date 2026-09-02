@@ -218,6 +218,21 @@ a region: each child is drawn at its `left`/`top`, and the whole area prints at 
 - `transform: rotate(90deg | 180deg | 270deg)` on the container rotates the whole region
   (mapped to the ESC/POS print direction); other angles snap to the nearest right angle.
 
+Giving the **`<body>` itself** a `width` and `height` makes the *whole job* one such area - a
+fixed-size label, badge, or ticket rather than a flowing receipt:
+
+```html
+<body style="width: 512px; height: 260px">
+  <span style="position: absolute; left: 0; top: 0"><b>FARAD'N CONF</b></span>
+  <span style="position: absolute; left: 0; top: 64px">Ada Lovelace</span>
+  <bar-code style="position: absolute; left: 0; top: 152px" symbology="code128">ID-0042</bar-code>
+</body>
+```
+
+A body without a size prints as a normal top-to-bottom receipt, so this only kicks in when you
+ask for it. The label ends with the usual feed and cut, which separates labels on continuous
+receipt paper.
+
 **Text encoding.** Text starts on the profile's default code page (TM-T88V's is
 PC437) and the renderer switches pages inline (`ESC t`) for glyphs outside the
 current one, so mixed-script receipts encode faithfully instead of collapsing to

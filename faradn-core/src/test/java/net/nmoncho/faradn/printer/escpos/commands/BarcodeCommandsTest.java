@@ -1,7 +1,9 @@
 package net.nmoncho.faradn.printer.escpos.commands;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -79,6 +81,16 @@ public class BarcodeCommandsTest {
 
     assertContains(out, new byte[] { 0x1D, 0x28, 0x6B, 0x03, 0x00, 49, 67, 8 }); // module size 8
     assertContains(out, new byte[] { 0x1D, 0x28, 0x6B, 0x03, 0x00, 49, 69, 51 }); // EC level H
+  }
+
+  @Test
+  void classifiesTwoDimensionalSymbologies() {
+    assertTrue(BarcodeCommands.isTwoDimensional("qr"));
+    assertTrue(BarcodeCommands.isTwoDimensional("QR-Code")); // punctuation/case ignored
+    assertTrue(BarcodeCommands.isTwoDimensional("pdf417"));
+    assertFalse(BarcodeCommands.isTwoDimensional("code128"));
+    assertFalse(BarcodeCommands.isTwoDimensional("ean13"));
+    assertFalse(BarcodeCommands.isTwoDimensional(null));
   }
 
   private static void assertContains(byte[] haystack, byte[] needle) {

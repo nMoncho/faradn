@@ -18,6 +18,7 @@ import net.nmoncho.faradn.Document;
 import net.nmoncho.faradn.Image;
 import net.nmoncho.faradn.RasterImage;
 import net.nmoncho.faradn.document.Barcode;
+import net.nmoncho.faradn.document.BarcodeOptions;
 import net.nmoncho.faradn.document.Canvas;
 import net.nmoncho.faradn.document.Cell;
 import net.nmoncho.faradn.document.ComputedStyle;
@@ -542,10 +543,31 @@ public class EscPosRendererTest {
 
     byte[] out = renderer.render(List.of(canvas));
 
+    // The image develops downward from y (no offset); the 1D barcode's bars draw
+    // upward from GS $, so it drops by its bar height (default 100) to put its top at y=96.
     assertBytes(cat(HEAD, GS_P_180, SELECT_PAGE_MODE, escW(512, 200), ESC_T_0,
         escDollar(0), gsDollar(0), raster,
-        escDollar(0), gsDollar(96), barcode,
+        escDollar(0), gsDollar(196), barcode,
         FF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void canvasOffsets1dBarcodeByBarHeightButNot2d() {
+    // 1D: bars drawn upward -> GS $ = y + height (60). 2D: QR develops downward -> GS $ = y.
+    byte[] oneD = renderer.render(List.of(Canvas.of(512, 300)
+        .place(0, 40, new Barcode("12345678", "code128", Alignment.LEFT,
+            new BarcodeOptions(60, 0, BarcodeOptions.Hri.BELOW, BarcodeOptions.QrEc.M)))
+        .build()));
+    assertBytes(cat(HEAD, GS_P_180, SELECT_PAGE_MODE, escW(512, 300), ESC_T_0,
+        escDollar(0), gsDollar(100), BarcodeCommands.encode("code128", "12345678",
+            new BarcodeOptions(60, 0, BarcodeOptions.Hri.BELOW, BarcodeOptions.QrEc.M)),
+        FF, FEED_4, PARTIAL_CUT), oneD);
+
+    byte[] twoD = renderer.render(List.of(Canvas.of(512, 300)
+        .place(0, 40, new Barcode("HELLO", "qr", Alignment.LEFT)).build()));
+    assertBytes(cat(HEAD, GS_P_180, SELECT_PAGE_MODE, escW(512, 300), ESC_T_0,
+        escDollar(0), gsDollar(40), BarcodeCommands.encode("qr", "HELLO"),
+        FF, FEED_4, PARTIAL_CUT), twoD);
   }
 
   @Test
@@ -648,6 +670,18 @@ public class EscPosRendererTest {
         return false;
       }
     };
+  }
+
+  @Test
+  void htmlSizedBodyRendersWholeJobPageMode() {
+    // A sized <body> makes the whole job one page-mode label (single ESC L … FF).
+    byte[] out = renderer.render(Document.from(
+        "<body style=\"width: 512px; height: 300px\">"
+            + "<span style=\"position: absolute; left: 0; top: 0\">LABEL</span></body>")
+        .blocks(180));
+
+    assertBytes(cat(HEAD, GS_P_180, SELECT_PAGE_MODE, escW(512, 300), ESC_T_0,
+        escDollar(0), gsDollar(24), "LABEL", FF, FEED_4, PARTIAL_CUT), out);
   }
 
   @Test

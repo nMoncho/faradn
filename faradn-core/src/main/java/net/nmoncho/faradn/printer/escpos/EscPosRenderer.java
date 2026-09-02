@@ -196,14 +196,11 @@ public final class EscPosRenderer {
 
     for (Placement placement : canvas.placements()) {
       // Placement (x, y) is the top-left of the content, but in page mode GS $
-      // anchors text at its *baseline* (the glyph is drawn upward from there),
-      // while images and barcodes develop downward from the position. So push
-      // the vertical position of text down by one character cell; leave images
-      // and barcodes at y.
-      int yDots = placement.yDots();
-      if (placement.content() instanceof Paragraph paragraph) {
-        yDots += textCellHeightDots(paragraph);
-      }
+      // anchors baseline-drawn content (text, 1D barcodes) at its *bottom* - the
+      // glyphs/bars are drawn upward from there - while rasters (images, 2D codes)
+      // develop downward from the position. So drop the vertical position of the
+      // former by its height to put its top at y; leave the latter at y.
+      final int yDots = placement.yDots() + baselineOffsetDots(placement.content());
       out.writeBytes(PrintPositionCommands.SET_ABSOLUTE_PRINT_POSITION.getCode(new Word16(placement.xDots()))); // ESC $
       out.writeBytes(PrintPositionCommands.SET_ABSOLUTE_VERTICAL_PRINT_POSITION.getCode(new Word16(yDots))); // GS $
       current = renderPlacement(out, enc, current, placement, canvas.widthDots());
@@ -252,6 +249,23 @@ public final class EscPosRenderer {
       max = Math.max(max, charWidthDots * 2 * run.style().heightMultiple());
     }
     return max;
+  }
+
+  /**
+   * How far to drop a placement's page-mode vertical position so its {@code y}
+   * lands at the top. Baseline-anchored content (text; 1D barcodes, whose bars
+   * are drawn upward from the {@code GS $} position) offsets by its height;
+   * rasters (images, 2D codes) develop downward from the position, so they do
+   * not.
+   */
+  private int baselineOffsetDots(Placeable content) {
+    if (content instanceof Paragraph paragraph) {
+      return textCellHeightDots(paragraph);
+    }
+    if (content instanceof Barcode barcode && !BarcodeCommands.isTwoDimensional(barcode.symbology())) {
+      return barcode.options().heightDots();
+    }
+    return 0;
   }
 
   /** Maps a canvas direction to the {@code ESC T} print direction. */

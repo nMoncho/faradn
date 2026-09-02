@@ -75,6 +75,22 @@ public final class BarcodeCommands {
     };
   }
 
+  /**
+   * Whether a symbology renders as a 2D matrix (QR / PDF417) rather than 1D bars.
+   * A 1D barcode has a caller-controlled bar {@code height}; a 2D symbol's size
+   * follows from its data and module size.
+   *
+   * @param symbology
+   *        the symbology name, matched leniently (case and punctuation ignored)
+   * @return {@code true} for {@code qr}/{@code pdf417}, {@code false} otherwise
+   */
+  public static boolean isTwoDimensional(String symbology) {
+    return switch (normalize(symbology == null ? "" : symbology)) {
+      case "qr", "qrcode", "pdf417" -> true;
+      default -> false;
+    };
+  }
+
   private static byte[] oneDimensional(Symbology symbology, String data, int heightDots, int moduleWidth, int hri) {
     validate(symbology, data);
 
