@@ -522,4 +522,20 @@ public class BlockBuilderTest {
     assertTrue(blocks.stream().noneMatch(b -> b instanceof Canvas));
     assertEquals("hi", assertInstanceOf(Paragraph.class, blocks.get(0)).runs().get(0).text());
   }
+
+  @Test
+  void lineHeightIsResolvedOnRuns() {
+    final List<Block> blocks = Document.from("<p style=\"line-height: 1.5\">hi</p>").blocks();
+
+    final Paragraph p = assertInstanceOf(Paragraph.class, blocks.get(0));
+    assertEquals(new LineHeight(LineHeight.Kind.FACTOR, 1.5), p.runs().get(0).style().lineHeight());
+  }
+
+  @Test
+  void lineHeightInheritsFromAncestor() {
+    final List<Block> blocks = Document.from("<div style=\"line-height: 2\"><p>hi</p></div>").blocks();
+
+    final Paragraph p = assertInstanceOf(Paragraph.class, blocks.get(0));
+    assertEquals(new LineHeight(LineHeight.Kind.FACTOR, 2), p.runs().get(0).style().lineHeight());
+  }
 }

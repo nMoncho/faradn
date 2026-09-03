@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.OptionalInt;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +30,9 @@ import net.nmoncho.faradn.printer.escpos.commands.BarcodeCommands;
 import net.nmoncho.faradn.printer.escpos.commands.CharacterCommands;
 import net.nmoncho.faradn.printer.escpos.commands.CharacterCommands.CharacterSize;
 import net.nmoncho.faradn.printer.escpos.commands.CharacterCommands.Lines;
+import net.nmoncho.faradn.printer.escpos.commands.CharacterCommands.MotionUnit;
 import net.nmoncho.faradn.printer.escpos.commands.CharacterCommands.MotionUnit2D;
+import net.nmoncho.faradn.printer.escpos.commands.LineSpacingCommands;
 import net.nmoncho.faradn.printer.escpos.commands.MechanismControlCommands;
 import net.nmoncho.faradn.printer.escpos.commands.MiscellaneousCommands;
 import net.nmoncho.faradn.printer.escpos.commands.PrintCommands;
@@ -130,6 +133,13 @@ public final class EscPosRenderer {
       Paragraph paragraph) {
     current = applyAlignment(out, current, paragraph.alignment());
 
+    // line-height maps to the ESC/POS line spacing (ESC 3 n); each of the
+    // paragraph's line feeds advances by it. Restore the printer default (ESC 2)
+    // afterward so the spacing doesn't leak into feeds or later blocks.
+    final OptionalInt spacing = paragraph.runs().get(0).style().lineHeight()
+        .resolveDots(textCellHeightDots(paragraph), profile.dpi());
+    spacing.ifPresent(dots -> out.writeBytes(LineSpacingCommands.SET_LINE_SPACING.getCode(new MotionUnit(dots)))); // ESC 3 n
+
     final List<List<TextRun>> lines = TextWrapper.wrap(paragraph.runs(), effectiveColumns(paragraph.runs()));
     for (int i = 0; i < lines.size(); i++) {
       for (TextRun segment : lines.get(i)) {
@@ -141,6 +151,10 @@ public final class EscPosRenderer {
         current = clearInlineStyle(out, current);
       }
       out.writeBytes(PrintCommands.LINE_FEED.getCode());
+    }
+
+    if (spacing.isPresent()) {
+      out.writeBytes(LineSpacingCommands.DEFAULT_LINE_SPACING.getCode()); // ESC 2
     }
     return current;
   }

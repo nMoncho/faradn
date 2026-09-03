@@ -21,7 +21,7 @@ import net.nmoncho.faradn.Utils;
  * used to detect style transitions.
  */
 public record ComputedStyle(boolean bold, boolean underline, int widthMultiple, int heightMultiple,
-    Alignment alignment, boolean invert, int font, boolean italic) {
+    Alignment alignment, boolean invert, int font, boolean italic, LineHeight lineHeight) {
 
   public static final int MIN_SIZE_MULTIPLE = 1;
   public static final int MAX_SIZE_MULTIPLE = 8;
@@ -41,7 +41,8 @@ public record ComputedStyle(boolean bold, boolean underline, int widthMultiple, 
    * Style at the root of a document: plain left-aligned text at base size, Font
    * A.
    */
-  public static final ComputedStyle INITIAL = new ComputedStyle(false, false, 1, 1, Alignment.LEFT, false);
+  public static final ComputedStyle INITIAL = new ComputedStyle(false, false, 1, 1, Alignment.LEFT, false,
+      DEFAULT_FONT, false, LineHeight.NORMAL);
 
   private static final Set<String> BOLD_TAGS = Set.of("b", "strong");
   private static final Set<String> ITALIC_TAGS = Set.of("em", "i");
@@ -81,18 +82,27 @@ public record ComputedStyle(boolean bold, boolean underline, int widthMultiple, 
     if (font < 0) {
       throw new IllegalArgumentException("font slot must be >= 0, got " + font);
     }
+    if (lineHeight == null) {
+      throw new IllegalArgumentException("lineHeight must not be null");
+    }
   }
 
-  /** A style at the base font (Font A), not italic. */
+  /** A style at the base font (Font A), not italic, default line height. */
   public ComputedStyle(boolean bold, boolean underline, int widthMultiple, int heightMultiple,
       Alignment alignment, boolean invert) {
     this(bold, underline, widthMultiple, heightMultiple, alignment, invert, DEFAULT_FONT, false);
   }
 
-  /** A style at the given font, not italic. */
+  /** A style at the given font, not italic, default line height. */
   public ComputedStyle(boolean bold, boolean underline, int widthMultiple, int heightMultiple,
       Alignment alignment, boolean invert, int font) {
     this(bold, underline, widthMultiple, heightMultiple, alignment, invert, font, false);
+  }
+
+  /** A style at the given font and italic, default line height. */
+  public ComputedStyle(boolean bold, boolean underline, int widthMultiple, int heightMultiple,
+      Alignment alignment, boolean invert, int font, boolean italic) {
+    this(bold, underline, widthMultiple, heightMultiple, alignment, invert, font, italic, LineHeight.NORMAL);
   }
 
   /**
@@ -112,6 +122,7 @@ public record ComputedStyle(boolean bold, boolean underline, int widthMultiple, 
     Alignment newAlignment = alignment;
     int newFont = font;
     boolean newItalic = italic;
+    LineHeight newLineHeight = lineHeight;
 
     // Tag defaults.
     final String tag = el.normalName();
@@ -170,8 +181,14 @@ public record ComputedStyle(boolean bold, boolean underline, int widthMultiple, 
       newItalic = value.contains("italic") || value.contains("oblique");
     }
 
+    // line-height inherits: keep the ancestor's value unless this element sets it.
+    final Optional<String> lineHeightCss = Utils.findStyleValue(el, "line-height");
+    if (lineHeightCss.isPresent()) {
+      newLineHeight = LineHeight.parse(lineHeightCss.get());
+    }
+
     final ComputedStyle computed = new ComputedStyle(newBold, newUnderline, newWidth, newHeight, newAlignment,
-        invert, newFont, newItalic);
+        invert, newFont, newItalic, newLineHeight);
 
     return equals(computed) ? this : computed;
   }

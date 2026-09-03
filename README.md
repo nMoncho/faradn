@@ -166,6 +166,11 @@ the tag defaults:
   Font A, `font-b` Font B, and so on for printers with more fonts); unlike `<small>` it
   works on blocks, so `<table style="font-family: font-b">` renders the whole table in that
   font. The available fonts and their widths come from the capability database.
+- `line-height` (a unit-less multiple like `1.5`, a `%`, or a length `px`/`mm`/`cm`): the
+  spacing between a paragraph's lines, mapped to ESC/POS line spacing (`ESC 3`). Unit-less and
+  `%` are relative to the font height (`1.0` packs lines tight, `2.0` doubles the gap); `px` is
+  1:1 with dots. Inherits, so setting it on `<body>` or a `<div>` styles everything inside;
+  `normal` restores the printer default.
 
 **Barcodes**
 

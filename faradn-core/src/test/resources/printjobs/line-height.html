@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Line height</title>
+</head>
+<!-- line-height maps to the ESC/POS line spacing (ESC 3 n). Each paragraph is
+     long enough to wrap onto several lines, so the spacing between lines is
+     visible: default vs tight (1.0) vs loose (2.0) vs a fixed 40 dots. -->
+<body>
+    <center><b>LINE-HEIGHT</b></center>
+    <hr>
+
+    <p><b>Default:</b> this paragraph is long enough to wrap onto several lines, so the gaps between lines print at the printer's default spacing.</p>
+    <hr>
+
+    <p style="line-height: 1"><b>Tight (1.0):</b> this paragraph is long enough to wrap onto several lines, so you can see the lines pulled close together.</p>
+    <hr>
+
+    <p style="line-height: 2"><b>Loose (2.0):</b> this paragraph is long enough to wrap onto several lines, so you can see the extra space between each line.</p>
+    <hr>
+
+    <p style="line-height: 40px"><b>Fixed 40px:</b> this paragraph wraps onto several lines with a fixed 40-dot gap between them, independent of the font size.</p>
+</body>
+</html>

@@ -68,6 +68,7 @@ public class EscPosRendererTest {
   private static final byte[] ESC_T_2 = { ESC, 0x54, 0x02 };
   private static final byte[] ESC_T_3 = { ESC, 0x54, 0x03 };
   private static final byte[] FF = { 0x0C };
+  private static final byte[] ESC_2 = { ESC, 0x32 };
   private static final byte[] FULL_CUT = { GS, 0x56, 0x00 };
   private static final byte[] SELECT_FONT_B = { ESC, 0x4D, 0x01 };
   private static final byte[] SELECT_FONT_A = { ESC, 0x4D, 0x00 };
@@ -703,11 +704,37 @@ public class EscPosRendererTest {
   }
 
   @Test
+  void lineHeightBracketsParagraphWithEscThreeAndTwo() {
+    // Font A cell = 24; line-height 2 -> ESC 3 48 before the lines, ESC 2 after.
+    byte[] out = renderer.render(Document.from("<p style=\"line-height: 2\">hi</p>").blocks());
+
+    assertBytes(cat(HEAD, esc3(48), "hi", LF, ESC_2, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void lineHeightInPixelsIsDotsOneToOne() {
+    byte[] out = renderer.render(Document.from("<p style=\"line-height: 40px\">hi</p>").blocks());
+
+    assertBytes(cat(HEAD, esc3(40), "hi", LF, ESC_2, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void normalLineHeightEmitsNoSpacingCommands() {
+    byte[] out = renderer.render(Document.from("<p>hi</p>").blocks());
+
+    assertBytes(cat(HEAD, "hi", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
   void nullProfileIsRejected() {
     assertThrows(IllegalArgumentException.class, () -> new EscPosRenderer(null));
   }
 
   // ----- helpers -----
+
+  private static byte[] esc3(int n) {
+    return new byte[] { ESC, 0x33, (byte) n }; // ESC 3 n: set line spacing
+  }
 
   private static byte[] escDollar(int value) {
     return new byte[] { ESC, 0x24, (byte) (value & 0xFF), (byte) ((value >> 8) & 0xFF) };

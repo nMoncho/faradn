@@ -75,6 +75,10 @@ import net.nmoncho.faradn.transport.UsbTransport;
  * direction. {@link #printsMixedModeOverUsb()} prints a single job that mixes
  * standard-mode receipt flow with an embedded page-mode coupon region, to check
  * that the two modes interleave correctly.
+ * <p>
+ * {@link #printsLineHeightOverUsb()} prints wrapped paragraphs at different
+ * {@code line-height}s (default / 1.0 / 2.0 / 40px) so the {@code ESC 3} line
+ * spacing can be compared by eye.
  */
 @Tag("hardware")
 public class HardwarePrintTest {
@@ -87,6 +91,7 @@ public class HardwarePrintTest {
   private static final File PAGE_MODE_QR = new File("src/test/resources/printjobs/page-mode-qr.html");
   private static final File ROTATIONS = new File("src/test/resources/printjobs/rotations.html");
   private static final File MIXED_MODE = new File("src/test/resources/printjobs/mixed-mode.html");
+  private static final File LINE_HEIGHT = new File("src/test/resources/printjobs/line-height.html");
 
   @Test
   @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
@@ -206,6 +211,19 @@ public class HardwarePrintTest {
     // page-mode coupon region (text left, QR right) in a single job. Verify the
     // flow and the positioned region both print, in order.
     Document doc = Document.from(MIXED_MODE);
+
+    Optional<Printer> printer = Printer.from(0x04b8);
+    printer.ifPresentOrElse(
+        p -> p.print(doc, "TM-T88V"),
+        () -> fail("No Epson printer (USB vendor 0x04b8) found"));
+  }
+
+  @Test
+  @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
+  void printsLineHeightOverUsb() {
+    // line-height -> ESC 3: four wrapped paragraphs (default / 1.0 / 2.0 / 40px).
+    // Verify the inter-line spacing visibly differs between them.
+    Document doc = Document.from(LINE_HEIGHT);
 
     Optional<Printer> printer = Printer.from(0x04b8);
     printer.ifPresentOrElse(
