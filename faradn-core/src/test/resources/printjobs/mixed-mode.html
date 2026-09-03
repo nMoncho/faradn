@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mixed mode</title>
+</head>
+<!-- One job that mixes standard-mode receipt flow with an embedded page-mode
+     region. The header, table, total, and trailing barcode flow normally; the
+     coupon box is a positioned (page-mode) region with text on the left and a QR
+     on the right - side by side, which the flow can't do. -->
+<body>
+    <center><b>FARAD'N CAFE</b></center>
+    <center>standard + page mode</center>
+    <hr>
+
+    <!-- page-mode coupon: text left, QR right, on the same rows -->
+    <div style="position: relative; width: 512px; height: 130px">
+        <span style="position: absolute; left: 0; top: 0"><b>COUPON</b></span>
+        <span style="position: absolute; left: 0; top: 44px">10% OFF</span>
+        <span style="position: absolute; left: 0; top: 88px">code: FARADN10</span>
+        <bar-code style="position: absolute; left: 320px; top: 0" symbology="qr" module="5">FARADN10</bar-code>
+    </div>
+    <hr>
+
+    <table>
+        <tr><th>Item</th><th style="text-align: right">Price</th></tr>
+        <tr><td>Flat white</td><td style="text-align: right">3,20</td></tr>
+        <tr><td>Croissant</td><td style="text-align: right">2,30</td></tr>
+    </table>
+    <p style="text-align: right"><b>TOTAL  5,50</b></p>
+    <hr>
+
+    <center><bar-code symbology="code128">THANKYOU</bar-code></center>
+    <center>See you soon!</center>
+</body>
+</html>

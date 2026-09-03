@@ -685,6 +685,24 @@ public class EscPosRendererTest {
   }
 
   @Test
+  void htmlInterleavesStandardAndPageMode() {
+    // A standard-mode paragraph, an embedded page-mode region, then another
+    // standard-mode paragraph - all framed as one job.
+    byte[] out = renderer.render(Document.from(
+        "<p>Hi</p>"
+            + "<div style=\"position: relative; width: 512px; height: 80px\">"
+            + "<span style=\"position: absolute; left: 0; top: 0\">X</span></div>"
+            + "<p>Bye</p>")
+        .blocks(180));
+
+    assertBytes(cat(HEAD,
+        "Hi", LF,
+        GS_P_180, SELECT_PAGE_MODE, escW(512, 80), ESC_T_0, escDollar(0), gsDollar(24), "X", FF,
+        "Bye", LF,
+        FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
   void nullProfileIsRejected() {
     assertThrows(IllegalArgumentException.class, () -> new EscPosRenderer(null));
   }

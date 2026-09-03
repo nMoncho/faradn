@@ -1,5 +1,8 @@
 package net.nmoncho.faradn;
 
+import org.jsoup.nodes.Element;
+
+import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -11,17 +14,13 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.imageio.ImageIO;
-
-import org.jsoup.nodes.Element;
-
 /**
- * Image inside a {@link Document}, decoded to {@link
- * RasterImage} pixels.
+ * Image inside a {@link Document}, decoded to {@link RasterImage} pixels.
  * <p>
  * PNGs are decoded in pure Java ({@link PngDecoder}) so they work in the native
  * binary; other formats (JPEG, BMP, WBMP) fall back to {@code javax.imageio},
  * which is available on the JVM but not inside the GraalVM native image.
+ * </p>
  */
 public class Image {
 

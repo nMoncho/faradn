@@ -69,6 +69,12 @@ import net.nmoncho.faradn.transport.UsbTransport;
  * <p>
  * {@link #printsQrPageModeOverUsb()} is a diagnostic for 2D (QR) vertical
  * anchoring in page mode: the QR should land between two marker lines and scan.
+ * <p>
+ * {@link #printsRotationShowcaseOverUsb()} prints four page-mode regions in one
+ * job (0/90/180/-90 degrees), each a text label plus a QR, to check every print
+ * direction. {@link #printsMixedModeOverUsb()} prints a single job that mixes
+ * standard-mode receipt flow with an embedded page-mode coupon region, to check
+ * that the two modes interleave correctly.
  */
 @Tag("hardware")
 public class HardwarePrintTest {
@@ -79,6 +85,8 @@ public class HardwarePrintTest {
   private static final File PAGE_MODE_ROTATED = new File("src/test/resources/printjobs/page-mode-rotated.html");
   private static final File LABEL = new File("src/test/resources/printjobs/label.html");
   private static final File PAGE_MODE_QR = new File("src/test/resources/printjobs/page-mode-qr.html");
+  private static final File ROTATIONS = new File("src/test/resources/printjobs/rotations.html");
+  private static final File MIXED_MODE = new File("src/test/resources/printjobs/mixed-mode.html");
 
   @Test
   @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
@@ -171,6 +179,33 @@ public class HardwarePrintTest {
     // The QR (top:56) should sit between the "ABOVE QR" (top:0) and "BELOW QR"
     // (top:260) markers; scan it to confirm 2D renders correctly under ESC L.
     Document doc = Document.from(PAGE_MODE_QR);
+
+    Optional<Printer> printer = Printer.from(0x04b8);
+    printer.ifPresentOrElse(
+        p -> p.print(doc, "TM-T88V"),
+        () -> fail("No Epson printer (USB vendor 0x04b8) found"));
+  }
+
+  @Test
+  @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
+  void printsRotationShowcaseOverUsb() {
+    // Four page-mode regions in one job: 0, 90, 180 and -90 degrees, each a bold
+    // angle label + a QR. Verify each region is rotated as labelled and the QRs scan.
+    Document doc = Document.from(ROTATIONS);
+
+    Optional<Printer> printer = Printer.from(0x04b8);
+    printer.ifPresentOrElse(
+        p -> p.print(doc, "TM-T88V"),
+        () -> fail("No Epson printer (USB vendor 0x04b8) found"));
+  }
+
+  @Test
+  @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
+  void printsMixedModeOverUsb() {
+    // Standard-mode receipt flow (header, table, total, barcode) with an embedded
+    // page-mode coupon region (text left, QR right) in a single job. Verify the
+    // flow and the positioned region both print, in order.
+    Document doc = Document.from(MIXED_MODE);
 
     Optional<Printer> printer = Printer.from(0x04b8);
     printer.ifPresentOrElse(

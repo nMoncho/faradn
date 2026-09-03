@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Rotations</title>
+</head>
+<!-- Four page-mode regions in one job, one per print direction (transform:
+     rotate). Each shows a bold angle label plus a QR (square, so its footprint
+     stays contained under any rotation). The standard-mode caption above each
+     region says which angle it is, so you can identify a region even if its
+     rotated content looks unexpected. -->
+<body>
+    <center><b>ROTATION SHOWCASE</b></center>
+    <hr>
+
+    <p>0 deg:</p>
+    <div style="position: relative; width: 512px; height: 180px; transform: rotate(0deg)">
+        <span style="position: absolute; left: 0; top: 0"><b>0 deg</b></span>
+        <bar-code style="position: absolute; left: 0; top: 48px" symbology="qr" module="4">ROT-0</bar-code>
+    </div>
+    <hr>
+
+    <p>90 deg:</p>
+    <div style="position: relative; width: 512px; height: 180px; transform: rotate(90deg)">
+        <span style="position: absolute; left: 0; top: 0"><b>90 deg</b></span>
+        <bar-code style="position: absolute; left: 0; top: 48px" symbology="qr" module="4">ROT-90</bar-code>
+    </div>
+    <hr>
+
+    <p>180 deg:</p>
+    <div style="position: relative; width: 512px; height: 180px; transform: rotate(180deg)">
+        <span style="position: absolute; left: 0; top: 0"><b>180 deg</b></span>
+        <bar-code style="position: absolute; left: 0; top: 48px" symbology="qr" module="4">ROT-180</bar-code>
+    </div>
+    <hr>
+
+    <p>-90 deg:</p>
+    <div style="position: relative; width: 512px; height: 180px; transform: rotate(-90deg)">
+        <span style="position: absolute; left: 0; top: 0"><b>-90 deg</b></span>
+        <bar-code style="position: absolute; left: 0; top: 48px" symbology="qr" module="4">ROT-270</bar-code>
+    </div>
+</body>
+</html>
