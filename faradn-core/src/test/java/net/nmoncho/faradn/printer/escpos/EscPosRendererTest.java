@@ -705,17 +705,18 @@ public class EscPosRendererTest {
 
   @Test
   void lineHeightBracketsParagraphWithEscThreeAndTwo() {
-    // Font A cell = 24; line-height 2 -> ESC 3 48 before the lines, ESC 2 after.
+    // Font A cell = 24; line-height 2 -> ESC 3 48. GS P pins the motion unit to
+    // dots first (so ESC 3 is dot-based); ESC 2 restores the default after.
     byte[] out = renderer.render(Document.from("<p style=\"line-height: 2\">hi</p>").blocks());
 
-    assertBytes(cat(HEAD, esc3(48), "hi", LF, ESC_2, FEED_4, PARTIAL_CUT), out);
+    assertBytes(cat(HEAD, GS_P_180, esc3(48), "hi", LF, ESC_2, FEED_4, PARTIAL_CUT), out);
   }
 
   @Test
   void lineHeightInPixelsIsDotsOneToOne() {
     byte[] out = renderer.render(Document.from("<p style=\"line-height: 40px\">hi</p>").blocks());
 
-    assertBytes(cat(HEAD, esc3(40), "hi", LF, ESC_2, FEED_4, PARTIAL_CUT), out);
+    assertBytes(cat(HEAD, GS_P_180, esc3(40), "hi", LF, ESC_2, FEED_4, PARTIAL_CUT), out);
   }
 
   @Test

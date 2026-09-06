@@ -133,12 +133,20 @@ public final class EscPosRenderer {
       Paragraph paragraph) {
     current = applyAlignment(out, current, paragraph.alignment());
 
-    // line-height maps to the ESC/POS line spacing (ESC 3 n); each of the
-    // paragraph's line feeds advances by it. Restore the printer default (ESC 2)
-    // afterward so the spacing doesn't leak into feeds or later blocks.
+    // line-height maps to the ESC/POS line spacing (ESC 3 n), in vertical motion
+    // units. Pin that unit to one dot with GS P first (as page mode does), so n is
+    // in dots regardless of the printer's default unit; each of the paragraph's
+    // line feeds then advances by it. Restore the printer default (ESC 2) after so
+    // the spacing doesn't leak into feeds or later blocks.
     final OptionalInt spacing = paragraph.runs().get(0).style().lineHeight()
         .resolveDots(textCellHeightDots(paragraph), profile.dpi());
-    spacing.ifPresent(dots -> out.writeBytes(LineSpacingCommands.SET_LINE_SPACING.getCode(new MotionUnit(dots)))); // ESC 3 n
+    if (spacing.isPresent()) {
+      final int dpi = profile.dpi();
+      if (dpi >= 1 && dpi <= 255) {
+        out.writeBytes(PrintPositionCommands.SET_MOTION_UNITS.getCode(new MotionUnit2D(dpi, dpi))); // GS P
+      }
+      out.writeBytes(LineSpacingCommands.SET_LINE_SPACING.getCode(new MotionUnit(spacing.getAsInt()))); // ESC 3 n
+    }
 
     final List<List<TextRun>> lines = TextWrapper.wrap(paragraph.runs(), effectiveColumns(paragraph.runs()));
     for (int i = 0; i < lines.size(); i++) {
