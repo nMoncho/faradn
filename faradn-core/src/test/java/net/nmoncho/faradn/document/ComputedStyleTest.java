@@ -193,4 +193,60 @@ public class ComputedStyleTest {
     assertEquals(1, s.widthMultiple());
     assertEquals(1, s.heightMultiple());
   }
+
+  private static ComputedStyle font(String css) {
+    return ComputedStyle.INITIAL.process(element("<span style=\"font: " + css + "\">x</span>"));
+  }
+
+  @Test
+  void fontShorthandSizeAndFamily() {
+    final ComputedStyle s = font("2em font-b");
+    assertEquals(2, s.widthMultiple());
+    assertEquals(2, s.heightMultiple());
+    assertEquals(1, s.font()); // font-b
+    assertFalse(s.bold());
+    assertFalse(s.italic());
+    assertEquals(LineHeight.NORMAL, s.lineHeight());
+  }
+
+  @Test
+  void fontShorthandWithStyleWeightAndLineHeight() {
+    final ComputedStyle s = font("italic bold 200%/1.5 font-c");
+    assertTrue(s.italic());
+    assertTrue(s.bold());
+    assertEquals(2, s.widthMultiple());
+    assertEquals(2, s.font()); // font-c
+    assertEquals(new LineHeight(LineHeight.Kind.FACTOR, 1.5), s.lineHeight());
+  }
+
+  @Test
+  void fontShorthandNumericWeight() {
+    assertTrue(font("700 2em font-a").bold());
+    assertFalse(font("400 2em font-a").bold());
+  }
+
+  @Test
+  void fontShorthandGenericFamilyResetsToFontA() {
+    final ComputedStyle s = font("12px monospace"); // 12/16 -> 1x; monospace has no slot -> Font A
+    assertEquals(1, s.widthMultiple());
+    assertEquals(0, s.font());
+  }
+
+  @Test
+  void fontShorthandResetsOmittedComponents() {
+    // The shorthand omits weight, so it resets <b>'s bold to normal (per CSS).
+    assertFalse(ComputedStyle.INITIAL.process(element("<b style=\"font: 2em font-a\">x</b>")).bold());
+  }
+
+  @Test
+  void explicitLonghandOverridesFontShorthand() {
+    assertTrue(font("2em font-a; font-weight: bold").bold());
+  }
+
+  @Test
+  void fontShorthandInvalidIsIgnored() {
+    assertEquals(1, font("2em").widthMultiple()); // no family
+    assertEquals(1, font("menu").widthMultiple()); // system keyword
+    assertEquals(1, font("gibberish family").widthMultiple()); // no size
+  }
 }

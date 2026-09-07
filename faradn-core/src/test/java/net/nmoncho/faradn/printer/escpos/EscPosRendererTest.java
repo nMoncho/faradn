@@ -741,6 +741,15 @@ public class EscPosRendererTest {
   }
 
   @Test
+  void fontShorthandDrivesBoldSizeAndItalic() {
+    // font: italic bold 200% font-a -> bold + 2x (GS !) + italic, reset after.
+    byte[] out = renderer.render(Document.from("<p style=\"font: italic bold 200% font-a\">hi</p>").blocks());
+
+    assertBytes(cat(HEAD, BOLD_ON, size(2, 2), ITALIC_ON, "hi",
+        BOLD_OFF, size(1, 1), ITALIC_OFF, LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
   void normalLineHeightEmitsNoSpacingCommands() {
     byte[] out = renderer.render(Document.from("<p>hi</p>").blocks());
 

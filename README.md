@@ -176,6 +176,11 @@ the tag defaults:
   `%` are relative to the font height (`1.0` packs lines tight, `2.0` doubles the gap); `px` is
   1:1 with dots. Inherits, so setting it on `<body>` or a `<div>` styles everything inside;
   `normal` restores the printer default.
+- `font` (shorthand): sets `font-style`, `font-weight`, `font-size`, `line-height`, and
+  `font-family` in one declaration, e.g. `font: italic bold 200%/1.5 font-b`. Font-size and
+  font-family are required; `font-variant`/`font-stretch` and system-font keywords (`menu`, …)
+  are ignored. As in CSS, the shorthand resets the components it omits (so `font: 2em font-a` is
+  not bold even on a `<b>`).
 
 **Table borders.** ESC/POS standard mode has no line command, so borders are drawn with
 box-drawing characters on the same monospace grid the table already uses (PC437/PC850 carry the
