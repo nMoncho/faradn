@@ -27,6 +27,15 @@ public record ComputedStyle(boolean bold, boolean underline, int widthMultiple, 
   public static final int MAX_SIZE_MULTIPLE = 8;
 
   /**
+   * CSS pixels that map to one step of {@code GS !} magnification (roughly CSS
+   * {@code medium}). {@code font-size} sets an absolute magnification of the base
+   * cell - {@code 16px}/{@code 1em}/{@code 100%} is 1&times;, {@code 32px} is
+   * 2&times;, and so on - since the printer only offers integer 1&times;-8&times;
+   * sizes, not points.
+   */
+  private static final double BASE_FONT_PX = 16.0;
+
+  /**
    * Selected font, as an {@code ESC M} slot: 0 is Font&nbsp;A (the default), 1
    * Font&nbsp;B, 2 Font&nbsp;C, and so on. Which slots a printer actually has,
    * and their column budgets, are a profile concern; the style only records the
@@ -181,6 +190,18 @@ public record ComputedStyle(boolean bold, boolean underline, int widthMultiple, 
       newItalic = value.contains("italic") || value.contains("oblique");
     }
 
+    // font-size scales the whole glyph uniformly, mapped to GS ! magnification
+    // (both width and height). When present it overrides the tag's size, e.g. an
+    // <h2 style="font-size: 300%"> becomes 3x rather than double-height.
+    final Optional<String> fontSize = Utils.findStyleValue(el, "font-size");
+    if (fontSize.isPresent()) {
+      final OptionalInt multiple = fontSizeMultiple(fontSize.get());
+      if (multiple.isPresent()) {
+        newWidth = multiple.getAsInt();
+        newHeight = multiple.getAsInt();
+      }
+    }
+
     // line-height inherits: keep the ancestor's value unless this element sets it.
     final Optional<String> lineHeightCss = Utils.findStyleValue(el, "line-height");
     if (lineHeightCss.isPresent()) {
@@ -198,6 +219,70 @@ public record ComputedStyle(boolean bold, boolean underline, int widthMultiple, 
    * {@code font-b} → 1, {@code font-c} → 2, and so on. The first recognized
    * family in the list wins; other names (real font stacks) are ignored.
    */
+  /**
+   * Maps a CSS {@code font-size} to a {@code GS !} magnification
+   * (1&times;-8&times;,
+   * width and height together). Keywords, {@code %}, {@code em}/{@code rem} and a
+   * unit-less number are ratios of the base size;
+   * {@code px}/{@code pt}/{@code in}/
+   * {@code cm}/{@code mm} convert via {@link #BASE_FONT_PX}. Sub-1&times; sizes
+   * clamp to 1&times; (the printer can't shrink the base font). Empty when the
+   * value can't be understood, so the tag/inherited size stands.
+   */
+  private static OptionalInt fontSizeMultiple(String value) {
+    final String v = value.strip().toLowerCase();
+    if (v.isEmpty()) {
+      return OptionalInt.empty();
+    }
+    switch (v) {
+      case "xx-small":
+      case "x-small":
+      case "small":
+      case "smaller":
+      case "medium":
+      case "normal":
+        return OptionalInt.of(clampMultiple(1));
+      case "large":
+      case "larger":
+        return OptionalInt.of(clampMultiple(2));
+      case "x-large":
+        return OptionalInt.of(clampMultiple(3));
+      case "xx-large":
+        return OptionalInt.of(clampMultiple(4));
+      default:
+        break;
+    }
+    try {
+      final double ratio;
+      if (v.endsWith("%")) {
+        ratio = Double.parseDouble(v.substring(0, v.length() - 1).strip()) / 100.0;
+      } else if (v.endsWith("rem")) {
+        ratio = Double.parseDouble(v.substring(0, v.length() - 3).strip());
+      } else if (v.endsWith("em")) {
+        ratio = Double.parseDouble(v.substring(0, v.length() - 2).strip());
+      } else if (v.endsWith("px")) {
+        ratio = Double.parseDouble(v.substring(0, v.length() - 2).strip()) / BASE_FONT_PX;
+      } else if (v.endsWith("pt")) {
+        ratio = Double.parseDouble(v.substring(0, v.length() - 2).strip()) * 96.0 / 72.0 / BASE_FONT_PX;
+      } else if (v.endsWith("in")) {
+        ratio = Double.parseDouble(v.substring(0, v.length() - 2).strip()) * 96.0 / BASE_FONT_PX;
+      } else if (v.endsWith("cm")) {
+        ratio = Double.parseDouble(v.substring(0, v.length() - 2).strip()) * 96.0 / 2.54 / BASE_FONT_PX;
+      } else if (v.endsWith("mm")) {
+        ratio = Double.parseDouble(v.substring(0, v.length() - 2).strip()) * 96.0 / 25.4 / BASE_FONT_PX;
+      } else {
+        ratio = Double.parseDouble(v); // unit-less: a direct multiple
+      }
+      return OptionalInt.of(clampMultiple((int) Math.round(ratio)));
+    } catch (NumberFormatException ignored) {
+      return OptionalInt.empty();
+    }
+  }
+
+  private static int clampMultiple(int multiple) {
+    return Math.max(MIN_SIZE_MULTIPLE, Math.min(MAX_SIZE_MULTIPLE, multiple));
+  }
+
   private static OptionalInt fontSlotFromCss(String value) {
     for (String token : value.toLowerCase().split(",")) {
       final String name = token.strip().replace("\"", "").replace("'", "");

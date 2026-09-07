@@ -148,4 +148,49 @@ public class ComputedStyleTest {
     assertThrows(IllegalArgumentException.class, () -> new ComputedStyle(false, false, 0, 1, Alignment.LEFT, false));
     assertThrows(IllegalArgumentException.class, () -> new ComputedStyle(false, false, 1, 9, Alignment.LEFT, false));
   }
+
+  private static ComputedStyle sized(String css) {
+    return ComputedStyle.INITIAL.process(element("<span style=\"font-size: " + css + "\">x</span>"));
+  }
+
+  @Test
+  void fontSizeRelativeUnitsScaleBothAxes() {
+    for (String css : new String[] { "200%", "2em", "2rem", "32px" }) {
+      final ComputedStyle s = sized(css);
+      assertEquals(2, s.widthMultiple(), css);
+      assertEquals(2, s.heightMultiple(), css);
+    }
+  }
+
+  @Test
+  void fontSizeKeywordsMap() {
+    assertEquals(1, sized("medium").widthMultiple());
+    assertEquals(1, sized("small").widthMultiple()); // can't go below 1x
+    assertEquals(2, sized("large").widthMultiple());
+    assertEquals(3, sized("x-large").widthMultiple());
+    assertEquals(4, sized("xx-large").heightMultiple());
+  }
+
+  @Test
+  void fontSizeClampsAndRounds() {
+    assertEquals(1, sized("8px").widthMultiple()); // 0.5x -> clamps to 1
+    assertEquals(8, sized("999%").widthMultiple()); // clamps to 8x
+    assertEquals(3, sized("250%").widthMultiple()); // rounds 2.5 -> 3
+  }
+
+  @Test
+  void fontSizeOverridesHeadingSize() {
+    // <h2> is normally 1x wide, 2x tall; an explicit font-size wins on both axes.
+    final ComputedStyle s = ComputedStyle.INITIAL.process(element("<h2 style=\"font-size: 300%\">x</h2>"));
+    assertEquals(3, s.widthMultiple());
+    assertEquals(3, s.heightMultiple());
+    assertTrue(s.bold()); // heading bold still applies
+  }
+
+  @Test
+  void fontSizeUnparseableIsIgnored() {
+    final ComputedStyle s = sized("gigantic");
+    assertEquals(1, s.widthMultiple());
+    assertEquals(1, s.heightMultiple());
+  }
 }

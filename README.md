@@ -166,6 +166,11 @@ the tag defaults:
   Font A, `font-b` Font B, and so on for printers with more fonts); unlike `<small>` it
   works on blocks, so `<table style="font-family: font-b">` renders the whole table in that
   font. The available fonts and their widths come from the capability database.
+- `font-size`: scales the whole glyph via `GS !` magnification (width and height together).
+  The printer only offers integer 1×–8× of the base font, so the value maps to the nearest
+  multiple: `100%`/`1em`/`16px` ⇒ 1×, `200%`/`2em`/`32px` ⇒ 2×, and so on (`%`, `em`/`rem`, and
+  keywords like `large`/`x-large` also work). Sub-1× sizes clamp to 1×. It overrides a tag's own
+  size, so `<h2 style="font-size: 300%">` is 3× rather than double-height.
 - `line-height` (a unit-less multiple like `1.5`, a `%`, or a length `px`/`mm`/`cm`): the
   spacing between a paragraph's lines, mapped to ESC/POS line spacing (`ESC 3`). Unit-less and
   `%` are relative to the font height (`1.0` packs lines tight, `2.0` doubles the gap); `px` is

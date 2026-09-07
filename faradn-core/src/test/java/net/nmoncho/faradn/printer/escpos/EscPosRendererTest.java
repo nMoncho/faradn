@@ -733,6 +733,14 @@ public class EscPosRendererTest {
   }
 
   @Test
+  void fontSizeEmitsCharacterSize() {
+    // font-size: 200% -> 2x width and height via GS ! (0x11), reset to 1x after.
+    byte[] out = renderer.render(Document.from("<p style=\"font-size: 200%\">hi</p>").blocks());
+
+    assertBytes(cat(HEAD, size(2, 2), "hi", size(1, 1), LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
   void normalLineHeightEmitsNoSpacingCommands() {
     byte[] out = renderer.render(Document.from("<p>hi</p>").blocks());
 
