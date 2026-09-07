@@ -182,51 +182,45 @@ the tag defaults:
   are ignored. As in CSS, the shorthand resets the components it omits (so `font: 2em font-a` is
   not bold even on a `<b>`).
 
-**Table borders.** ESC/POS standard mode has no line command, so borders are drawn with
-box-drawing characters on the same monospace grid the table already uses (PC437/PC850 carry the
-glyphs; the encoder switches to them automatically). Turn them on with the HTML `border`
-attribute or a CSS `border` on the `<table>`:
+**Borders.** ESC/POS standard mode has no line-drawing command, so borders are drawn with
+**box-drawing characters** on the same monospace grid the text already sits on (PC437/PC850 carry
+the glyphs, and the encoder switches to them automatically). One weight knob applies throughout:
+single (`─│┼`) by default, double (`═║╬`) when the CSS says `border-style: double` or the shorthand
+carries a `double`. `border: none` / `border="0"` / absent means no border. Colour, radius,
+`dashed`/`dotted`, and per-side pixel widths don't map.
 
-```html
-<table border="1">…</table>                        <!-- single-line grid ─│┼ -->
-<table style="border-style: double">…</table>      <!-- double-line grid ═║╬ -->
-```
+Three things can be bordered:
 
-This frames the table and draws separators between every cell; the border eats `columnCount + 1`
-columns of width. `border: none` (or `border="0"`) turns it off. Only single vs double weight is
-expressible — colour, radius, dashed/dotted, and per-side widths don't map. A `colspan` cell
-merges correctly, and the grid joins around it pick the right glyph (`┴`/`┬`/`─`) so the lines
-meet cleanly.
+- **Tables** — the HTML `border` attribute or CSS `border` on a `<table>` frames it and draws
+  separators between every cell (the border spends `columnCount + 1` columns of width). A
+  `colspan` cell merges correctly, and the grid joins around it pick the right glyph (`┴`/`┬`/`─`)
+  so the lines meet cleanly.
 
-A CSS `border-top` / `border-bottom` (or the `border` shorthand) on a **`<p>` or `<div>`** draws
-a full-width rule above and/or below the paragraph — handy for a line under a total:
+  ```html
+  <table border="1">…</table>                     <!-- single grid -->
+  <table style="border-style: double">…</table>   <!-- double grid -->
+  ```
 
-```html
-<p style="border-bottom: 1px solid">Subtotal      7,50</p>
-<p style="border-bottom: 3px double">TOTAL         9,00</p>
-```
+- **Paragraph rules and boxes** — `border-top`/`border-bottom` on a `<p>`/`<div>` draws a
+  full-width rule above/below (a line under a total). Add the left/right sides — or the `border`
+  shorthand (all four) — to draw a **full box**: corners, `│` side rails, and content wrapped to
+  `columns − 2` and aligned inside per `text-align`.
 
-`border-style: double` (or a `double` in the shorthand) uses the `═` line. Adding the left/right
-sides (or the `border` shorthand, which sets all four) draws a **full box** — corners, side
-`│` rails, and content wrapped to fit inside:
+  ```html
+  <p style="border-bottom: 1px solid">Subtotal      7,50</p>
+  <p style="border: 1px solid">Keep this receipt for any returns.</p>
+  ```
 
-```html
-<p style="border: 1px solid">Keep this receipt for any returns.</p>
-```
+- **Grouped blocks** — a bordered `<div>` wrapping **several** blocks frames the whole group in one
+  box. Paragraph children are wrapped inside the side rails; other block types (a table, an image)
+  render between the top and bottom edges without rails, and the box is full paper width.
 
-The box is full paper width; content is wrapped to `columns − 2` and aligned inside per the
-paragraph's `text-align`. A bordered `<div>` wrapping **several** blocks frames the whole group in
-one box:
-
-```html
-<div style="border: 1px solid">
-  <p><b>Store hours</b></p>
-  <p>Mon-Fri  07:00 - 18:00</p>
-</div>
-```
-
-Paragraph children are wrapped inside the side rails; other block types (a table, an image) render
-between the top and bottom edges without side rails.
+  ```html
+  <div style="border: 1px solid">
+    <p><b>Store hours</b></p>
+    <p>Mon-Fri  07:00 - 18:00</p>
+  </div>
+  ```
 
 **Barcodes**
 
