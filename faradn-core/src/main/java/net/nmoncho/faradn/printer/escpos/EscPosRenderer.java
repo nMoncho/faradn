@@ -13,6 +13,7 @@ import net.nmoncho.faradn.UnsupportedBlockException;
 import net.nmoncho.faradn.document.Barcode;
 import net.nmoncho.faradn.document.Block;
 import net.nmoncho.faradn.document.Border;
+import net.nmoncho.faradn.document.Box;
 import net.nmoncho.faradn.document.Canvas;
 import net.nmoncho.faradn.document.Cell;
 import net.nmoncho.faradn.document.ComputedStyle;
@@ -102,25 +103,7 @@ public final class EscPosRenderer {
     ComputedStyle current = ComputedStyle.INITIAL;
 
     for (Block block : blocks) {
-      if (block instanceof Paragraph paragraph) {
-        current = renderParagraph(out, enc, current, paragraph);
-      } else if (block instanceof Rule) {
-        current = renderRule(out, enc, current);
-      } else if (block instanceof Feed feed) {
-        out.writeBytes(PrintCommands.PRINT_AND_FEED_LINES.getCode(Lines.of(feed.lines())));
-      } else if (block instanceof Cut cut) {
-        out.writeBytes(cutCommand(cut.partial()));
-      } else if (block instanceof ImageBlock image) {
-        current = renderImage(out, current, image);
-      } else if (block instanceof Barcode barcode) {
-        current = renderBarcode(out, current, barcode);
-      } else if (block instanceof Table table) {
-        current = renderTable(out, enc, current, table);
-      } else if (block instanceof Canvas canvas) {
-        current = renderCanvas(out, enc, current, canvas);
-      } else {
-        throw new UnsupportedBlockException(block);
-      }
+      current = renderBlock(out, enc, current, block);
     }
 
     // Avoid double cutting if job already has a cut
@@ -128,6 +111,37 @@ public final class EscPosRenderer {
     endOfJob(out, endsWithCut);
 
     return out.toByteArray();
+  }
+
+  /**
+   * Renders one block, dispatching by type; also used to render a {@link Box}'s
+   * children.
+   */
+  private ComputedStyle renderBlock(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current,
+      Block block) {
+    if (block instanceof Paragraph paragraph) {
+      return renderParagraph(out, enc, current, paragraph);
+    } else if (block instanceof Rule) {
+      return renderRule(out, enc, current);
+    } else if (block instanceof Feed feed) {
+      out.writeBytes(PrintCommands.PRINT_AND_FEED_LINES.getCode(Lines.of(feed.lines())));
+      return current;
+    } else if (block instanceof Cut cut) {
+      out.writeBytes(cutCommand(cut.partial()));
+      return current;
+    } else if (block instanceof ImageBlock image) {
+      return renderImage(out, current, image);
+    } else if (block instanceof Barcode barcode) {
+      return renderBarcode(out, current, barcode);
+    } else if (block instanceof Table table) {
+      return renderTable(out, enc, current, table);
+    } else if (block instanceof Canvas canvas) {
+      return renderCanvas(out, enc, current, canvas);
+    } else if (block instanceof Box box) {
+      return renderBox(out, enc, current, box);
+    } else {
+      throw new UnsupportedBlockException(block);
+    }
   }
 
   private ComputedStyle renderParagraph(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current,
@@ -174,17 +188,67 @@ public final class EscPosRenderer {
   private ComputedStyle renderBoxedParagraph(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current,
       Paragraph paragraph, Border border) {
     final BoxDrawing box = BoxDrawing.of(border.style());
-    final int contentWidth = Math.max(1,
-        profile.columns() - (border.left() ? 1 : 0) - (border.right() ? 1 : 0));
+    final int contentWidth = boxContentWidth(border);
 
     current = applyAlignment(out, current, Alignment.LEFT); // the box itself is full-width
+    current = emitBoxEdge(out, enc, current, box, border, contentWidth, true);
+    current = emitFramedParagraph(out, enc, current, paragraph, border, box, contentWidth);
+    current = emitBoxEdge(out, enc, current, box, border, contentWidth, false);
+    return current;
+  }
 
-    if (border.top()) {
-      current = clearInlineStyle(out, current);
-      enc.emit(horizontalEdge(box, border, contentWidth, true));
-      out.writeBytes(PrintCommands.LINE_FEED.getCode());
+  /**
+   * Renders a {@link Box}: a top edge, its children (paragraphs wrapped inside
+   * the
+   * side rails, other blocks rendered plainly between the edges), then a bottom
+   * edge.
+   */
+  private ComputedStyle renderBox(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current, Box box) {
+    final Border border = box.border();
+    final BoxDrawing drawing = BoxDrawing.of(border.style());
+    final int contentWidth = boxContentWidth(border);
+
+    current = applyAlignment(out, current, Alignment.LEFT);
+    current = emitBoxEdge(out, enc, current, drawing, border, contentWidth, true);
+    for (Block child : box.children()) {
+      if (child instanceof Paragraph paragraph) {
+        current = emitFramedParagraph(out, enc, current, paragraph, border, drawing, contentWidth);
+      } else {
+        current = renderBlock(out, enc, current, child); // non-paragraph child: no side rails (v1)
+      }
     }
+    current = emitBoxEdge(out, enc, current, drawing, border, contentWidth, false);
+    return current;
+  }
 
+  /**
+   * The content width inside a box: the paper columns minus a cell for each side
+   * rail.
+   */
+  private int boxContentWidth(Border border) {
+    return Math.max(1, profile.columns() - (border.left() ? 1 : 0) - (border.right() ? 1 : 0));
+  }
+
+  /**
+   * Emits a box top ({@code isTop}) or bottom edge, when that side has a border.
+   */
+  private ComputedStyle emitBoxEdge(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current,
+      BoxDrawing box, Border border, int contentWidth, boolean isTop) {
+    if (isTop ? !border.top() : !border.bottom()) {
+      return current;
+    }
+    current = clearInlineStyle(out, current);
+    enc.emit(horizontalEdge(box, border, contentWidth, isTop));
+    out.writeBytes(PrintCommands.LINE_FEED.getCode());
+    return current;
+  }
+
+  /**
+   * Emits a paragraph's wrapped lines framed by the box's side rails ({@code │}),
+   * padded to {@code contentWidth}.
+   */
+  private ComputedStyle emitFramedParagraph(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current,
+      Paragraph paragraph, Border border, BoxDrawing box, int contentWidth) {
     final OptionalInt spacing = beginLineSpacing(out, paragraph);
     for (List<TextRun> line : TextWrapper.wrap(paragraph.runs(), contentWidth)) {
       current = clearInlineStyle(out, current);
@@ -199,12 +263,6 @@ public final class EscPosRenderer {
       out.writeBytes(PrintCommands.LINE_FEED.getCode());
     }
     endLineSpacing(out, spacing);
-
-    if (border.bottom()) {
-      current = clearInlineStyle(out, current);
-      enc.emit(horizontalEdge(box, border, contentWidth, false));
-      out.writeBytes(PrintCommands.LINE_FEED.getCode());
-    }
     return current;
   }
 

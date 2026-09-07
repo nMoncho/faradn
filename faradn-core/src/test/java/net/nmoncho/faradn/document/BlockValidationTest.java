@@ -45,6 +45,13 @@ public class BlockValidationTest {
   }
 
   @Test
+  void boxRejectsNullBorderAndEmptyChildren() {
+    final Paragraph child = new Paragraph(List.of(RUN), Alignment.LEFT);
+    assertThrows(IllegalArgumentException.class, () -> new Box(null, List.of(child)));
+    assertThrows(IllegalArgumentException.class, () -> new Box(Border.all(Border.Style.SINGLE), List.of()));
+  }
+
+  @Test
   void paragraphCopiesItsRuns() {
     final List<TextRun> runs = new ArrayList<>();
     runs.add(RUN);

@@ -215,8 +215,18 @@ sides (or the `border` shorthand, which sets all four) draws a **full box** — 
 ```
 
 The box is full paper width; content is wrapped to `columns − 2` and aligned inside per the
-paragraph's `text-align`. A box spanning several separate blocks (a bordered `<div>` around
-multiple paragraphs) isn't supported yet.
+paragraph's `text-align`. A bordered `<div>` wrapping **several** blocks frames the whole group in
+one box:
+
+```html
+<div style="border: 1px solid">
+  <p><b>Store hours</b></p>
+  <p>Mon-Fri  07:00 - 18:00</p>
+</div>
+```
+
+Paragraph children are wrapped inside the side rails; other block types (a table, an image) render
+between the top and bottom edges without side rails.
 
 **Barcodes**
 

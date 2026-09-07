@@ -40,9 +40,12 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
   private static final String BARCODE_TAG = "bar-code";
   private static final String BARCODE_CLASS_PREFIX = "bar-code--";
 
-  private final List<Block> blocks = new ArrayList<>();
+  // The current block accumulator. Normally the root output list, but while
+  // inside a bordered container it is that box's child list (see boxes).
+  private List<Block> blocks = new ArrayList<>();
   private final List<TextRun> runs = new ArrayList<>();
   private final Deque<ComputedStyle> styles = new ArrayDeque<>();
+  private final Deque<BoxFrame> boxes = new ArrayDeque<>();
 
   private boolean pendingSpace = false;
   private Element consumedSubtree = null;
@@ -50,6 +53,13 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
   private String pendingMarker = null;
   private int preDepth = 0;
   private final int dpi;
+
+  /**
+   * An open bordered container: the element that opened it, its border, and the
+   * parent accumulator to restore.
+   */
+  private record BoxFrame(Element opener, Border border, List<Block> parent) {
+  }
 
   private BlockBuilder(int dpi) {
     this.dpi = dpi;
@@ -147,6 +157,17 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
     } else if (tag.equals("br") || BLOCK_TAGS.contains(tag)) {
       flushParagraph();
     }
+
+    // A bordered block container captures the blocks produced inside it, so its
+    // border can frame the whole group at tail (see closeBox). The prior content
+    // was already flushed above into the parent accumulator.
+    if (consumedSubtree == null && BLOCK_TAGS.contains(tag)) {
+      final Border border = blockBorder(el);
+      if (border.any()) {
+        boxes.push(new BoxFrame(el, border, blocks));
+        blocks = new ArrayList<>();
+      }
+    }
   }
 
   @Override
@@ -175,8 +196,32 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
     }
 
     if (BLOCK_TAGS.contains(tag)) {
-      // A border on this block draws a rule above/below the paragraph it flushes.
-      flushParagraph(blockBorder(el));
+      flushParagraph(); // this block's direct inline content (borderless; a box frames it)
+      if (!boxes.isEmpty() && boxes.peek().opener() == el) {
+        closeBox();
+      }
+    }
+  }
+
+  /**
+   * Closes the bordered container opened by the current element: pops its
+   * captured children, restores the parent accumulator, and adds a {@link Box}
+   * (or,
+   * for a lone borderless paragraph, that paragraph with the border attached -
+   * the
+   * single-paragraph case that {@code Paragraph}'s border covers).
+   */
+  private void closeBox() {
+    final BoxFrame frame = boxes.pop();
+    final List<Block> children = blocks;
+    blocks = frame.parent();
+    if (children.isEmpty()) {
+      return;
+    }
+    if (children.size() == 1 && children.get(0) instanceof Paragraph only && only.border().equals(Border.NONE)) {
+      blocks.add(new Paragraph(only.runs(), only.alignment(), frame.border()));
+    } else {
+      blocks.add(new Box(frame.border(), children));
     }
   }
 

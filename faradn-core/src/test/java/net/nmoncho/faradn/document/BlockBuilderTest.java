@@ -604,4 +604,37 @@ public class BlockBuilderTest {
     assertEquals(Border.NONE, paragraph("<p>x</p>").border());
     assertEquals(Border.NONE, paragraph("<p style=\"border: none\">x</p>").border());
   }
+
+  // ----- boxes: a bordered container wrapping several blocks -----
+
+  @Test
+  void borderedDivWithMultipleBlocksBecomesBox() {
+    final List<Block> blocks = Document.from(
+        "<div style=\"border: 1px solid\"><p>a</p><p>b</p></div>").blocks();
+
+    assertEquals(1, blocks.size());
+    final Box box = assertInstanceOf(Box.class, blocks.get(0));
+    assertEquals(Border.all(Border.Style.SINGLE), box.border());
+    assertEquals(2, box.children().size());
+    assertEquals("a", assertInstanceOf(Paragraph.class, box.children().get(0)).runs().get(0).text());
+    assertEquals("b", assertInstanceOf(Paragraph.class, box.children().get(1)).runs().get(0).text());
+  }
+
+  @Test
+  void borderedDivWithSingleParagraphStaysABorderedParagraph() {
+    final Paragraph p = paragraph("<div style=\"border: 1px solid\">solo</div>");
+
+    assertEquals(Border.all(Border.Style.SINGLE), p.border());
+  }
+
+  @Test
+  void borderedDivKeepsChildBlockTypesInsideTheBox() {
+    final Box box = assertInstanceOf(Box.class, Document.from(
+        "<div style=\"border: 1px solid\"><p>a</p><hr><p>b</p></div>").blocks().get(0));
+
+    assertEquals(3, box.children().size());
+    assertInstanceOf(Paragraph.class, box.children().get(0));
+    assertInstanceOf(Rule.class, box.children().get(1));
+    assertInstanceOf(Paragraph.class, box.children().get(2));
+  }
 }

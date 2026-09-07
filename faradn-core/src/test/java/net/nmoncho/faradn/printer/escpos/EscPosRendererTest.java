@@ -916,6 +916,20 @@ public class EscPosRendererTest {
   }
 
   @Test
+  void boxWrapsMultipleParagraphsInOneFrame() {
+    byte[] out = new EscPosRenderer(profile(7, PC437))
+        .render(Document.from("<div style=\"border: 1px solid\"><p>aa</p><p>bb</p></div>").blocks());
+
+    // one frame around both paragraphs; each line padded to content width 5.
+    assertBytes(cat(HEAD,
+        boxEdge(BOX_TL, BOX_H, BOX_TR, 5), LF,
+        VBAR, "aa   ", VBAR, LF,
+        VBAR, "bb   ", VBAR, LF,
+        boxEdge(BOX_BL, BOX_H, BOX_BR, 5), LF,
+        FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
   void nullProfileIsRejected() {
     assertThrows(IllegalArgumentException.class, () -> new EscPosRenderer(null));
   }
