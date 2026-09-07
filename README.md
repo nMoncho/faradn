@@ -198,6 +198,17 @@ expressible — colour, radius, dashed/dotted, and per-side widths don't map. A 
 merges correctly, and the grid joins around it pick the right glyph (`┴`/`┬`/`─`) so the lines
 meet cleanly.
 
+A CSS `border-top` / `border-bottom` (or the `border` shorthand) on a **`<p>` or `<div>`** draws
+a full-width rule above and/or below the paragraph — handy for a line under a total:
+
+```html
+<p style="border-bottom: 1px solid">Subtotal      7,50</p>
+<p style="border-bottom: 3px double">TOTAL         9,00</p>
+```
+
+`border-style: double` (or a `double` in the shorthand) uses the `═` line. Left/right sides on a
+paragraph aren't boxed yet.
+
 **Barcodes**
 
 Either a custom element or a `bar-code` class with a symbology modifier:

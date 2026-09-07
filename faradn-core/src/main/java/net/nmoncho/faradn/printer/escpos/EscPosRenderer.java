@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import net.nmoncho.faradn.UnsupportedBlockException;
 import net.nmoncho.faradn.document.Barcode;
 import net.nmoncho.faradn.document.Block;
+import net.nmoncho.faradn.document.Border;
 import net.nmoncho.faradn.document.Canvas;
 import net.nmoncho.faradn.document.Cell;
 import net.nmoncho.faradn.document.ComputedStyle;
@@ -133,6 +134,11 @@ public final class EscPosRenderer {
       Paragraph paragraph) {
     current = applyAlignment(out, current, paragraph.alignment());
 
+    final Border border = paragraph.border();
+    if (border.top()) {
+      current = emitHorizontalBorder(out, enc, current, border.style());
+    }
+
     // line-height maps to the ESC/POS line spacing (ESC 3 n), in vertical motion
     // units. Pin that unit to one dot with GS P first (as page mode does), so n is
     // in dots regardless of the printer's default unit; each of the paragraph's
@@ -164,6 +170,22 @@ public final class EscPosRenderer {
     if (spacing.isPresent()) {
       out.writeBytes(LineSpacingCommands.DEFAULT_LINE_SPACING.getCode()); // ESC 2
     }
+
+    if (border.bottom()) {
+      current = emitHorizontalBorder(out, enc, current, border.style());
+    }
+    return current;
+  }
+
+  /**
+   * Emits a full-width horizontal rule ({@code ─}/{@code ═}) for a paragraph's
+   * top/bottom border.
+   */
+  private ComputedStyle emitHorizontalBorder(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current,
+      Border.Style style) {
+    current = clearInlineStyle(out, current);
+    enc.emit(BoxDrawing.of(style).horizontal().repeat(profile.columns()));
+    out.writeBytes(PrintCommands.LINE_FEED.getCode());
     return current;
   }
 

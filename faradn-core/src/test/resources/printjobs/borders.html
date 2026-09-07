@@ -5,8 +5,9 @@
     <title>Borders</title>
 </head>
 <!-- Table grid borders via box-drawing characters (PC437 has the glyphs). The
-     items table uses a single grid; the note uses a double grid. The last row
-     spans two columns to exercise the (v1) uniform-join colspan. -->
+     items table uses a single grid; the note uses a double grid, the last row
+     spans two columns, and paragraph top/bottom rules sit under the subtotal
+     and total. -->
 <body>
     <center><b>FARAD'N CAFE</b></center>
     <hr>
@@ -21,5 +22,9 @@
     <table style="border-style: double">
         <tr><td>Keep this receipt for returns.</td></tr>
     </table>
+
+    <!-- Paragraph top/bottom rules: a single rule under the subtotal and a double rule under the total. -->
+    <p style="border-top: 1px solid; border-bottom: 1px solid">Subtotal      7,50</p>
+    <p style="border-bottom: 3px double"><b>TOTAL         9,00</b></p>
 </body>
 </html>

@@ -175,8 +175,54 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
     }
 
     if (BLOCK_TAGS.contains(tag)) {
-      flushParagraph();
+      // A border on this block draws a rule above/below the paragraph it flushes.
+      flushParagraph(blockBorder(el));
     }
+  }
+
+  /**
+   * The border for a block-level element from CSS {@code border-<side>} or the
+   * {@code border}/{@code border-style} shorthand. All four sides are recorded
+   * (double for a {@code double} style); the renderer draws only top/bottom for
+   * now. {@link Border#NONE} when absent or {@code none}/{@code 0}.
+   */
+  private static Border blockBorder(Element el) {
+    final boolean top = sideBordered(el, "border-top");
+    final boolean right = sideBordered(el, "border-right");
+    final boolean bottom = sideBordered(el, "border-bottom");
+    final boolean left = sideBordered(el, "border-left");
+    if (!(top || right || bottom || left)) {
+      return Border.NONE;
+    }
+    return new Border(top, right, bottom, left, mentionsDouble(el) ? Border.Style.DOUBLE : Border.Style.SINGLE);
+  }
+
+  /**
+   * Whether a side has a border: its own {@code border-<side>}, else the
+   * {@code border}/{@code border-style} shorthand.
+   */
+  private static boolean sideBordered(Element el, String sideProperty) {
+    final Optional<String> side = Utils.findStyleValue(el, sideProperty);
+    if (side.isPresent()) {
+      return !isNoneBorder(side.get());
+    }
+    return Utils.findStyleValue(el, "border").map(v -> !isNoneBorder(v)).orElse(false)
+        || Utils.findStyleValue(el, "border-style").map(v -> !isNoneBorder(v)).orElse(false);
+  }
+
+  private static boolean isNoneBorder(String value) {
+    final String v = value.strip().toLowerCase();
+    return v.equals("none") || v.equals("0") || v.equals("hidden");
+  }
+
+  private static boolean mentionsDouble(Element el) {
+    for (String property : new String[] { "border", "border-style", "border-top", "border-right", "border-bottom",
+        "border-left" }) {
+      if (Utils.findStyleValue(el, property).map(v -> v.toLowerCase().contains("double")).orElse(false)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private void appendText(TextNode text) {
@@ -240,6 +286,10 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
   }
 
   private void flushParagraph() {
+    flushParagraph(Border.NONE);
+  }
+
+  private void flushParagraph(Border border) {
     pendingSpace = false;
     if (runs.isEmpty()) {
       return;
@@ -253,7 +303,7 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
     }
 
     if (!runs.isEmpty()) {
-      blocks.add(new Paragraph(List.copyOf(runs), runs.get(0).style().alignment()));
+      blocks.add(new Paragraph(List.copyOf(runs), runs.get(0).style().alignment(), border));
     }
     runs.clear();
   }

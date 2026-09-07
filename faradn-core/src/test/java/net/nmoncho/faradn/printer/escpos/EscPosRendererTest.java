@@ -843,6 +843,38 @@ public class EscPosRendererTest {
   }
 
   @Test
+  void paragraphBorderBottomEmitsRuleBelow() {
+    byte[] out = new EscPosRenderer(profile(7, PC437))
+        .render(Document.from("<p style=\"border-bottom: 1px solid\">Total</p>").blocks());
+
+    assertBytes(cat(HEAD, "Total", LF, hline(BOX_H, 7), LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void paragraphBorderTopEmitsRuleAbove() {
+    byte[] out = new EscPosRenderer(profile(7, PC437))
+        .render(Document.from("<p style=\"border-top: 1px solid\">Hdr</p>").blocks());
+
+    assertBytes(cat(HEAD, hline(BOX_H, 7), LF, "Hdr", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void paragraphBorderShorthandRulesBothSides() {
+    byte[] out = new EscPosRenderer(profile(7, PC437))
+        .render(Document.from("<p style=\"border: 1px solid\">Box</p>").blocks());
+
+    assertBytes(cat(HEAD, hline(BOX_H, 7), LF, "Box", LF, hline(BOX_H, 7), LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void paragraphBorderDoubleUsesDoubleRule() {
+    byte[] out = new EscPosRenderer(profile(7, PC437))
+        .render(Document.from("<p style=\"border-bottom: 3px double\">Sum</p>").blocks());
+
+    assertBytes(cat(HEAD, "Sum", LF, hline(DBOX_H, 7), LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
   void nullProfileIsRejected() {
     assertThrows(IllegalArgumentException.class, () -> new EscPosRenderer(null));
   }
@@ -851,6 +883,13 @@ public class EscPosRendererTest {
 
   private static byte[] esc3(int n) {
     return new byte[] { ESC, 0x33, (byte) n }; // ESC 3 n: set line spacing
+  }
+
+  /** A bare horizontal line of {@code width} box glyphs (a paragraph rule). */
+  private static byte[] hline(byte glyph, int width) {
+    final byte[] line = new byte[width];
+    Arrays.fill(line, glyph);
+    return line;
   }
 
   /**

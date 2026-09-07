@@ -574,4 +574,34 @@ public class BlockBuilderTest {
     assertEquals(Border.NONE,
         table("<table border=\"1\" style=\"border: none\"><tr><td>a</td></tr></table>").outer());
   }
+
+  // ----- paragraph borders (top / bottom rules) -----
+
+  private static Paragraph paragraph(String html) {
+    return assertInstanceOf(Paragraph.class, Document.from(html).blocks().get(0));
+  }
+
+  @Test
+  void paragraphBorderBottomParsed() {
+    final Paragraph p = paragraph("<p style=\"border-bottom: 1px solid\">x</p>");
+
+    assertTrue(p.border().bottom());
+    assertFalse(p.border().top());
+    assertEquals(Border.Style.SINGLE, p.border().style());
+  }
+
+  @Test
+  void paragraphBorderShorthandSetsAllSidesAndDouble() {
+    final Paragraph p = paragraph("<div style=\"border: 2px double\">x</div>");
+
+    assertTrue(p.border().top());
+    assertTrue(p.border().bottom());
+    assertEquals(Border.Style.DOUBLE, p.border().style());
+  }
+
+  @Test
+  void paragraphHasNoBorderByDefaultOrWhenNone() {
+    assertEquals(Border.NONE, paragraph("<p>x</p>").border());
+    assertEquals(Border.NONE, paragraph("<p style=\"border: none\">x</p>").border());
+  }
 }

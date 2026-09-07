@@ -40,6 +40,11 @@ public class BlockValidationTest {
   }
 
   @Test
+  void paragraphRejectsMissingBorder() {
+    assertThrows(IllegalArgumentException.class, () -> new Paragraph(List.of(RUN), Alignment.LEFT, null));
+  }
+
+  @Test
   void paragraphCopiesItsRuns() {
     final List<TextRun> runs = new ArrayList<>();
     runs.add(RUN);
