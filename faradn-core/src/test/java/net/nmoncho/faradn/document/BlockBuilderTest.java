@@ -538,4 +538,40 @@ public class BlockBuilderTest {
     final Paragraph p = assertInstanceOf(Paragraph.class, blocks.get(0));
     assertEquals(new LineHeight(LineHeight.Kind.FACTOR, 2), p.runs().get(0).style().lineHeight());
   }
+
+  // ----- table borders -----
+
+  private static Table table(String html) {
+    return assertInstanceOf(Table.class, Document.from(html).blocks().get(0));
+  }
+
+  @Test
+  void tableBorderAttributeMakesSingleGrid() {
+    final Table t = table("<table border=\"1\"><tr><td>a</td></tr></table>");
+
+    assertEquals(Border.all(Border.Style.SINGLE), t.outer());
+    assertTrue(t.gridLines());
+    assertTrue(t.bordered());
+  }
+
+  @Test
+  void tableBorderZeroOrAbsentHasNoBorder() {
+    assertEquals(Border.NONE, table("<table><tr><td>a</td></tr></table>").outer());
+    assertEquals(Border.NONE, table("<table border=\"0\"><tr><td>a</td></tr></table>").outer());
+    assertFalse(table("<table><tr><td>a</td></tr></table>").bordered());
+  }
+
+  @Test
+  void tableCssBorderStyleDoubleMakesDoubleGrid() {
+    assertEquals(Border.all(Border.Style.DOUBLE),
+        table("<table style=\"border-style: double\"><tr><td>a</td></tr></table>").outer());
+    assertEquals(Border.all(Border.Style.DOUBLE),
+        table("<table style=\"border: 2px double\"><tr><td>a</td></tr></table>").outer());
+  }
+
+  @Test
+  void tableCssBorderNoneOverridesAttribute() {
+    assertEquals(Border.NONE,
+        table("<table border=\"1\" style=\"border: none\"><tr><td>a</td></tr></table>").outer());
+  }
 }

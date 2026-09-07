@@ -148,7 +148,7 @@ golden-byte tests.
 | `<ul>`, `<ol>`, `<li>`            | list items with `- ` / `1. ` markers (nested indents)                                                      |
 | `<pre>`                           | preformatted: whitespace and line breaks preserved                                                         |
 | `<br>`, `<hr>`                    | line break, horizontal rule                                                                                |
-| `<table>`, `<tr>`, `<td>`, `<th>` | character-grid table: content-sized columns, `colspan`, per-cell `text-align`, inline styling, bold `<th>` |
+| `<table>`, `<tr>`, `<td>`, `<th>` | character-grid table: content-sized columns, `colspan`, per-cell `text-align`, inline styling, bold `<th>`, optional grid borders (below) |
 | `<img>`                           | image (URL or Base64 `data:` URI; PNG, JPEG, BMP, WBMP)                                                    |
 | `<em>`, `<i>`                     | italic (`ESC 4`/`ESC 5`); printers without italic ignore the command                                       |
 
@@ -171,6 +171,22 @@ the tag defaults:
   `%` are relative to the font height (`1.0` packs lines tight, `2.0` doubles the gap); `px` is
   1:1 with dots. Inherits, so setting it on `<body>` or a `<div>` styles everything inside;
   `normal` restores the printer default.
+
+**Table borders.** ESC/POS standard mode has no line command, so borders are drawn with
+box-drawing characters on the same monospace grid the table already uses (PC437/PC850 carry the
+glyphs; the encoder switches to them automatically). Turn them on with the HTML `border`
+attribute or a CSS `border` on the `<table>`:
+
+```html
+<table border="1">…</table>                        <!-- single-line grid ─│┼ -->
+<table style="border-style: double">…</table>      <!-- double-line grid ═║╬ -->
+```
+
+This frames the table and draws separators between every cell; the border eats `columnCount + 1`
+columns of width. `border: none` (or `border="0"`) turns it off. Only single vs double weight is
+expressible — colour, radius, dashed/dotted, and per-side widths don't map. A `colspan` cell
+merges correctly, and the grid joins around it pick the right glyph (`┴`/`┬`/`─`) so the lines
+meet cleanly.
 
 **Barcodes**
 

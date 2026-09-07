@@ -79,6 +79,10 @@ import net.nmoncho.faradn.transport.UsbTransport;
  * {@link #printsLineHeightOverUsb()} prints wrapped paragraphs at different
  * {@code line-height}s (default / 1.0 / 2.0 / 40px) so the {@code ESC 3} line
  * spacing can be compared by eye.
+ * <p>
+ * {@link #printsBorderedTableOverUsb()} prints tables with box-drawing grid
+ * borders (single and double, plus a colspan row) to check the lines join up on
+ * paper and the columns stay aligned.
  */
 @Tag("hardware")
 public class HardwarePrintTest {
@@ -92,6 +96,8 @@ public class HardwarePrintTest {
   private static final File ROTATIONS = new File("src/test/resources/printjobs/rotations.html");
   private static final File MIXED_MODE = new File("src/test/resources/printjobs/mixed-mode.html");
   private static final File LINE_HEIGHT = new File("src/test/resources/printjobs/line-height.html");
+  private static final File BORDERS = new File("src/test/resources/printjobs/borders.html");
+  private static final File HEADINGS = new File("src/test/resources/printjobs/headings.html");
 
   @Test
   @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
@@ -224,6 +230,34 @@ public class HardwarePrintTest {
     // line-height -> ESC 3: four wrapped paragraphs (default / 1.0 / 2.0 / 40px).
     // Verify the inter-line spacing visibly differs between them.
     Document doc = Document.from(LINE_HEIGHT);
+
+    Optional<Printer> printer = Printer.from(0x04b8);
+    printer.ifPresentOrElse(
+        p -> p.print(doc, "TM-T88V"),
+        () -> fail("No Epson printer (USB vendor 0x04b8) found"));
+  }
+
+  @Test
+  @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
+  void printsBorderedTableOverUsb() {
+    // Table grid borders drawn with PC437 box characters: a single-grid items
+    // table (with a colspan TOTAL row) and a double-grid note. Verify the lines
+    // join up and columns stay aligned.
+    Document doc = Document.from(BORDERS);
+
+    Optional<Printer> printer = Printer.from(0x04b8);
+    printer.ifPresentOrElse(
+        p -> p.print(doc, "TM-T88V"),
+        () -> fail("No Epson printer (USB vendor 0x04b8) found"));
+  }
+
+  @Test
+  @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
+  void printsHeadingsOverUsb() {
+    // Table grid borders drawn with PC437 box characters: a single-grid items
+    // table (with a colspan TOTAL row) and a double-grid note. Verify the lines
+    // join up and columns stay aligned.
+    Document doc = Document.from(HEADINGS);
 
     Optional<Printer> printer = Printer.from(0x04b8);
     printer.ifPresentOrElse(

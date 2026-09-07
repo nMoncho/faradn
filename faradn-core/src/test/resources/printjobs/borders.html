@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Borders</title>
+</head>
+<!-- Table grid borders via box-drawing characters (PC437 has the glyphs). The
+     items table uses a single grid; the note uses a double grid. The last row
+     spans two columns to exercise the (v1) uniform-join colspan. -->
+<body>
+    <center><b>FARAD'N CAFE</b></center>
+    <hr>
+
+    <table border="1">
+        <tr><th>Item</th><th>Qty</th><th style="text-align: right">Price</th></tr>
+        <tr><td>Flat white</td><td>1</td><td style="text-align: right">3,20</td></tr>
+        <tr><td>Croissant</td><td>2</td><td style="text-align: right">4,30</td></tr>
+        <tr><td colspan="2">TOTAL</td><td style="text-align: right">7,50</td></tr>
+    </table>
+
+    <table style="border-style: double">
+        <tr><td>Keep this receipt for returns.</td></tr>
+    </table>
+</body>
+</html>

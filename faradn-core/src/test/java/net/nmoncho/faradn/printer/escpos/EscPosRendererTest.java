@@ -19,6 +19,7 @@ import net.nmoncho.faradn.Image;
 import net.nmoncho.faradn.RasterImage;
 import net.nmoncho.faradn.document.Barcode;
 import net.nmoncho.faradn.document.BarcodeOptions;
+import net.nmoncho.faradn.document.Border;
 import net.nmoncho.faradn.document.Canvas;
 import net.nmoncho.faradn.document.Cell;
 import net.nmoncho.faradn.document.ComputedStyle;
@@ -70,6 +71,18 @@ public class EscPosRendererTest {
   private static final byte[] FF = { 0x0C };
   private static final byte[] ESC_2 = { ESC, 0x32 };
   private static final byte[] FULL_CUT = { GS, 0x56, 0x00 };
+
+  // Box-drawing glyphs in PC437 (single / double), for bordered-table goldens.
+  private static final byte[] VBAR = { (byte) 0xB3 }; // │
+  private static final byte[] DVBAR = { (byte) 0xBA }; // ║
+  private static final byte BOX_H = (byte) 0xC4;
+  private static final byte BOX_TL = (byte) 0xDA, BOX_TR = (byte) 0xBF, BOX_BL = (byte) 0xC0, BOX_BR = (byte) 0xD9;
+  private static final byte BOX_TD = (byte) 0xC2, BOX_TU = (byte) 0xC1;
+  private static final byte BOX_TRT = (byte) 0xC3, BOX_TLF = (byte) 0xB4, BOX_X = (byte) 0xC5;
+  private static final byte DBOX_H = (byte) 0xCD;
+  private static final byte DBOX_TL = (byte) 0xC9, DBOX_TR = (byte) 0xBB, DBOX_BL = (byte) 0xC8, DBOX_BR = (byte) 0xBC;
+  private static final byte DBOX_TD = (byte) 0xCB, DBOX_TU = (byte) 0xCA;
+  private static final byte DBOX_TRT = (byte) 0xCC, DBOX_TLF = (byte) 0xB9, DBOX_X = (byte) 0xCE;
   private static final byte[] SELECT_FONT_B = { ESC, 0x4D, 0x01 };
   private static final byte[] SELECT_FONT_A = { ESC, 0x4D, 0x00 };
   private static final ComputedStyle FONT_B = new ComputedStyle(false, false, 1, 1, Alignment.LEFT, false, 1);
@@ -727,6 +740,92 @@ public class EscPosRendererTest {
   }
 
   @Test
+  void borderedTableDrawsSingleGrid() {
+    ComputedStyle plain = ComputedStyle.INITIAL;
+    Table table = new Table(List.of(
+        List.of(new Cell(List.of(new TextRun("ab", plain)), Alignment.LEFT),
+            new Cell(List.of(new TextRun("cd", plain)), Alignment.LEFT)),
+        List.of(new Cell(List.of(new TextRun("ef", plain)), Alignment.LEFT),
+            new Cell(List.of(new TextRun("gh", plain)), Alignment.LEFT))),
+        Border.all(Border.Style.SINGLE), true);
+
+    byte[] out = new EscPosRenderer(profile(7, PC437)).render(List.of(table));
+
+    // budget = 7 - (columns+1=3) = 4 -> widths [2, 2]
+    assertBytes(cat(HEAD,
+        boxRule(BOX_H, BOX_TL, BOX_TD, BOX_TR, 2, 2), LF,
+        VBAR, "ab", VBAR, "cd", VBAR, LF,
+        boxRule(BOX_H, BOX_TRT, BOX_X, BOX_TLF, 2, 2), LF,
+        VBAR, "ef", VBAR, "gh", VBAR, LF,
+        boxRule(BOX_H, BOX_BL, BOX_TU, BOX_BR, 2, 2), LF,
+        FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void borderedTableDrawsDoubleGrid() {
+    ComputedStyle plain = ComputedStyle.INITIAL;
+    Table table = new Table(List.of(
+        List.of(new Cell(List.of(new TextRun("ab", plain)), Alignment.LEFT),
+            new Cell(List.of(new TextRun("cd", plain)), Alignment.LEFT))),
+        Border.all(Border.Style.DOUBLE), true);
+
+    byte[] out = new EscPosRenderer(profile(7, PC437)).render(List.of(table));
+
+    assertBytes(cat(HEAD,
+        boxRule(DBOX_H, DBOX_TL, DBOX_TD, DBOX_TR, 2, 2), LF,
+        DVBAR, "ab", DVBAR, "cd", DVBAR, LF,
+        boxRule(DBOX_H, DBOX_BL, DBOX_TU, DBOX_BR, 2, 2), LF,
+        FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void borderedTableColspanAtTopSelectsJoinGlyphs() {
+    ComputedStyle plain = ComputedStyle.INITIAL;
+    Table table = new Table(List.of(
+        List.of(new Cell(List.of(new TextRun("hdr", plain)), Alignment.LEFT, 2)),
+        List.of(new Cell(List.of(new TextRun("ab", plain)), Alignment.LEFT),
+            new Cell(List.of(new TextRun("cd", plain)), Alignment.LEFT))),
+        Border.all(Border.Style.SINGLE), true);
+
+    byte[] out = new EscPosRenderer(profile(9, PC437)).render(List.of(table));
+
+    // widths [3, 3]. The span sits in the top row, so no divider meets the top
+    // rule from below (plain ─); the separator gains a ┬ as the columns split.
+    assertBytes(cat(HEAD,
+        boxRule(BOX_H, BOX_TL, BOX_TR, new int[] { 3, 3 }, BOX_H), LF,
+        VBAR, "hdr    ", VBAR, LF,
+        boxRule(BOX_H, BOX_TRT, BOX_TLF, new int[] { 3, 3 }, BOX_TD), LF,
+        VBAR, "ab ", VBAR, "cd ", VBAR, LF,
+        boxRule(BOX_H, BOX_BL, BOX_BR, new int[] { 3, 3 }, BOX_TU), LF,
+        FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void borderedTableColspanAtBottomSelectsJoinGlyphs() {
+    ComputedStyle plain = ComputedStyle.INITIAL;
+    // Mirrors a totals row: a colspan over the first two of three columns.
+    Table table = new Table(List.of(
+        List.of(new Cell(List.of(new TextRun("a", plain)), Alignment.LEFT),
+            new Cell(List.of(new TextRun("b", plain)), Alignment.LEFT),
+            new Cell(List.of(new TextRun("c", plain)), Alignment.LEFT)),
+        List.of(new Cell(List.of(new TextRun("tot", plain)), Alignment.LEFT, 2),
+            new Cell(List.of(new TextRun("p", plain)), Alignment.LEFT))),
+        Border.all(Border.Style.SINGLE), true);
+
+    byte[] out = new EscPosRenderer(profile(13, PC437)).render(List.of(table));
+
+    // widths [3, 3, 3]. Separator over the span: ┴ at the merged boundary, ┼ at
+    // the split; bottom under the span: plain ─ at the merged boundary, ┴ at the split.
+    assertBytes(cat(HEAD,
+        boxRule(BOX_H, BOX_TL, BOX_TR, new int[] { 3, 3, 3 }, BOX_TD, BOX_TD), LF,
+        VBAR, "a  ", VBAR, "b  ", VBAR, "c  ", VBAR, LF,
+        boxRule(BOX_H, BOX_TRT, BOX_TLF, new int[] { 3, 3, 3 }, BOX_TU, BOX_X), LF,
+        VBAR, "tot    ", VBAR, "p  ", VBAR, LF,
+        boxRule(BOX_H, BOX_BL, BOX_BR, new int[] { 3, 3, 3 }, BOX_H, BOX_TU), LF,
+        FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
   void nullProfileIsRejected() {
     assertThrows(IllegalArgumentException.class, () -> new EscPosRenderer(null));
   }
@@ -735,6 +834,32 @@ public class EscPosRendererTest {
 
   private static byte[] esc3(int n) {
     return new byte[] { ESC, 0x33, (byte) n }; // ESC 3 n: set line spacing
+  }
+
+  /**
+   * A horizontal box rule: {@code left}, then {@code hz}×width per column joined
+   * by {@code join}, then {@code right}.
+   */
+  private static byte[] boxRule(byte hz, byte left, byte join, byte right, int... widths) {
+    final byte[] joins = new byte[Math.max(0, widths.length - 1)];
+    Arrays.fill(joins, join);
+    return boxRule(hz, left, right, widths, joins);
+  }
+
+  /**
+   * A horizontal box rule with a per-boundary join glyph (one per interior
+   * boundary).
+   */
+  private static byte[] boxRule(byte hz, byte left, byte right, int[] widths, byte... joins) {
+    final ByteArrayOutputStream rule = new ByteArrayOutputStream();
+    rule.write(left);
+    for (int c = 0; c < widths.length; c++) {
+      for (int k = 0; k < widths[c]; k++) {
+        rule.write(hz);
+      }
+      rule.write(c < widths.length - 1 ? joins[c] : right);
+    }
+    return rule.toByteArray();
   }
 
   private static byte[] escDollar(int value) {

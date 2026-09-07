@@ -460,7 +460,38 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
         rows.add(cells);
       }
     }
-    return rows.isEmpty() ? Optional.empty() : Optional.of(new Table(rows));
+    if (rows.isEmpty()) {
+      return Optional.empty();
+    }
+    final Border border = tableBorder(table);
+    return Optional.of(new Table(rows, border, border.any()));
+  }
+
+  /**
+   * The border for a table from its {@code <table border>} attribute or CSS
+   * {@code border}/{@code border-style}. A single-line grid by default; a double
+   * grid for {@code border-style: double}; {@link Border#NONE} when absent or
+   * explicitly {@code none}/{@code 0}.
+   */
+  private static Border tableBorder(Element table) {
+    final String attr = table.attr("border").strip();
+    final Optional<String> css = Utils.findStyleValue(table, "border").map(v -> v.toLowerCase());
+    final Optional<String> cssStyle = Utils.findStyleValue(table, "border-style").map(v -> v.toLowerCase());
+
+    // An explicit CSS "none"/"0" turns borders off, even if the attribute is set.
+    if (css.map(v -> v.equals("none") || v.equals("0")).orElse(false)
+        || cssStyle.map(v -> v.equals("none")).orElse(false)) {
+      return Border.NONE;
+    }
+
+    final boolean bordered = (!attr.isEmpty() && !attr.equals("0")) || css.isPresent() || cssStyle.isPresent();
+    if (!bordered) {
+      return Border.NONE;
+    }
+
+    final boolean isDouble = css.map(v -> v.contains("double")).orElse(false)
+        || cssStyle.map(v -> v.contains("double")).orElse(false);
+    return Border.all(isDouble ? Border.Style.DOUBLE : Border.Style.SINGLE);
   }
 
   /**

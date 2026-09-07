@@ -309,7 +309,15 @@ public final class EscPosRenderer {
     if (columnCount == 0) {
       return current;
     }
-    final int[] widths = columnWidths(table, columnCount, tableColumns(table));
+    // Bordered tables spend columnCount+1 cells on the vertical rules (a │ at each
+    // edge and between columns); borderless ones spend columnCount-1 space gutters.
+    final int separatorTotal = table.bordered() ? (columnCount + 1) : (columnCount - 1) * TABLE_COLUMN_GUTTER;
+    final int available = Math.max(columnCount, tableColumns(table) - separatorTotal);
+    final int[] widths = columnWidths(table, columnCount, available);
+
+    if (table.bordered()) {
+      return renderBorderedTable(out, enc, current, table, widths, columnCount);
+    }
 
     for (List<Cell> row : table.rows()) {
       final List<PlacedCell> placed = placeRow(row, widths, columnCount);
@@ -334,6 +342,121 @@ public final class EscPosRenderer {
       }
     }
     return current;
+  }
+
+  /**
+   * Renders a table with box-drawing borders: a top frame, each row's content
+   * lines wrapped in vertical rules ({@code │}), a separator between rows, and a
+   * bottom frame. The grid is uniform - a {@code colspan}'s interior joins are
+   * drawn as if the cell were split (a v1 simplification).
+   */
+  private ComputedStyle renderBorderedTable(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current,
+      Table table, int[] widths, int columnCount) {
+    final BoxDrawing box = BoxDrawing.of(table.outer().style());
+    final List<List<Cell>> rows = table.rows();
+
+    // Per row, which interior column boundaries carry a vertical divider (a
+    // colspan cell has none across the columns it merges). A rule's join glyph is
+    // chosen from whether a divider meets it from the row above and/or below.
+    final boolean[] noDivider = new boolean[columnCount];
+    final boolean[][] dividers = new boolean[rows.size()][];
+    for (int r = 0; r < rows.size(); r++) {
+      dividers[r] = dividerBoundaries(rows.get(r), columnCount);
+    }
+
+    current = clearInlineStyle(out, current);
+    enc.emit(horizontalRule(box, widths, box.topLeft(), box.topRight(), noDivider, dividers[0]));
+    out.writeBytes(PrintCommands.LINE_FEED.getCode());
+
+    for (int r = 0; r < rows.size(); r++) {
+      final List<PlacedCell> placed = placeRow(rows.get(r), widths, columnCount);
+      int rowHeight = 1;
+      for (PlacedCell cell : placed) {
+        rowHeight = Math.max(rowHeight, cell.lines().size());
+      }
+
+      for (int line = 0; line < rowHeight; line++) {
+        current = clearInlineStyle(out, current);
+        enc.emit(box.vertical()); // left edge
+        for (PlacedCell cell : placed) {
+          final List<TextRun> segments = line < cell.lines().size() ? cell.lines().get(line) : List.of();
+          current = emitCell(out, enc, current, segments, cell.width(), cell.alignment());
+          current = clearInlineStyle(out, current);
+          enc.emit(box.vertical()); // column separator / right edge
+        }
+        out.writeBytes(PrintCommands.LINE_FEED.getCode());
+      }
+
+      if (r < rows.size() - 1) {
+        current = clearInlineStyle(out, current);
+        enc.emit(horizontalRule(box, widths, box.teeRight(), box.teeLeft(), dividers[r], dividers[r + 1]));
+        out.writeBytes(PrintCommands.LINE_FEED.getCode());
+      }
+    }
+
+    current = clearInlineStyle(out, current);
+    enc.emit(horizontalRule(box, widths, box.bottomLeft(), box.bottomRight(), dividers[rows.size() - 1], noDivider));
+    out.writeBytes(PrintCommands.LINE_FEED.getCode());
+    return current;
+  }
+
+  /**
+   * Which interior column boundaries of a row carry a vertical divider. Index
+   * {@code b} (for {@code 1 ≤ b < columnCount}) is the boundary between columns
+   * {@code b-1} and {@code b}; it has a divider unless a cell spans across it.
+   */
+  private static boolean[] dividerBoundaries(List<Cell> row, int columnCount) {
+    final boolean[] divider = new boolean[columnCount];
+    int col = 0;
+    for (Cell cell : row) {
+      if (col >= columnCount) {
+        break;
+      }
+      if (col > 0) {
+        divider[col] = true; // this cell's left edge is a divider
+      }
+      col += Math.min(cell.colSpan(), columnCount - col);
+    }
+    while (col < columnCount) { // columns the row leaves uncovered are single cells
+      if (col > 0) {
+        divider[col] = true;
+      }
+      col++;
+    }
+    return divider;
+  }
+
+  /**
+   * A full-width horizontal rule: {@code left}, each column's {@code ─×width},
+   * {@code right}, with each interior join chosen from whether a vertical divider
+   * meets it from the rule's upper row ({@code above}) and lower row
+   * ({@code below}).
+   */
+  private static String horizontalRule(BoxDrawing box, int[] widths, String left, String right,
+      boolean[] above, boolean[] below) {
+    final StringBuilder rule = new StringBuilder(left);
+    for (int c = 0; c < widths.length; c++) {
+      rule.append(box.horizontal().repeat(widths[c]));
+      rule.append(c < widths.length - 1 ? joinGlyph(box, above[c + 1], below[c + 1]) : right);
+    }
+    return rule.toString();
+  }
+
+  /**
+   * The rule glyph at a boundary given whether a divider meets it from above /
+   * below.
+   */
+  private static String joinGlyph(BoxDrawing box, boolean above, boolean below) {
+    if (above && below) {
+      return box.cross();
+    }
+    if (above) {
+      return box.teeUp();
+    }
+    if (below) {
+      return box.teeDown();
+    }
+    return box.horizontal();
   }
 
   /**
@@ -422,8 +545,7 @@ public final class EscPosRenderer {
    * fill the line (or content is shrunk proportionally when it overflows the
    * budget).
    */
-  private int[] columnWidths(Table table, int columnCount, int columns) {
-    final int available = Math.max(columnCount, columns - (columnCount - 1) * TABLE_COLUMN_GUTTER);
+  private int[] columnWidths(Table table, int columnCount, int available) {
     final int[] natural = new int[columnCount];
     for (List<Cell> row : table.rows()) {
       int col = 0;

@@ -107,6 +107,23 @@ public class BlockValidationTest {
   }
 
   @Test
+  void borderRejectsNullStyleAndReportsAnySide() {
+    assertThrows(IllegalArgumentException.class, () -> new Border(true, false, false, false, null));
+    assertFalse(Border.NONE.any());
+    assertTrue(Border.all(Border.Style.SINGLE).any());
+  }
+
+  @Test
+  void tableRejectsNullOuterAndDefaultsToBorderless() {
+    final List<List<Cell>> rows = List.of(List.of(new Cell(List.of(RUN), Alignment.LEFT)));
+    assertThrows(IllegalArgumentException.class, () -> new Table(rows, null, false));
+
+    final Table plain = new Table(rows);
+    assertEquals(Border.NONE, plain.outer());
+    assertFalse(plain.bordered());
+  }
+
+  @Test
   void canvasBuilderCollectsPlacements() {
     Paragraph a = new Paragraph(List.of(RUN), Alignment.LEFT);
     Barcode b = new Barcode("12345678", "code128", Alignment.LEFT);
