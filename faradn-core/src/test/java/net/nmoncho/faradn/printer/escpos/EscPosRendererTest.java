@@ -859,11 +859,52 @@ public class EscPosRendererTest {
   }
 
   @Test
-  void paragraphBorderShorthandRulesBothSides() {
+  void paragraphBorderShorthandDrawsFullBox() {
     byte[] out = new EscPosRenderer(profile(7, PC437))
         .render(Document.from("<p style=\"border: 1px solid\">Box</p>").blocks());
 
-    assertBytes(cat(HEAD, hline(BOX_H, 7), LF, "Box", LF, hline(BOX_H, 7), LF, FEED_4, PARTIAL_CUT), out);
+    // columns 7, sides eat 2 -> content width 5; "Box" padded to "Box  ".
+    assertBytes(cat(HEAD,
+        boxEdge(BOX_TL, BOX_H, BOX_TR, 5), LF,
+        VBAR, "Box  ", VBAR, LF,
+        boxEdge(BOX_BL, BOX_H, BOX_BR, 5), LF,
+        FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void boxedParagraphWrapsContentInsideTheFrame() {
+    byte[] out = new EscPosRenderer(profile(7, PC437))
+        .render(Document.from("<p style=\"border: 1px solid\">hello world</p>").blocks());
+
+    // content width 5: "hello" / "world" each framed by │.
+    assertBytes(cat(HEAD,
+        boxEdge(BOX_TL, BOX_H, BOX_TR, 5), LF,
+        VBAR, "hello", VBAR, LF,
+        VBAR, "world", VBAR, LF,
+        boxEdge(BOX_BL, BOX_H, BOX_BR, 5), LF,
+        FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void boxedParagraphDoubleWeight() {
+    byte[] out = new EscPosRenderer(profile(8, PC437))
+        .render(Document.from("<div style=\"border: 3px double\">Note</div>").blocks());
+
+    // columns 8 -> content width 6; double corners and rails.
+    assertBytes(cat(HEAD,
+        boxEdge(DBOX_TL, DBOX_H, DBOX_TR, 6), LF,
+        DVBAR, "Note  ", DVBAR, LF,
+        boxEdge(DBOX_BL, DBOX_H, DBOX_BR, 6), LF,
+        FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void boxedParagraphLeftSideOnly() {
+    byte[] out = new EscPosRenderer(profile(7, PC437))
+        .render(Document.from("<p style=\"border-left: 1px solid\">Hi</p>").blocks());
+
+    // left rail only: no top/bottom rule, no right rail; content padded to 6.
+    assertBytes(cat(HEAD, VBAR, "Hi    ", LF, FEED_4, PARTIAL_CUT), out);
   }
 
   @Test
@@ -890,6 +931,20 @@ public class EscPosRendererTest {
     final byte[] line = new byte[width];
     Arrays.fill(line, glyph);
     return line;
+  }
+
+  /**
+   * A box edge: {@code left} corner, {@code glyph}×contentWidth, {@code right}
+   * corner.
+   */
+  private static byte[] boxEdge(byte left, byte glyph, byte right, int contentWidth) {
+    final ByteArrayOutputStream edge = new ByteArrayOutputStream();
+    edge.write(left);
+    for (int i = 0; i < contentWidth; i++) {
+      edge.write(glyph);
+    }
+    edge.write(right);
+    return edge.toByteArray();
   }
 
   /**

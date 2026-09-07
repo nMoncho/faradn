@@ -206,8 +206,17 @@ a full-width rule above and/or below the paragraph — handy for a line under a 
 <p style="border-bottom: 3px double">TOTAL         9,00</p>
 ```
 
-`border-style: double` (or a `double` in the shorthand) uses the `═` line. Left/right sides on a
-paragraph aren't boxed yet.
+`border-style: double` (or a `double` in the shorthand) uses the `═` line. Adding the left/right
+sides (or the `border` shorthand, which sets all four) draws a **full box** — corners, side
+`│` rails, and content wrapped to fit inside:
+
+```html
+<p style="border: 1px solid">Keep this receipt for any returns.</p>
+```
+
+The box is full paper width; content is wrapped to `columns − 2` and aligned inside per the
+paragraph's `text-align`. A box spanning several separate blocks (a bordered `<div>` around
+multiple paragraphs) isn't supported yet.
 
 **Barcodes**
 

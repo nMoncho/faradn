@@ -132,28 +132,19 @@ public final class EscPosRenderer {
 
   private ComputedStyle renderParagraph(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current,
       Paragraph paragraph) {
-    current = applyAlignment(out, current, paragraph.alignment());
-
     final Border border = paragraph.border();
+    // Side borders frame each line with │ and shrink the content, so they take
+    // the box path; top/bottom-only borders stay full-width rules.
+    if (border.left() || border.right()) {
+      return renderBoxedParagraph(out, enc, current, paragraph, border);
+    }
+
+    current = applyAlignment(out, current, paragraph.alignment());
     if (border.top()) {
       current = emitHorizontalBorder(out, enc, current, border.style());
     }
 
-    // line-height maps to the ESC/POS line spacing (ESC 3 n), in vertical motion
-    // units. Pin that unit to one dot with GS P first (as page mode does), so n is
-    // in dots regardless of the printer's default unit; each of the paragraph's
-    // line feeds then advances by it. Restore the printer default (ESC 2) after so
-    // the spacing doesn't leak into feeds or later blocks.
-    final OptionalInt spacing = paragraph.runs().get(0).style().lineHeight()
-        .resolveDots(textCellHeightDots(paragraph), profile.dpi());
-    if (spacing.isPresent()) {
-      final int dpi = profile.dpi();
-      if (dpi >= 1 && dpi <= 255) {
-        out.writeBytes(PrintPositionCommands.SET_MOTION_UNITS.getCode(new MotionUnit2D(dpi, dpi))); // GS P
-      }
-      out.writeBytes(LineSpacingCommands.SET_LINE_SPACING.getCode(new MotionUnit(spacing.getAsInt()))); // ESC 3 n
-    }
-
+    final OptionalInt spacing = beginLineSpacing(out, paragraph);
     final List<List<TextRun>> lines = TextWrapper.wrap(paragraph.runs(), effectiveColumns(paragraph.runs()));
     for (int i = 0; i < lines.size(); i++) {
       for (TextRun segment : lines.get(i)) {
@@ -166,15 +157,71 @@ public final class EscPosRenderer {
       }
       out.writeBytes(PrintCommands.LINE_FEED.getCode());
     }
-
-    if (spacing.isPresent()) {
-      out.writeBytes(LineSpacingCommands.DEFAULT_LINE_SPACING.getCode()); // ESC 2
-    }
+    endLineSpacing(out, spacing);
 
     if (border.bottom()) {
       current = emitHorizontalBorder(out, enc, current, border.style());
     }
     return current;
+  }
+
+  /**
+   * Renders a paragraph framed by side borders: a top edge ({@code ┌─┐}), each
+   * content line wrapped to {@code columns − sides} between {@code │}s, and a
+   * bottom edge ({@code └─┘}). Reuses {@link #emitCell} to pad/align content
+   * within the box.
+   */
+  private ComputedStyle renderBoxedParagraph(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current,
+      Paragraph paragraph, Border border) {
+    final BoxDrawing box = BoxDrawing.of(border.style());
+    final int contentWidth = Math.max(1,
+        profile.columns() - (border.left() ? 1 : 0) - (border.right() ? 1 : 0));
+
+    current = applyAlignment(out, current, Alignment.LEFT); // the box itself is full-width
+
+    if (border.top()) {
+      current = clearInlineStyle(out, current);
+      enc.emit(horizontalEdge(box, border, contentWidth, true));
+      out.writeBytes(PrintCommands.LINE_FEED.getCode());
+    }
+
+    final OptionalInt spacing = beginLineSpacing(out, paragraph);
+    for (List<TextRun> line : TextWrapper.wrap(paragraph.runs(), contentWidth)) {
+      current = clearInlineStyle(out, current);
+      if (border.left()) {
+        enc.emit(box.vertical());
+      }
+      current = emitCell(out, enc, current, line, contentWidth, paragraph.alignment());
+      if (border.right()) {
+        current = clearInlineStyle(out, current);
+        enc.emit(box.vertical());
+      }
+      out.writeBytes(PrintCommands.LINE_FEED.getCode());
+    }
+    endLineSpacing(out, spacing);
+
+    if (border.bottom()) {
+      current = clearInlineStyle(out, current);
+      enc.emit(horizontalEdge(box, border, contentWidth, false));
+      out.writeBytes(PrintCommands.LINE_FEED.getCode());
+    }
+    return current;
+  }
+
+  /**
+   * A box top ({@code true}) or bottom edge: a corner where a side border exists,
+   * a plain {@code ─} where it does not, around {@code ─×contentWidth}.
+   */
+  private static String horizontalEdge(BoxDrawing box, Border border, int contentWidth, boolean top) {
+    final StringBuilder edge = new StringBuilder();
+    if (border.left()) {
+      edge.append(top ? box.topLeft() : box.bottomLeft());
+    }
+    edge.append(box.horizontal().repeat(contentWidth));
+    if (border.right()) {
+      edge.append(top ? box.topRight() : box.bottomRight());
+    }
+    return edge.toString();
   }
 
   /**
@@ -187,6 +234,31 @@ public final class EscPosRenderer {
     enc.emit(BoxDrawing.of(style).horizontal().repeat(profile.columns()));
     out.writeBytes(PrintCommands.LINE_FEED.getCode());
     return current;
+  }
+
+  /**
+   * Pins the line spacing for a paragraph's {@code line-height} (via GS P + ESC 3
+   * n) and returns the spacing so {@link #endLineSpacing} can restore the
+   * default;
+   * empty when the paragraph uses the default spacing.
+   */
+  private OptionalInt beginLineSpacing(ByteArrayOutputStream out, Paragraph paragraph) {
+    final OptionalInt spacing = paragraph.runs().get(0).style().lineHeight()
+        .resolveDots(textCellHeightDots(paragraph), profile.dpi());
+    if (spacing.isPresent()) {
+      final int dpi = profile.dpi();
+      if (dpi >= 1 && dpi <= 255) {
+        out.writeBytes(PrintPositionCommands.SET_MOTION_UNITS.getCode(new MotionUnit2D(dpi, dpi))); // GS P
+      }
+      out.writeBytes(LineSpacingCommands.SET_LINE_SPACING.getCode(new MotionUnit(spacing.getAsInt()))); // ESC 3 n
+    }
+    return spacing;
+  }
+
+  private void endLineSpacing(ByteArrayOutputStream out, OptionalInt spacing) {
+    if (spacing.isPresent()) {
+      out.writeBytes(LineSpacingCommands.DEFAULT_LINE_SPACING.getCode()); // ESC 2
+    }
   }
 
   private ComputedStyle renderRule(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current) {
