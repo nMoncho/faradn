@@ -771,4 +771,39 @@ public class BlockBuilderTest {
     assertEquals(12, assertInstanceOf(Space.class, blocks.get(0)).dots());
     assertInstanceOf(Paragraph.class, blocks.get(1));
   }
+
+  /**
+   * For a bordered single-paragraph block, asserts the outer margin Spaces (top
+   * first, bottom last).
+   */
+  private static void assertVerticalMargin(List<Block> blocks, int topDots, int bottomDots) {
+    assertEquals(topDots, assertInstanceOf(Space.class, blocks.get(0)).dots());
+    assertEquals(bottomDots, assertInstanceOf(Space.class, blocks.get(blocks.size() - 1)).dots());
+  }
+
+  @Test
+  void marginShorthandExpandsOneToFourValues() {
+    final String open = "<div style=\"border: 1px solid; margin: ";
+    assertVerticalMargin(Document.from(open + "10px\">x</div>").blocks(), 10, 10); // 1: all sides
+    assertVerticalMargin(Document.from(open + "10px 20px\">x</div>").blocks(), 10, 10); // 2: top/bottom
+    assertVerticalMargin(Document.from(open + "5px 9px 15px\">x</div>").blocks(), 5, 15); // 3: top, _, bottom
+    assertVerticalMargin(Document.from(open + "5px 9px 15px 9px\">x</div>").blocks(), 5, 15); // 4: t r b l
+  }
+
+  @Test
+  void paddingShorthandIndentsLeftAndRight() {
+    // top/bottom 1ch (no vertical dots from ch); left/right 4ch -> a 4-column indent.
+    final Paragraph p = paragraph("<p style=\"padding: 1ch 4ch\">x</p>");
+
+    assertEquals(4, p.layout().leftIndent());
+    assertEquals(4, p.layout().rightIndent());
+  }
+
+  @Test
+  void longhandOverridesTheShorthandSide() {
+    final List<Block> blocks = Document.from(
+        "<div style=\"border: 1px solid; margin: 10px; margin-top: 30px\">x</div>").blocks();
+
+    assertVerticalMargin(blocks, 30, 10); // margin-top longhand wins; bottom from the shorthand
+  }
 }
