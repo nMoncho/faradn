@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Section headers</title>
+</head>
+<!-- A dark `background` inks the whole line: white-on-black, a full-width
+     reverse-video section header. text-align positions the label inside the
+     bar. An inline background inverts only that word, not the whole line. -->
+<body>
+    <center><b>SECTION HEADERS</b></center>
+    <hr>
+
+    <p>Left label (default):</p>
+    <div style="background: black">TOTAL</div>
+
+    <p>Centered label:</p>
+    <div style="background: black; text-align: center">SUBTOTAL</div>
+
+    <p>Right label, bold:</p>
+    <div style="background: black; text-align: right"><b>BALANCE DUE</b></div>
+
+    <p>Any colour inks the bar (monochrome printer):</p>
+    <div style="background: #c00; text-align: center">SALE</div>
+
+    <p>Inline inverted word (not a full bar):</p>
+    <p>Order is <span style="background: black">READY</span> for pickup.</p>
+
+    <p>End of demo.</p>
+</body>
+</html>

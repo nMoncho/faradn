@@ -99,6 +99,23 @@ public class ComputedStyleTest {
   }
 
   @Test
+  void darkBackgroundTurnsInvertOn() {
+    assertTrue(ComputedStyle.INITIAL.process(element("<div style=\"background: black\">x</div>")).invert());
+    assertTrue(ComputedStyle.INITIAL.process(element("<div style=\"background-color: #000\">x</div>")).invert());
+    // any non-white colour inks the line on a monochrome printer
+    assertTrue(ComputedStyle.INITIAL.process(element("<div style=\"background: #c00\">x</div>")).invert());
+  }
+
+  @Test
+  void whiteOrTransparentBackgroundTurnsInvertOff() {
+    final ComputedStyle inverted = ComputedStyle.INITIAL.process(element("<div style=\"background: black\">x</div>"));
+    assertTrue(inverted.invert());
+    // an explicit white/transparent background inside a dark one turns it back off
+    assertFalse(inverted.process(element("<span style=\"background: white\">x</span>")).invert());
+    assertFalse(inverted.process(element("<span style=\"background: transparent\">x</span>")).invert());
+  }
+
+  @Test
   void unstyledElementReturnsTheSameInstance() {
     // An element that changes nothing returns this, so identity detects transitions.
     assertSame(ComputedStyle.INITIAL, ComputedStyle.INITIAL.process(element("<span>x</span>")));

@@ -336,7 +336,7 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
       return;
     }
     if (children.size() == 1 && children.get(0) instanceof Paragraph only && only.border().equals(Border.NONE)) {
-      blocks.add(new Paragraph(only.runs(), only.alignment(), frame.border(), only.layout()));
+      blocks.add(new Paragraph(only.runs(), only.alignment(), frame.border(), only.layout(), only.filled()));
     } else {
       blocks.add(new Box(frame.border(), children));
     }
@@ -518,8 +518,11 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
 
     if (!runs.isEmpty()) {
       // Borders come from the enclosing box frame (see closeBox), so the paragraph
-      // itself is borderless here; indentation is its own.
-      blocks.add(new Paragraph(List.copyOf(runs), runs.get(0).style().alignment(), Border.NONE, layout));
+      // itself is borderless here; indentation is its own. A run's invert comes
+      // only from a dark CSS background (ComputedStyle), so an inverted lead run
+      // means the whole line is a reverse-video section header: fill it to width.
+      final boolean filled = runs.get(0).style().invert();
+      blocks.add(new Paragraph(List.copyOf(runs), runs.get(0).style().alignment(), Border.NONE, layout, filled));
     }
     runs.clear();
   }

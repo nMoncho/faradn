@@ -19,6 +19,7 @@ import net.nmoncho.faradn.Image;
 import net.nmoncho.faradn.RasterImage;
 import net.nmoncho.faradn.document.Barcode;
 import net.nmoncho.faradn.document.BarcodeOptions;
+import net.nmoncho.faradn.document.BlockLayout;
 import net.nmoncho.faradn.document.Border;
 import net.nmoncho.faradn.document.Canvas;
 import net.nmoncho.faradn.document.Cell;
@@ -165,6 +166,32 @@ public class EscPosRendererTest {
         new Paragraph(List.of(new TextRun("x", invert)), Alignment.LEFT)));
 
     assertBytes(cat(HEAD, INVERT_ON, "x", INVERT_OFF, LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void filledBannerInksTheWholeLine() {
+    ComputedStyle invert = new ComputedStyle(false, false, 1, 1, Alignment.LEFT, true);
+    Paragraph banner = new Paragraph(List.of(new TextRun("TOTAL", invert)), Alignment.LEFT, Border.NONE,
+        BlockLayout.NONE, true);
+
+    byte[] out = renderer.render(List.of(banner));
+
+    // invert on, the label, then pad to the full width under invert, then off.
+    assertBytes(cat(HEAD, INVERT_ON, "TOTAL", " ".repeat(TM_T88V.columns() - 5), INVERT_OFF, LF,
+        FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void filledBannerCentersTheLabel() {
+    ComputedStyle invert = new ComputedStyle(false, false, 1, 1, Alignment.CENTER, true);
+    Paragraph banner = new Paragraph(List.of(new TextRun("TOTAL", invert)), Alignment.CENTER, Border.NONE,
+        BlockLayout.NONE, true);
+
+    byte[] out = renderer.render(List.of(banner));
+
+    int pad = TM_T88V.columns() - 5; // 37 -> 18 left, 19 right
+    assertBytes(cat(HEAD, INVERT_ON, " ".repeat(pad / 2), "TOTAL", " ".repeat(pad - pad / 2), INVERT_OFF, LF,
+        FEED_4, PARTIAL_CUT), out);
   }
 
   @Test

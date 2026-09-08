@@ -121,6 +121,7 @@ public class HardwarePrintTest {
   private static final File INDENTATION = new File("src/test/resources/printjobs/indentation.html");
   private static final File SPACING = new File("src/test/resources/printjobs/spacing.html");
   private static final File MARGIN_PADDING = new File("src/test/resources/printjobs/margin-padding.html");
+  private static final File SECTION_HEADERS = new File("src/test/resources/printjobs/section-headers.html");
   private static final File HEADINGS = new File("src/test/resources/printjobs/headings.html");
 
   @Test
@@ -348,6 +349,20 @@ public class HardwarePrintTest {
     // padding is blank framed lines inside it. Verify the visible difference in
     // three boxes (margin only / padding only / both).
     Document doc = Document.from(MARGIN_PADDING);
+
+    Optional<Printer> printer = Printer.from(0x04b8);
+    printer.ifPresentOrElse(
+        p -> p.print(doc, "TM-T88V"),
+        () -> fail("No Epson printer (USB vendor 0x04b8) found"));
+  }
+
+  @Test
+  @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
+  void printsSectionHeadersOverUsb() {
+    // background: black -> full-width reverse-video section headers (white-on-black
+    // bars). Verify the whole line is inked (no white gaps at the ends), the label
+    // sits where its text-align says, and an inline inverted word is NOT a full bar.
+    Document doc = Document.from(SECTION_HEADERS);
 
     Optional<Printer> printer = Printer.from(0x04b8);
     printer.ifPresentOrElse(

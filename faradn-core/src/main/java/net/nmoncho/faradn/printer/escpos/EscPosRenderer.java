@@ -233,6 +233,10 @@ public final class EscPosRenderer {
 
   private ComputedStyle renderParagraph(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current,
       Paragraph paragraph) {
+    // A reverse-video section header: ink the whole line, so it takes its own path.
+    if (paragraph.filled()) {
+      return renderBanner(out, enc, current, paragraph);
+    }
     final Border border = paragraph.border();
     // Side borders frame each line with │ and shrink the content, so they take
     // the box path; top/bottom-only borders stay full-width rules.
@@ -267,6 +271,52 @@ public final class EscPosRenderer {
     if (border.bottom()) {
       current = emitHorizontalBorder(out, enc, current, border.style());
     }
+    return current;
+  }
+
+  /**
+   * Renders a reverse-video section header: each wrapped line is padded to the
+   * full paper width under invert ({@code GS B}) so the whole line is inked
+   * (a solid black bar), with the label placed by {@link Paragraph#alignment()}.
+   * The padding spaces carry invert too — unlike {@link #emitCell}, which clears
+   * style for its pad — so there are no white gaps at the ends of the bar.
+   */
+  private ComputedStyle renderBanner(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current,
+      Paragraph paragraph) {
+    final int columns = effectiveColumns(paragraph.runs());
+    final ComputedStyle inked = new ComputedStyle(false, false, 1, 1, current.alignment(), true); // plain, invert on
+    final Alignment alignment = paragraph.alignment();
+
+    current = applyAlignment(out, current, Alignment.LEFT); // full-width line; the label is placed by padding
+    final OptionalInt spacing = beginLineSpacing(out, paragraph);
+    final List<List<TextRun>> lines = TextWrapper.wrap(paragraph.runs(), columns);
+    for (int i = 0; i < lines.size(); i++) {
+      final int pad = Math.max(0, columns - displayWidth(lines.get(i)));
+      final int leftPad = switch (alignment) {
+        case RIGHT -> pad;
+        case CENTER -> pad / 2;
+        default -> 0;
+      };
+      final int rightPad = pad - leftPad;
+
+      current = applyInlineStyle(out, current, inked); // ink the left pad
+      if (leftPad > 0) {
+        enc.emit(" ".repeat(leftPad));
+      }
+      for (TextRun segment : lines.get(i)) {
+        current = applyInlineStyle(out, current, segment.style());
+        enc.emit(segment.text());
+      }
+      if (rightPad > 0) {
+        current = applyInlineStyle(out, current, inked); // ink the right pad (drops any bold from the last run)
+        enc.emit(" ".repeat(rightPad));
+      }
+      if (i == lines.size() - 1) {
+        current = clearInlineStyle(out, current); // invert off at the end of the bar
+      }
+      out.writeBytes(PrintCommands.LINE_FEED.getCode());
+    }
+    endLineSpacing(out, spacing);
     return current;
   }
 

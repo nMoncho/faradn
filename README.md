@@ -181,6 +181,12 @@ the tag defaults:
   font-family are required; `font-variant`/`font-stretch` and system-font keywords (`menu`, …)
   are ignored. As in CSS, the shorthand resets the components it omits (so `font: 2em font-a` is
   not bold even on a `<b>`).
+- `background` / `background-color`: inverts the text (white-on-black, ESC/POS `GS B`). On a block
+  it becomes a **full-width reverse-video section header** — the whole line is inked into a solid
+  bar and the label is positioned by `text-align` (see below); on an inline `<span>` it inverts
+  just that word. A monochrome printer has only black ink, so *any* non-white colour inks the line
+  (`black`, `#000`, `navy`, `#c00`, …); an explicit `white`/`transparent` turns it back off.
+  `color: white` is redundant (invert already whitens the glyphs) and is ignored.
 
 **Borders.** ESC/POS standard mode has no line-drawing command, so borders are drawn with
 **box-drawing characters** on the same monospace grid the text already sits on (PC437/PC850 carry
@@ -263,6 +269,19 @@ blank paper outside the box (`ESC J`, dot-precise), while padding adds blank fra
 Without a border, margin and padding both just add space (dot feeds). Adjacent margins **sum** (not
 CSS-collapsed); a single margin is capped at 255 dots. Horizontal `margin`/`padding` (left/right) is
 the column indent above (use `ch`); vertical margins on tables/images aren't mapped yet.
+
+**Section headers.** A dark `background` on a block turns the whole line into a full-width
+reverse-video bar (white-on-black) — the classic receipt section divider. The line is inked edge to
+edge (no white gaps) and the label sits where `text-align` puts it:
+
+```html
+<div style="background: black; text-align: center">SUBTOTAL</div>
+<div style="background: black; text-align: right"><b>BALANCE DUE</b></div>
+```
+
+Any non-white colour inks the bar (there's only black ink); a `white`/`transparent` background turns
+it off. On an inline `<span>` the same `background` inverts just that word instead of filling the
+line — `Order is <span style="background: black">READY</span>` prints only `READY` in reverse video.
 
 **Barcodes**
 

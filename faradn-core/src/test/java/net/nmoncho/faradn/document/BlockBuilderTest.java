@@ -806,4 +806,50 @@ public class BlockBuilderTest {
 
     assertVerticalMargin(blocks, 30, 10); // margin-top longhand wins; bottom from the shorthand
   }
+
+  // ----- reverse-video section headers (background -> invert + filled) -----
+
+  @Test
+  void darkBackgroundMakesAFilledInvertedBanner() {
+    final Paragraph p = paragraph("<div style=\"background: black\">TOTAL</div>");
+
+    assertTrue(p.filled());
+    assertTrue(p.runs().get(0).style().invert());
+  }
+
+  @Test
+  void anyNonWhiteBackgroundInksTheLine() {
+    // A monochrome printer has only black ink, so a coloured background is "black".
+    assertTrue(paragraph("<div style=\"background-color: #c00\">SALE</div>").filled());
+    assertTrue(paragraph("<div style=\"background: navy\">INFO</div>").filled());
+  }
+
+  @Test
+  void whiteBackgroundDoesNotInkTheLine() {
+    final Paragraph p = paragraph("<p style=\"background: white\">plain</p>");
+
+    assertFalse(p.filled());
+    assertFalse(p.runs().get(0).style().invert());
+  }
+
+  @Test
+  void bannerInheritsToNestedBlockChildren() {
+    // background is applied per line: the inner paragraph inherits the invert and
+    // so becomes its own filled bar.
+    final Paragraph p = paragraph("<div style=\"background: black\"><p>SECTION</p></div>");
+
+    assertTrue(p.filled());
+    assertTrue(p.runs().get(0).style().invert());
+  }
+
+  @Test
+  void inlineInvertedSpanIsNotAFilledBanner() {
+    // A background on an inline span inverts only that word; the paragraph as a
+    // whole is not a full-width bar (its lead run is not inverted).
+    final Paragraph p = paragraph("<p>normal <span style=\"background: black\">HOT</span> tail</p>");
+
+    assertFalse(p.filled());
+    assertFalse(p.runs().get(0).style().invert());
+    assertTrue(p.runs().get(1).style().invert());
+  }
 }

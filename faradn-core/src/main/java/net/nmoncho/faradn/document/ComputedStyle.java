@@ -142,6 +142,7 @@ public record ComputedStyle(boolean bold, boolean underline, int widthMultiple, 
     Alignment newAlignment = alignment;
     int newFont = font;
     boolean newItalic = italic;
+    boolean newInvert = invert;
     LineHeight newLineHeight = lineHeight;
 
     // Tag defaults.
@@ -233,10 +234,37 @@ public record ComputedStyle(boolean bold, boolean underline, int widthMultiple, 
       newLineHeight = LineHeight.parse(lineHeightCss.get());
     }
 
+    // A dark background inks the whole line: white-on-black, the reverse-video
+    // section header. On a monochrome printer any non-white colour is "black",
+    // so any background but white/transparent turns invert on (an explicit
+    // white background turns it back off). Emitted as GS B on the text runs;
+    // BlockBuilder pads the line to full width so the bar spans the paper.
+    final Optional<String> background = Utils.findStyleValue(el, "background")
+        .or(() -> Utils.findStyleValue(el, "background-color"));
+    if (background.isPresent()) {
+      newInvert = isInkedBackground(background.get());
+    }
+
     final ComputedStyle computed = new ComputedStyle(newBold, newUnderline, newWidth, newHeight, newAlignment,
-        invert, newFont, newItalic, newLineHeight);
+        newInvert, newFont, newItalic, newLineHeight);
 
     return equals(computed) ? this : computed;
+  }
+
+  /**
+   * Whether a CSS {@code background}/{@code background-color} value should ink
+   * the line (invert). A monochrome printer has only black ink, so every colour
+   * but white/transparent counts as "inked". The first token is taken as the
+   * colour (so the {@code background} shorthand's other words are ignored).
+   */
+  private static boolean isInkedBackground(String value) {
+    final String color = value.strip().toLowerCase().split("\\s+", 2)[0];
+    return !(color.isEmpty()
+        || color.equals("white")
+        || color.equals("#fff")
+        || color.equals("#ffffff")
+        || color.equals("transparent")
+        || color.equals("none"));
   }
 
   /**
