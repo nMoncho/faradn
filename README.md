@@ -222,6 +222,20 @@ Three things can be bordered:
   </div>
   ```
 
+**Leader lines.** A `float: right` span pushes its content to the right edge of the line, with the
+gap between the label and the value filled — the `Subtotal········9,00` receipt idiom. The label
+flows on the left; the span is the value. The fill is a space by default, or the `data-leader`
+character (e.g. dots):
+
+```html
+<p>Subtotal <span style="float: right">9,00</span></p>
+<p>Tax (9%) <span style="float: right" data-leader=".">0,68</span></p>
+```
+
+Both sides keep their inline styling (`<b>`, `font-size`, …). If the two don't fit on one line, the
+value drops to its own right-aligned line. This is a single-line feature — it's the useful slice of
+CSS `float`, not full float layout (`float: left` and wrap-around aren't supported).
+
 **Barcodes**
 
 Either a custom element or a `bar-code` class with a symbology modifier:

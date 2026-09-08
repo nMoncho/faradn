@@ -52,6 +52,13 @@ public class BlockValidationTest {
   }
 
   @Test
+  void leaderLineRejectsNullsAndBothSidesEmpty() {
+    assertThrows(IllegalArgumentException.class, () -> new LeaderLine(null, List.of(RUN), ' '));
+    assertThrows(IllegalArgumentException.class, () -> new LeaderLine(List.of(RUN), null, ' '));
+    assertThrows(IllegalArgumentException.class, () -> new LeaderLine(List.of(), List.of(), ' '));
+  }
+
+  @Test
   void paragraphCopiesItsRuns() {
     final List<TextRun> runs = new ArrayList<>();
     runs.add(RUN);

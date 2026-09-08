@@ -8,5 +8,6 @@ package net.nmoncho.faradn.document;
  * more full lines of paper. Renderers walk {@code List<Block>} and emit
  * printer bytes; nothing in this package knows about ESC/POS commands.
  */
-public sealed interface Block permits Paragraph, ImageBlock, Barcode, Rule, Feed, Cut, Table, Canvas, Box {
+public sealed interface Block
+    permits Paragraph, ImageBlock, Barcode, Rule, Feed, Cut, Table, Canvas, Box, LeaderLine {
 }

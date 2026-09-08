@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Leader lines</title>
+</head>
+<!-- Leader / space-between lines: a `float: right` span pushes its content to the
+     right edge and the gap is filled - a space by default, or the data-leader
+     character (dots here). The label flows on the left. -->
+<body>
+    <center><b>FARAD'N CAFE</b></center>
+    <hr>
+    <p>Flat white <span style="float: right">3,20</span></p>
+    <p>Croissant <span style="float: right">4,30</span></p>
+    <hr>
+    <p><b>Subtotal</b> <span style="float: right"><b>7,50</b></span></p>
+    <p>Tax (9%) <span style="float: right" data-leader=".">0,68</span></p>
+    <p><b>TOTAL</b> <span style="float: right"><b>8,18</b></span></p>
+</body>
+</html>

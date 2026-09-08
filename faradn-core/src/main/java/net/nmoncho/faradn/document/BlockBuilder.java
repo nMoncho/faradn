@@ -43,9 +43,20 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
   // The current block accumulator. Normally the root output list, but while
   // inside a bordered container it is that box's child list (see boxes).
   private List<Block> blocks = new ArrayList<>();
-  private final List<TextRun> runs = new ArrayList<>();
+  // The current inline-run accumulator. Normally the paragraph's runs, but while
+  // inside a `float: right` span it is that span's (right-group) runs.
+  private List<TextRun> runs = new ArrayList<>();
   private final Deque<ComputedStyle> styles = new ArrayDeque<>();
   private final Deque<BoxFrame> boxes = new ArrayDeque<>();
+
+  // A `float: right` span in progress: the element that opened it, the left
+  // group's runs (parked while the span accumulates), and the leader fill.
+  // `pendingRight` holds the captured right group until the block flushes into a
+  // LeaderLine.
+  private Element floatOpener = null;
+  private List<TextRun> leftRuns = null;
+  private char leaderFill = ' ';
+  private List<TextRun> pendingRight = null;
 
   private boolean pendingSpace = false;
   private Element consumedSubtree = null;
@@ -168,6 +179,39 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
         blocks = new ArrayList<>();
       }
     }
+
+    // A `float: right` span splits the line: park the left group and accumulate
+    // the span's content as the right group (closed in tail, flushed as a
+    // LeaderLine). Only the first float per line is handled.
+    if (consumedSubtree == null && floatOpener == null && pendingRight == null && isFloatRight(el)) {
+      openFloat(el);
+    }
+  }
+
+  private static boolean isFloatRight(Element el) {
+    return Utils.findStyleValue(el, "float").map(v -> v.strip().equalsIgnoreCase("right")).orElse(false);
+  }
+
+  private void openFloat(Element el) {
+    // Keep the pending space so a dotted leader reads "Subtotal ....." not "Subtotal.....".
+    if (pendingSpace && !runs.isEmpty()) {
+      final TextRun last = runs.remove(runs.size() - 1);
+      runs.add(new TextRun(last.text() + " ", last.style()));
+    }
+    pendingSpace = false;
+    leftRuns = runs;
+    runs = new ArrayList<>();
+    floatOpener = el;
+    leaderFill = leaderFillOf(el);
+  }
+
+  /**
+   * The fill character for a leader: the first char of {@code data-leader}, or a
+   * space.
+   */
+  private static char leaderFillOf(Element el) {
+    final String value = el.attr("data-leader");
+    return value.isEmpty() ? ' ' : value.charAt(0);
   }
 
   @Override
@@ -185,6 +229,10 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
     }
 
     styles.pop();
+
+    if (floatOpener == el) {
+      closeFloat();
+    }
 
     final String tag = el.normalName();
     if (tag.equals("ul") || tag.equals("ol")) {
@@ -335,6 +383,11 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
   }
 
   private void flushParagraph(Border border) {
+    if (pendingRight != null) {
+      flushLeaderLine(); // a float: right span captured a right group -> leader line
+      return;
+    }
+
     pendingSpace = false;
     if (runs.isEmpty()) {
       return;
@@ -351,6 +404,70 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
       blocks.add(new Paragraph(List.copyOf(runs), runs.get(0).style().alignment(), border));
     }
     runs.clear();
+  }
+
+  /**
+   * Restores the parked left group; the closed span's runs become the pending
+   * right group.
+   */
+  private void closeFloat() {
+    pendingRight = runs;
+    runs = leftRuns;
+    leftRuns = null;
+    floatOpener = null;
+    pendingSpace = false;
+  }
+
+  /**
+   * Flushes the captured {@code float: right} group into a {@link LeaderLine}:
+   * the
+   * left group keeps its trailing space (the leader gap), the right group is
+   * trimmed. An empty right group degrades to a normal paragraph.
+   */
+  private void flushLeaderLine() {
+    pendingSpace = false;
+    final List<TextRun> left = List.copyOf(runs);
+    final List<TextRun> right = stripEnds(pendingRight);
+    final char fill = leaderFill;
+    runs.clear();
+    pendingRight = null;
+    leaderFill = ' ';
+
+    if (right.isEmpty()) {
+      if (!left.isEmpty()) {
+        blocks.add(new Paragraph(left, left.get(0).style().alignment()));
+      }
+    } else {
+      blocks.add(new LeaderLine(left, right, fill));
+    }
+  }
+
+  /**
+   * Trims leading space from the first run and trailing space from the last,
+   * dropping any run left empty.
+   */
+  private static List<TextRun> stripEnds(List<TextRun> runs) {
+    final List<TextRun> out = new ArrayList<>(runs);
+    while (!out.isEmpty()) {
+      final String trimmed = out.get(0).text().stripLeading();
+      if (trimmed.isEmpty()) {
+        out.remove(0);
+      } else {
+        out.set(0, new TextRun(trimmed, out.get(0).style()));
+        break;
+      }
+    }
+    while (!out.isEmpty()) {
+      final int lastIndex = out.size() - 1;
+      final String trimmed = out.get(lastIndex).text().stripTrailing();
+      if (trimmed.isEmpty()) {
+        out.remove(lastIndex);
+      } else {
+        out.set(lastIndex, new TextRun(trimmed, out.get(lastIndex).style()));
+        break;
+      }
+    }
+    return out;
   }
 
   private static boolean isBarcode(Element el) {

@@ -930,6 +930,33 @@ public class EscPosRendererTest {
   }
 
   @Test
+  void leaderLineFillsTheGapWithSpaces() {
+    byte[] out = new EscPosRenderer(profile(20, PC437))
+        .render(Document.from("<p>Subtotal <span style=\"float: right\">9,00</span></p>").blocks());
+
+    // 20 cols - "Subtotal " (9) - "9,00" (4) = 7 spaces of gap.
+    assertBytes(cat(HEAD, "Subtotal " + " ".repeat(7) + "9,00", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void leaderLineDottedFill() {
+    byte[] out = new EscPosRenderer(profile(20, PC437)).render(Document.from(
+        "<p>Total <span style=\"float: right\" data-leader=\".\">12,50</span></p>").blocks());
+
+    // 20 - "Total " (6) - "12,50" (5) = 9 dots.
+    assertBytes(cat(HEAD, "Total " + ".".repeat(9) + "12,50", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void leaderLineOverflowDropsRightToItsOwnLine() {
+    byte[] out = new EscPosRenderer(profile(10, PC437)).render(Document.from(
+        "<p>A very long label here <span style=\"float: right\">9999</span></p>").blocks());
+
+    // Doesn't fit: left on its own line, right group on its own right-aligned line.
+    assertBytes(cat(HEAD, "A very long label here ", LF, ALIGN_RIGHT, "9999", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
   void nullProfileIsRejected() {
     assertThrows(IllegalArgumentException.class, () -> new EscPosRenderer(null));
   }

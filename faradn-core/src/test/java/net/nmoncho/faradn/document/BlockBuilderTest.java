@@ -637,4 +637,40 @@ public class BlockBuilderTest {
     assertInstanceOf(Rule.class, box.children().get(1));
     assertInstanceOf(Paragraph.class, box.children().get(2));
   }
+
+  // ----- leader / space-between lines (float: right) -----
+
+  @Test
+  void floatRightSpanBecomesLeaderLine() {
+    final List<Block> blocks = Document.from(
+        "<p>Subtotal <span style=\"float: right\">9,00</span></p>").blocks();
+
+    assertEquals(1, blocks.size());
+    final LeaderLine leader = assertInstanceOf(LeaderLine.class, blocks.get(0));
+    assertEquals("Subtotal ", leader.left().get(0).text()); // trailing space kept for the gap
+    assertEquals("9,00", leader.right().get(0).text());
+    assertEquals(' ', leader.fill());
+  }
+
+  @Test
+  void dataLeaderSetsTheFillCharacter() {
+    final LeaderLine leader = assertInstanceOf(LeaderLine.class, Document.from(
+        "<p>Total <span style=\"float: right\" data-leader=\".\">12,50</span></p>").blocks().get(0));
+
+    assertEquals('.', leader.fill());
+  }
+
+  @Test
+  void floatRightGroupsCarryRunStyles() {
+    final LeaderLine leader = assertInstanceOf(LeaderLine.class, Document.from(
+        "<p><b>Total</b> <span style=\"float: right\"><b>9,00</b></span></p>").blocks().get(0));
+
+    assertTrue(leader.left().get(0).style().bold());
+    assertTrue(leader.right().get(0).style().bold());
+  }
+
+  @Test
+  void noFloatIsANormalParagraph() {
+    assertInstanceOf(Paragraph.class, Document.from("<p>Subtotal 9,00</p>").blocks().get(0));
+  }
 }

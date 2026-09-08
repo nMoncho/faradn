@@ -86,6 +86,11 @@ import net.nmoncho.faradn.transport.UsbTransport;
  * <p>
  * {@link #printsFontSizeOverUsb()} prints lines at increasing {@code font-size}
  * (1x/2x/3x via {@code GS !}) so the magnification can be compared by eye.
+ * <p>
+ * {@link #printsLeaderLinesOverUsb()} prints leader / space-between lines
+ * ({@code float: right}) - item prices flush right, a dotted tax line - to
+ * check
+ * the gap fills and the values align at the right edge.
  */
 @Tag("hardware")
 public class HardwarePrintTest {
@@ -101,6 +106,7 @@ public class HardwarePrintTest {
   private static final File LINE_HEIGHT = new File("src/test/resources/printjobs/line-height.html");
   private static final File BORDERS = new File("src/test/resources/printjobs/borders.html");
   private static final File FONT_SIZE = new File("src/test/resources/printjobs/font-size.html");
+  private static final File LEADER_LINES = new File("src/test/resources/printjobs/leader-lines.html");
   private static final File HEADINGS = new File("src/test/resources/printjobs/headings.html");
 
   @Test
@@ -274,6 +280,19 @@ public class HardwarePrintTest {
   void printsFontSizeOverUsb() {
     // CSS font-size -> GS ! magnification: each line should be visibly bigger.
     Document doc = Document.from(FONT_SIZE);
+
+    Optional<Printer> printer = Printer.from(0x04b8);
+    printer.ifPresentOrElse(
+        p -> p.print(doc, "TM-T88V"),
+        () -> fail("No Epson printer (USB vendor 0x04b8) found"));
+  }
+
+  @Test
+  @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
+  void printsLeaderLinesOverUsb() {
+    // float: right -> leader / space-between lines; verify each value sits flush
+    // right, the gap fills (dots for the tax line), and it survives the paper edge.
+    Document doc = Document.from(LEADER_LINES);
 
     Optional<Printer> printer = Printer.from(0x04b8);
     printer.ifPresentOrElse(

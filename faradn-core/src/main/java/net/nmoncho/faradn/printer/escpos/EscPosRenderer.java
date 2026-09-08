@@ -21,6 +21,7 @@ import net.nmoncho.faradn.document.ComputedStyle.Alignment;
 import net.nmoncho.faradn.document.Cut;
 import net.nmoncho.faradn.document.Feed;
 import net.nmoncho.faradn.document.ImageBlock;
+import net.nmoncho.faradn.document.LeaderLine;
 import net.nmoncho.faradn.document.Paragraph;
 import net.nmoncho.faradn.document.Placeable;
 import net.nmoncho.faradn.document.Placement;
@@ -139,9 +140,76 @@ public final class EscPosRenderer {
       return renderCanvas(out, enc, current, canvas);
     } else if (block instanceof Box box) {
       return renderBox(out, enc, current, box);
+    } else if (block instanceof LeaderLine leader) {
+      return renderLeaderLine(out, enc, current, leader);
     } else {
       throw new UnsupportedBlockException(block);
     }
+  }
+
+  /**
+   * Renders a {@link LeaderLine}: the left group, then the fill character
+   * repeated across the gap, then the right group flush to the edge. If the two
+   * groups don't fit on one line, the right group drops to its own right-aligned
+   * line.
+   */
+  private ComputedStyle renderLeaderLine(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current,
+      LeaderLine leader) {
+    final int columns = leaderColumns(leader);
+    final int gap = columns - displayWidth(leader.left()) - displayWidth(leader.right());
+
+    if (gap < 0) {
+      current = applyAlignment(out, current, Alignment.LEFT);
+      if (!leader.left().isEmpty()) {
+        current = emitRuns(out, enc, current, leader.left());
+        current = clearInlineStyle(out, current);
+        out.writeBytes(PrintCommands.LINE_FEED.getCode());
+      }
+      current = applyAlignment(out, current, Alignment.RIGHT);
+      current = emitRuns(out, enc, current, leader.right());
+      current = clearInlineStyle(out, current);
+      out.writeBytes(PrintCommands.LINE_FEED.getCode());
+      return current;
+    }
+
+    current = applyAlignment(out, current, Alignment.LEFT);
+    current = emitRuns(out, enc, current, leader.left());
+    current = clearInlineStyle(out, current);
+    enc.emit(String.valueOf(leader.fill()).repeat(gap));
+    current = emitRuns(out, enc, current, leader.right());
+    current = clearInlineStyle(out, current);
+    out.writeBytes(PrintCommands.LINE_FEED.getCode());
+    return current;
+  }
+
+  /**
+   * The column budget for a leader line: the narrowest font across both groups.
+   */
+  private int leaderColumns(LeaderLine leader) {
+    final List<TextRun> all = new ArrayList<>(leader.left());
+    all.addAll(leader.right());
+    return effectiveColumns(all);
+  }
+
+  /**
+   * The on-paper width of a run list in columns (characters × width multiplier).
+   */
+  private static int displayWidth(List<TextRun> runs) {
+    int width = 0;
+    for (TextRun run : runs) {
+      width += run.text().length() * run.style().widthMultiple();
+    }
+    return width;
+  }
+
+  /** Emits a run list with each run's inline style applied. */
+  private ComputedStyle emitRuns(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current,
+      List<TextRun> runs) {
+    for (TextRun run : runs) {
+      current = applyInlineStyle(out, current, run.style());
+      enc.emit(run.text());
+    }
+    return current;
   }
 
   private ComputedStyle renderParagraph(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current,
