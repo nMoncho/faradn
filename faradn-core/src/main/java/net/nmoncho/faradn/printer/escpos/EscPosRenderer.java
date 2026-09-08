@@ -27,6 +27,7 @@ import net.nmoncho.faradn.document.Paragraph;
 import net.nmoncho.faradn.document.Placeable;
 import net.nmoncho.faradn.document.Placement;
 import net.nmoncho.faradn.document.Rule;
+import net.nmoncho.faradn.document.Space;
 import net.nmoncho.faradn.document.Table;
 import net.nmoncho.faradn.document.TextRun;
 import net.nmoncho.faradn.printer.PrinterProfile;
@@ -143,9 +144,26 @@ public final class EscPosRenderer {
       return renderBox(out, enc, current, box);
     } else if (block instanceof LeaderLine leader) {
       return renderLeaderLine(out, enc, current, leader);
+    } else if (block instanceof Space space) {
+      renderSpace(out, space);
+      return current;
     } else {
       throw new UnsupportedBlockException(block);
     }
+  }
+
+  /**
+   * Feeds the paper by a block-level margin in dots ({@code ESC J n}). Pins the
+   * motion unit to one dot with GS P first (as line spacing does), so {@code n}
+   * is
+   * in dots regardless of the printer's default unit.
+   */
+  private void renderSpace(ByteArrayOutputStream out, Space space) {
+    final int dpi = profile.dpi();
+    if (dpi >= 1 && dpi <= 255) {
+      out.writeBytes(PrintPositionCommands.SET_MOTION_UNITS.getCode(new MotionUnit2D(dpi, dpi))); // GS P
+    }
+    out.writeBytes(PrintCommands.PRINT_AND_FEED_PAPER.getCode(new MotionUnit(Math.min(255, space.dots())))); // ESC J n
   }
 
   /**
@@ -325,11 +343,36 @@ public final class EscPosRenderer {
     for (Block child : box.children()) {
       if (child instanceof Paragraph paragraph) {
         current = emitFramedParagraph(out, enc, current, paragraph, border, drawing, contentWidth);
+      } else if (child instanceof Space space) {
+        current = emitFramedBlank(out, enc, current, space, border, drawing, contentWidth); // padding inside the box
       } else {
         current = renderBlock(out, enc, current, child); // non-paragraph child: no side rails (v1)
       }
     }
     current = emitBoxEdge(out, enc, current, drawing, border, contentWidth, false);
+    return current;
+  }
+
+  /**
+   * Emits vertical padding inside a box as blank framed lines, so the side rails
+   * stay unbroken. The dot amount is rounded to whole lines (at the default 1/6"
+   * line advance), since a framed blank is line-granular.
+   */
+  private ComputedStyle emitFramedBlank(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current,
+      Space space, Border border, BoxDrawing box, int contentWidth) {
+    final int lineAdvance = Math.max(1, profile.dpi() / 6); // ~default line spacing in dots
+    final int lines = Math.max(1, Math.round((float) space.dots() / lineAdvance));
+    for (int i = 0; i < lines; i++) {
+      current = clearInlineStyle(out, current);
+      if (border.left()) {
+        enc.emit(box.vertical());
+      }
+      enc.emit(" ".repeat(contentWidth));
+      if (border.right()) {
+        enc.emit(box.vertical());
+      }
+      out.writeBytes(PrintCommands.LINE_FEED.getCode());
+    }
     return current;
   }
 

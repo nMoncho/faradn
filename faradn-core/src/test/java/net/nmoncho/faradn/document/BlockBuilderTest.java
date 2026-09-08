@@ -705,4 +705,70 @@ public class BlockBuilderTest {
     assertEquals(0, paragraph("<p style=\"margin-left: 20px\">x</p>").layout().leftIndent()); // px not mapped (v1)
     assertEquals(BlockLayout.NONE, paragraph("<p>x</p>").layout());
   }
+
+  // ----- vertical spacing (margin-top / margin-bottom) -----
+
+  @Test
+  void marginTopInsertsSpaceBeforeTheBlock() {
+    final List<Block> blocks = Document.from("<p style=\"margin-top: 24px\">a</p>").blocks();
+
+    assertEquals(2, blocks.size());
+    assertEquals(24, assertInstanceOf(Space.class, blocks.get(0)).dots());
+    assertInstanceOf(Paragraph.class, blocks.get(1));
+  }
+
+  @Test
+  void marginBottomInsertsSpaceAfterTheBlock() {
+    final List<Block> blocks = Document.from("<div style=\"margin-bottom: 12px\">a</div>").blocks();
+
+    assertInstanceOf(Paragraph.class, blocks.get(0));
+    assertEquals(12, assertInstanceOf(Space.class, blocks.get(1)).dots());
+  }
+
+  @Test
+  void marginInMillimetresUsesDpi() {
+    final List<Block> blocks = Document.from("<p style=\"margin-top: 5mm\">a</p>").blocks(180);
+
+    assertEquals(35, assertInstanceOf(Space.class, blocks.get(0)).dots()); // 5 * 180 / 25.4
+  }
+
+  @Test
+  void noMarginProducesNoSpace() {
+    assertEquals(1, Document.from("<p>a</p>").blocks().size());
+  }
+
+  @Test
+  void marginIsOutsideAndPaddingIsInsideTheBox() {
+    final List<Block> blocks = Document.from(
+        "<div style=\"border: 1px solid; margin-top: 24px; padding-top: 24px; padding-bottom: 24px;"
+            + " margin-bottom: 24px\"><p>x</p></div>")
+        .blocks();
+
+    assertEquals(3, blocks.size());
+    assertEquals(24, assertInstanceOf(Space.class, blocks.get(0)).dots()); // margin-top: outside
+    final Box box = assertInstanceOf(Box.class, blocks.get(1));
+    assertEquals(24, assertInstanceOf(Space.class, box.children().get(0)).dots()); // padding-top: inside
+    assertInstanceOf(Paragraph.class, box.children().get(1));
+    assertEquals(24, assertInstanceOf(Space.class, box.children().get(2)).dots()); // padding-bottom: inside
+    assertEquals(24, assertInstanceOf(Space.class, blocks.get(2)).dots()); // margin-bottom: outside
+  }
+
+  @Test
+  void marginAndPaddingShorthandsSetVerticalSpace() {
+    final List<Block> blocks = Document.from(
+        "<div style=\"border: 1px solid; margin: 10px; padding: 6px\"><p>x</p></div>").blocks();
+
+    assertEquals(10, assertInstanceOf(Space.class, blocks.get(0)).dots()); // margin shorthand -> top
+    final Box box = assertInstanceOf(Box.class, blocks.get(1));
+    assertEquals(6, assertInstanceOf(Space.class, box.children().get(0)).dots()); // padding shorthand -> top
+    assertEquals(10, assertInstanceOf(Space.class, blocks.get(2)).dots()); // margin shorthand -> bottom
+  }
+
+  @Test
+  void borderlessPaddingIsJustSpaceBeforeTheBlock() {
+    final List<Block> blocks = Document.from("<p style=\"padding-top: 12px\">x</p>").blocks();
+
+    assertEquals(12, assertInstanceOf(Space.class, blocks.get(0)).dots());
+    assertInstanceOf(Paragraph.class, blocks.get(1));
+  }
 }

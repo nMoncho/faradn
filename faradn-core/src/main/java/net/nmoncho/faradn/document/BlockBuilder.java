@@ -177,10 +177,18 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
     // border can frame the whole group at tail (see closeBox). The prior content
     // was already flushed above into the parent accumulator.
     if (consumedSubtree == null && BLOCK_TAGS.contains(tag)) {
+      final int marginTop = verticalSpaceDots(el, "margin-top");
+      if (marginTop > 0) {
+        blocks.add(new Space(marginTop)); // margin is outside the box (added before the frame)
+      }
       final Border border = blockBorder(el);
       if (border.any()) {
         boxes.push(new BoxFrame(el, border, blocks));
         blocks = new ArrayList<>();
+      }
+      final int paddingTop = verticalSpaceDots(el, "padding-top");
+      if (paddingTop > 0) {
+        blocks.add(new Space(paddingTop)); // padding is inside the box (added after the frame)
       }
     }
 
@@ -249,13 +257,67 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
 
     if (BLOCK_TAGS.contains(tag)) {
       flushParagraph(blockLayout(el)); // this block's direct inline content, with its indentation
+      final int paddingBottom = verticalSpaceDots(el, "padding-bottom");
+      if (paddingBottom > 0) {
+        blocks.add(new Space(paddingBottom)); // padding is inside the box (before closeBox)
+      }
       if (!boxes.isEmpty() && boxes.peek().opener() == el) {
         closeBox();
+      }
+      final int marginBottom = verticalSpaceDots(el, "margin-bottom");
+      if (marginBottom > 0) {
+        blocks.add(new Space(marginBottom)); // margin is outside the box (after closeBox)
       }
     }
     if (tag.equals("li") && !liMarkers.isEmpty()) {
       liMarkers.pop();
     }
+  }
+
+  /**
+   * A block's vertical margin or padding in dots
+   * ({@code px}/{@code mm}/{@code cm}
+   * from the longhand or the {@code margin}/{@code padding} shorthand), clamped
+   * to
+   * a byte.
+   */
+  private int verticalSpaceDots(Element el, String property) {
+    final Optional<String> value = boxSide(el, property);
+    if (value.isEmpty()) {
+      return 0;
+    }
+    final OptionalInt dots = Utils.lengthToDots(value.get(), dpi, 0);
+    return dots.isPresent() ? Math.max(0, Math.min(255, dots.getAsInt())) : 0;
+  }
+
+  /**
+   * The value for one side of a box property: the {@code <prop>-<side>} longhand
+   * if set, otherwise the matching side of the {@code <prop>} shorthand (1-4
+   * values in CSS order top/right/bottom/left).
+   */
+  private static Optional<String> boxSide(Element el, String longhand) {
+    final Optional<String> direct = Utils.findStyleValue(el, longhand);
+    if (direct.isPresent()) {
+      return direct;
+    }
+    final int dash = longhand.indexOf('-');
+    final String shorthand = longhand.substring(0, dash);
+    final String side = longhand.substring(dash + 1);
+    return Utils.findStyleValue(el, shorthand).map(value -> shorthandSide(value, side));
+  }
+
+  private static String shorthandSide(String value, String side) {
+    final String[] parts = value.strip().split("\\s+");
+    final String top = parts[0];
+    final String right = parts.length > 1 ? parts[1] : parts[0];
+    final String bottom = parts.length > 2 ? parts[2] : parts[0];
+    final String left = parts.length > 3 ? parts[3] : right;
+    return switch (side) {
+      case "top" -> top;
+      case "right" -> right;
+      case "bottom" -> bottom;
+      default -> left;
+    };
   }
 
   /**
@@ -329,7 +391,8 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
    * The indentation for a block-level element: {@code margin-left + padding-left}
    * and their right counterparts, plus {@code text-indent} for the first line
    * (all in character columns). A {@code
-   * <li>} adds a hanging indent equal to its
+   *
+  <li>} adds a hanging indent equal to its
    * marker width, so wrapped lines align under the text rather than the marker.
    */
   private BlockLayout blockLayout(Element el) {
@@ -349,7 +412,7 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
    * plain number; other units are ignored).
    */
   private static int indentColumns(Element el, String property) {
-    return Math.max(0, signedColumns(Utils.findStyleValue(el, property)));
+    return Math.max(0, signedColumns(boxSide(el, property)));
   }
 
   /**

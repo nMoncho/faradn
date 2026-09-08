@@ -95,6 +95,13 @@ import net.nmoncho.faradn.transport.UsbTransport;
  * {@link #printsIndentationOverUsb()} prints an indented note ({@code
  * margin-left}) and a list whose wrapped items hang under the text, to check
  * block margins and hanging indents.
+ * <p>
+ * {@link #printsSpacingOverUsb()} prints paragraphs with {@code margin-top}/
+ * {@code margin-bottom} (dot feeds) to check the vertical gaps between blocks.
+ * <p>
+ * {@link #printsMarginPaddingOverUsb()} prints bordered boxes with margin only,
+ * padding only, and both, to show that margin feeds outside the border while
+ * padding adds blank framed lines inside it.
  */
 @Tag("hardware")
 public class HardwarePrintTest {
@@ -112,6 +119,8 @@ public class HardwarePrintTest {
   private static final File FONT_SIZE = new File("src/test/resources/printjobs/font-size.html");
   private static final File LEADER_LINES = new File("src/test/resources/printjobs/leader-lines.html");
   private static final File INDENTATION = new File("src/test/resources/printjobs/indentation.html");
+  private static final File SPACING = new File("src/test/resources/printjobs/spacing.html");
+  private static final File MARGIN_PADDING = new File("src/test/resources/printjobs/margin-padding.html");
   private static final File HEADINGS = new File("src/test/resources/printjobs/headings.html");
 
   @Test
@@ -312,6 +321,33 @@ public class HardwarePrintTest {
     // Verify the indented note is pushed in and wraps narrower, and each list
     // item's continuation lines align under the text (not the number).
     Document doc = Document.from(INDENTATION);
+
+    Optional<Printer> printer = Printer.from(0x04b8);
+    printer.ifPresentOrElse(
+        p -> p.print(doc, "TM-T88V"),
+        () -> fail("No Epson printer (USB vendor 0x04b8) found"));
+  }
+
+  @Test
+  @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
+  void printsSpacingOverUsb() {
+    // margin-top / margin-bottom -> dot feeds (ESC J). Verify the first two lines
+    // are tight and the later lines have visible gaps above/below.
+    Document doc = Document.from(SPACING);
+
+    Optional<Printer> printer = Printer.from(0x04b8);
+    printer.ifPresentOrElse(
+        p -> p.print(doc, "TM-T88V"),
+        () -> fail("No Epson printer (USB vendor 0x04b8) found"));
+  }
+
+  @Test
+  @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
+  void printsMarginPaddingOverUsb() {
+    // margin vs padding with a border: margin is a blank feed outside the box,
+    // padding is blank framed lines inside it. Verify the visible difference in
+    // three boxes (margin only / padding only / both).
+    Document doc = Document.from(MARGIN_PADDING);
 
     Optional<Printer> printer = Printer.from(0x04b8);
     printer.ifPresentOrElse(

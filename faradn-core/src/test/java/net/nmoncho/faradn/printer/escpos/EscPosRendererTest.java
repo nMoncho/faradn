@@ -975,6 +975,52 @@ public class EscPosRendererTest {
   }
 
   @Test
+  void marginTopFeedsDotsBeforeTheBlock() {
+    byte[] out = new EscPosRenderer(profile(20, PC437))
+        .render(Document.from("<p style=\"margin-top: 24px\">a</p>").blocks());
+
+    // GS P pins the unit to dots, then ESC J 24 feeds 24 dots before the paragraph.
+    assertBytes(cat(HEAD, GS_P_180, escJ(24), "a", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void marginBottomFeedsDotsAfterTheBlock() {
+    byte[] out = new EscPosRenderer(profile(20, PC437))
+        .render(Document.from("<p style=\"margin-bottom: 24px\">a</p>").blocks());
+
+    assertBytes(cat(HEAD, "a", LF, GS_P_180, escJ(24), FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void paddingInsideABoxIsBlankFramedLines() {
+    byte[] out = new EscPosRenderer(profile(8, PC437))
+        .render(Document.from("<div style=\"border: 1px solid; padding-top: 30px\"><p>ab</p></div>").blocks());
+
+    // content width 6; padding-top 30px -> 1 blank framed line (1/6" advance = 30 dots at 180 dpi).
+    assertBytes(cat(HEAD,
+        boxEdge(BOX_TL, BOX_H, BOX_TR, 6), LF,
+        VBAR, "      ", VBAR, LF,
+        VBAR, "ab    ", VBAR, LF,
+        boxEdge(BOX_BL, BOX_H, BOX_BR, 6), LF,
+        FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void marginFeedsOutsideAndPaddingFramesInside() {
+    byte[] out = new EscPosRenderer(profile(8, PC437)).render(Document.from(
+        "<div style=\"border: 1px solid; margin-top: 24px; padding-bottom: 30px\"><p>ab</p></div>").blocks());
+
+    // margin-top: dot feed before the box; padding-bottom: blank framed line inside.
+    assertBytes(cat(HEAD,
+        GS_P_180, escJ(24),
+        boxEdge(BOX_TL, BOX_H, BOX_TR, 6), LF,
+        VBAR, "ab    ", VBAR, LF,
+        VBAR, "      ", VBAR, LF,
+        boxEdge(BOX_BL, BOX_H, BOX_BR, 6), LF,
+        FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
   void nullProfileIsRejected() {
     assertThrows(IllegalArgumentException.class, () -> new EscPosRenderer(null));
   }
@@ -983,6 +1029,10 @@ public class EscPosRendererTest {
 
   private static byte[] esc3(int n) {
     return new byte[] { ESC, 0x33, (byte) n }; // ESC 3 n: set line spacing
+  }
+
+  private static byte[] escJ(int n) {
+    return new byte[] { ESC, 0x4A, (byte) n }; // ESC J n: print and feed n dots
   }
 
   /** A bare horizontal line of {@code width} box glyphs (a paragraph rule). */

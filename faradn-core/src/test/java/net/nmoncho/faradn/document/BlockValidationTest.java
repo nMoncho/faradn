@@ -68,6 +68,13 @@ public class BlockValidationTest {
   }
 
   @Test
+  void spaceRejectsNonPositiveDots() {
+    assertThrows(IllegalArgumentException.class, () -> new Space(0));
+    assertThrows(IllegalArgumentException.class, () -> new Space(-5));
+    assertEquals(10, new Space(10).dots());
+  }
+
+  @Test
   void paragraphCopiesItsRuns() {
     final List<TextRun> runs = new ArrayList<>();
     runs.add(RUN);

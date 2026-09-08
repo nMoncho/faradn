@@ -248,6 +248,22 @@ the text, not the marker:
    onto a second line
 ```
 
+**Vertical spacing (margin & padding).** `margin-top`/`margin-bottom` and `padding-top`/
+`padding-bottom` on a `<p>`/`<div>` add blank space above/below the block, in `px` (1 px = 1 dot),
+`mm`, or `cm`. The `margin`/`padding` shorthands work too (`margin: 40px`, etc.). As in CSS, **margin
+is outside the border and padding is inside it** — with a border the difference shows: margin feeds
+blank paper outside the box (`ESC J`, dot-precise), while padding adds blank framed lines inside it
+(so the side rails stay unbroken, rounded to whole lines).
+
+```html
+<p style="margin-top: 40px">Breathing room above.</p>
+<div style="border: 1px solid; padding: 30px">Content with space inside the box.</div>
+```
+
+Without a border, margin and padding both just add space (dot feeds). Adjacent margins **sum** (not
+CSS-collapsed); a single margin is capped at 255 dots. Horizontal `margin`/`padding` (left/right) is
+the column indent above (use `ch`); vertical margins on tables/images aren't mapped yet.
+
 **Barcodes**
 
 Either a custom element or a `bar-code` class with a symbology modifier:
