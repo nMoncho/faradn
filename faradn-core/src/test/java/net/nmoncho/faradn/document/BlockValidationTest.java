@@ -59,6 +59,15 @@ public class BlockValidationTest {
   }
 
   @Test
+  void blockLayoutRejectsNegativeSideIndentsButAllowsNegativeFirstLine() {
+    assertThrows(IllegalArgumentException.class, () -> new BlockLayout(-1, 0, 0));
+    assertThrows(IllegalArgumentException.class, () -> new BlockLayout(0, -1, 0));
+    assertEquals(-2, new BlockLayout(0, 0, -2).firstLineIndent()); // hanging indent
+    assertTrue(BlockLayout.NONE.isNone());
+    assertFalse(new BlockLayout(1, 0, 0).isNone());
+  }
+
+  @Test
   void paragraphCopiesItsRuns() {
     final List<TextRun> runs = new ArrayList<>();
     runs.add(RUN);

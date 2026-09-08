@@ -62,6 +62,9 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
   private Element consumedSubtree = null;
   private final Deque<ListState> lists = new ArrayDeque<>();
   private String pendingMarker = null;
+  // Marker widths of the open list items, so a wrapped item hangs its
+  // continuation lines under the text (a hanging indent).
+  private final Deque<Integer> liMarkers = new ArrayDeque<>();
   private int preDepth = 0;
   private final int dpi;
 
@@ -162,6 +165,7 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
       flushParagraph();
       final String marker = listMarker();
       pendingMarker = marker.isEmpty() ? null : marker;
+      liMarkers.push(marker.length());
     } else if (tag.equals("pre")) {
       flushParagraph();
       preDepth++;
@@ -244,10 +248,13 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
     }
 
     if (BLOCK_TAGS.contains(tag)) {
-      flushParagraph(); // this block's direct inline content (borderless; a box frames it)
+      flushParagraph(blockLayout(el)); // this block's direct inline content, with its indentation
       if (!boxes.isEmpty() && boxes.peek().opener() == el) {
         closeBox();
       }
+    }
+    if (tag.equals("li") && !liMarkers.isEmpty()) {
+      liMarkers.pop();
     }
   }
 
@@ -267,7 +274,7 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
       return;
     }
     if (children.size() == 1 && children.get(0) instanceof Paragraph only && only.border().equals(Border.NONE)) {
-      blocks.add(new Paragraph(only.runs(), only.alignment(), frame.border()));
+      blocks.add(new Paragraph(only.runs(), only.alignment(), frame.border(), only.layout()));
     } else {
       blocks.add(new Box(frame.border(), children));
     }
@@ -316,6 +323,52 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
       }
     }
     return false;
+  }
+
+  /**
+   * The indentation for a block-level element: {@code margin-left + padding-left}
+   * and their right counterparts, plus {@code text-indent} for the first line
+   * (all in character columns). A {@code
+   * <li>} adds a hanging indent equal to its
+   * marker width, so wrapped lines align under the text rather than the marker.
+   */
+  private BlockLayout blockLayout(Element el) {
+    int left = indentColumns(el, "margin-left") + indentColumns(el, "padding-left");
+    int right = indentColumns(el, "margin-right") + indentColumns(el, "padding-right");
+    int firstLine = signedColumns(Utils.findStyleValue(el, "text-indent"));
+    if (el.normalName().equals("li") && !liMarkers.isEmpty()) {
+      final int marker = liMarkers.peek();
+      left += marker;
+      firstLine -= marker; // first line starts at the marker; continuations hang in by marker width
+    }
+    return (left == 0 && right == 0 && firstLine == 0) ? BlockLayout.NONE : new BlockLayout(left, right, firstLine);
+  }
+
+  /**
+   * A non-negative column indent from a CSS property (a {@code ch} value or a
+   * plain number; other units are ignored).
+   */
+  private static int indentColumns(Element el, String property) {
+    return Math.max(0, signedColumns(Utils.findStyleValue(el, property)));
+  }
+
+  /**
+   * Parses a {@code ch} value or a plain number to whole columns; anything else
+   * is 0.
+   */
+  private static int signedColumns(Optional<String> value) {
+    if (value.isEmpty()) {
+      return 0;
+    }
+    String v = value.get().strip().toLowerCase();
+    if (v.endsWith("ch")) {
+      v = v.substring(0, v.length() - 2).strip();
+    }
+    try {
+      return Math.round(Float.parseFloat(v));
+    } catch (NumberFormatException ignored) {
+      return 0;
+    }
   }
 
   private void appendText(TextNode text) {
@@ -379,10 +432,10 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
   }
 
   private void flushParagraph() {
-    flushParagraph(Border.NONE);
+    flushParagraph(BlockLayout.NONE);
   }
 
-  private void flushParagraph(Border border) {
+  private void flushParagraph(BlockLayout layout) {
     if (pendingRight != null) {
       flushLeaderLine(); // a float: right span captured a right group -> leader line
       return;
@@ -401,7 +454,9 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
     }
 
     if (!runs.isEmpty()) {
-      blocks.add(new Paragraph(List.copyOf(runs), runs.get(0).style().alignment(), border));
+      // Borders come from the enclosing box frame (see closeBox), so the paragraph
+      // itself is borderless here; indentation is its own.
+      blocks.add(new Paragraph(List.copyOf(runs), runs.get(0).style().alignment(), Border.NONE, layout));
     }
     runs.clear();
   }

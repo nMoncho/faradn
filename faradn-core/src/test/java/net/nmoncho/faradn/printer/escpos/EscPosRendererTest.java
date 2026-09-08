@@ -957,6 +957,24 @@ public class EscPosRendererTest {
   }
 
   @Test
+  void marginLeftIndentsAndNarrowsTheWrap() {
+    byte[] out = new EscPosRenderer(profile(14, PC437))
+        .render(Document.from("<p style=\"margin-left: 3ch\">indent me please over lines</p>").blocks());
+
+    // every line padded 3, content wrapped to 14 - 3 = 11.
+    assertBytes(cat(HEAD, "   indent me", LF, "   please over", LF, "   lines", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void wrappedListItemHangsUnderTheText() {
+    byte[] out = new EscPosRenderer(profile(14, PC437))
+        .render(Document.from("<ol><li>first item that wraps over lines</li></ol>").blocks());
+
+    // first line at the marker; continuations hang in by the marker width (3).
+    assertBytes(cat(HEAD, "1. first item", LF, "   that wraps", LF, "   over lines", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
   void nullProfileIsRejected() {
     assertThrows(IllegalArgumentException.class, () -> new EscPosRenderer(null));
   }

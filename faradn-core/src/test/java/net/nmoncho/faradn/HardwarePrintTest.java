@@ -91,6 +91,10 @@ import net.nmoncho.faradn.transport.UsbTransport;
  * ({@code float: right}) - item prices flush right, a dotted tax line - to
  * check
  * the gap fills and the values align at the right edge.
+ * <p>
+ * {@link #printsIndentationOverUsb()} prints an indented note ({@code
+ * margin-left}) and a list whose wrapped items hang under the text, to check
+ * block margins and hanging indents.
  */
 @Tag("hardware")
 public class HardwarePrintTest {
@@ -107,6 +111,7 @@ public class HardwarePrintTest {
   private static final File BORDERS = new File("src/test/resources/printjobs/borders.html");
   private static final File FONT_SIZE = new File("src/test/resources/printjobs/font-size.html");
   private static final File LEADER_LINES = new File("src/test/resources/printjobs/leader-lines.html");
+  private static final File INDENTATION = new File("src/test/resources/printjobs/indentation.html");
   private static final File HEADINGS = new File("src/test/resources/printjobs/headings.html");
 
   @Test
@@ -293,6 +298,20 @@ public class HardwarePrintTest {
     // float: right -> leader / space-between lines; verify each value sits flush
     // right, the gap fills (dots for the tax line), and it survives the paper edge.
     Document doc = Document.from(LEADER_LINES);
+
+    Optional<Printer> printer = Printer.from(0x04b8);
+    printer.ifPresentOrElse(
+        p -> p.print(doc, "TM-T88V"),
+        () -> fail("No Epson printer (USB vendor 0x04b8) found"));
+  }
+
+  @Test
+  @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
+  void printsIndentationOverUsb() {
+    // Block margins (margin-left) and the hanging indent for wrapped list items.
+    // Verify the indented note is pushed in and wraps narrower, and each list
+    // item's continuation lines align under the text (not the number).
+    Document doc = Document.from(INDENTATION);
 
     Optional<Printer> printer = Printer.from(0x04b8);
     printer.ifPresentOrElse(

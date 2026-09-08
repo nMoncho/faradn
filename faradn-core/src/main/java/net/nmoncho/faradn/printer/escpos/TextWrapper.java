@@ -24,6 +24,14 @@ final class TextWrapper {
   }
 
   static List<List<TextRun>> wrap(List<TextRun> runs, int maxColumns) {
+    return wrap(runs, maxColumns, maxColumns);
+  }
+
+  /**
+   * Wraps with a different budget for the first line than the rest - used for
+   * first-line / hanging indents where those lines have more or less room.
+   */
+  static List<List<TextRun>> wrap(List<TextRun> runs, int firstColumns, int restColumns) {
     final List<StyledChar> chars = new ArrayList<>();
     for (TextRun run : runs) {
       for (int i = 0; i < run.text().length(); i++) {
@@ -37,6 +45,7 @@ final class TextWrapper {
     int lastSpace = -1;
     int i = 0;
     while (i < chars.size()) {
+      final int maxColumns = lines.isEmpty() ? firstColumns : restColumns;
       final StyledChar sc = chars.get(i);
       final int w = sc.style().widthMultiple();
       if (sc.ch() == ' ') {

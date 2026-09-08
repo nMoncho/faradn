@@ -8,9 +8,10 @@ import java.util.List;
  * Alignment is a block-level property (ESC/POS {@code ESC a} applies to
  * whole lines), so it lives here and not on the individual runs. An optional
  * {@link Border} draws a rule above ({@code top}) and/or below ({@code bottom})
- * the paragraph; the side borders are carried for later phases.
+ * the paragraph; the side borders are carried for later phases. An optional
+ * {@link BlockLayout} indents the paragraph.
  */
-public record Paragraph(List<TextRun> runs, ComputedStyle.Alignment alignment, Border border)
+public record Paragraph(List<TextRun> runs, ComputedStyle.Alignment alignment, Border border, BlockLayout layout)
     implements
       Block,
       Placeable {
@@ -25,11 +26,19 @@ public record Paragraph(List<TextRun> runs, ComputedStyle.Alignment alignment, B
     if (border == null) {
       throw new IllegalArgumentException("border must not be null");
     }
+    if (layout == null) {
+      throw new IllegalArgumentException("layout must not be null");
+    }
     runs = List.copyOf(runs);
   }
 
-  /** A paragraph with no border. */
+  /** A paragraph with no border and no indentation. */
   public Paragraph(List<TextRun> runs, ComputedStyle.Alignment alignment) {
-    this(runs, alignment, Border.NONE);
+    this(runs, alignment, Border.NONE, BlockLayout.NONE);
+  }
+
+  /** A paragraph with a border and no indentation. */
+  public Paragraph(List<TextRun> runs, ComputedStyle.Alignment alignment, Border border) {
+    this(runs, alignment, border, BlockLayout.NONE);
   }
 }

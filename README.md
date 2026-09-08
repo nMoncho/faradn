@@ -236,6 +236,18 @@ Both sides keep their inline styling (`<b>`, `font-size`, …). If the two don't
 value drops to its own right-aligned line. This is a single-line feature — it's the useful slice of
 CSS `float`, not full float layout (`float: left` and wrap-around aren't supported).
 
+**Indentation.** `margin-left`/`margin-right` (and `padding-left`/`padding-right`) on a `<p>`/`<div>`
+indent the block: each line is padded and the text wraps within the narrower width. `text-indent`
+offsets the first line (positive indents it, negative hangs the wrapped lines). Indents are measured
+in **character columns**, so use `ch` or a plain number (`margin-left: 4ch`); `px`/`mm`/`%` aren't
+mapped for indentation. Wrapped **list items** hang automatically — continuation lines align under
+the text, not the marker:
+
+```
+1. A long item that wraps
+   onto a second line
+```
+
 **Barcodes**
 
 Either a custom element or a `bar-code` class with a symbology modifier:

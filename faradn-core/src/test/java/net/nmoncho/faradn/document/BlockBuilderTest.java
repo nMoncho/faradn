@@ -673,4 +673,36 @@ public class BlockBuilderTest {
   void noFloatIsANormalParagraph() {
     assertInstanceOf(Paragraph.class, Document.from("<p>Subtotal 9,00</p>").blocks().get(0));
   }
+
+  // ----- block margins & indentation -----
+
+  @Test
+  void marginAndPaddingIndentAsColumns() {
+    final Paragraph p = paragraph("<p style=\"margin-left: 2ch; padding-left: 1ch; margin-right: 3ch\">x</p>");
+
+    assertEquals(3, p.layout().leftIndent()); // 2 + 1
+    assertEquals(3, p.layout().rightIndent());
+    assertEquals(0, p.layout().firstLineIndent());
+  }
+
+  @Test
+  void textIndentSetsFirstLineIndent() {
+    assertEquals(4, paragraph("<p style=\"text-indent: 4ch\">x</p>").layout().firstLineIndent());
+    assertEquals(-2, paragraph("<p style=\"text-indent: -2ch\">x</p>").layout().firstLineIndent());
+  }
+
+  @Test
+  void listItemHangsByItsMarkerWidth() {
+    final Paragraph p = paragraph("<ol><li>x</li></ol>");
+
+    assertEquals(3, p.layout().leftIndent()); // "1. "
+    assertEquals(-3, p.layout().firstLineIndent()); // hanging
+  }
+
+  @Test
+  void plainNumberIsColumnsAndUnknownUnitsIgnored() {
+    assertEquals(2, paragraph("<p style=\"margin-left: 2\">x</p>").layout().leftIndent());
+    assertEquals(0, paragraph("<p style=\"margin-left: 20px\">x</p>").layout().leftIndent()); // px not mapped (v1)
+    assertEquals(BlockLayout.NONE, paragraph("<p>x</p>").layout());
+  }
 }

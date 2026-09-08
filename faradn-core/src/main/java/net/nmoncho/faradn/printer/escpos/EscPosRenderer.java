@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import net.nmoncho.faradn.UnsupportedBlockException;
 import net.nmoncho.faradn.document.Barcode;
 import net.nmoncho.faradn.document.Block;
+import net.nmoncho.faradn.document.BlockLayout;
 import net.nmoncho.faradn.document.Border;
 import net.nmoncho.faradn.document.Box;
 import net.nmoncho.faradn.document.Canvas;
@@ -220,6 +221,10 @@ public final class EscPosRenderer {
     if (border.left() || border.right()) {
       return renderBoxedParagraph(out, enc, current, paragraph, border);
     }
+    // Indentation narrows the wrap and pads each line (hanging for lists).
+    if (!paragraph.layout().isNone()) {
+      return renderIndentedParagraph(out, enc, current, paragraph);
+    }
 
     current = applyAlignment(out, current, paragraph.alignment());
     if (border.top()) {
@@ -244,6 +249,45 @@ public final class EscPosRenderer {
     if (border.bottom()) {
       current = emitHorizontalBorder(out, enc, current, border.style());
     }
+    return current;
+  }
+
+  /**
+   * Renders an indented paragraph: each line padded on the left by the indent
+   * ({@code firstLineIndent} extra on the first line, or negative for a hanging
+   * indent) and wrapped to the narrowed width. Left-aligned content emits its
+   * runs directly (so a single, unwrapped line matches an un-indented paragraph
+   * byte for byte); other alignments position within the content width.
+   */
+  private ComputedStyle renderIndentedParagraph(ByteArrayOutputStream out, CodePageEncoder enc,
+      ComputedStyle current, Paragraph paragraph) {
+    final BlockLayout layout = paragraph.layout();
+    final int columns = effectiveColumns(paragraph.runs());
+    final int firstPad = Math.max(0, layout.leftIndent() + layout.firstLineIndent());
+    final int restPad = layout.leftIndent();
+    final int firstWidth = Math.max(1, columns - firstPad - layout.rightIndent());
+    final int restWidth = Math.max(1, columns - restPad - layout.rightIndent());
+
+    current = applyAlignment(out, current, Alignment.LEFT); // the block is left on paper; indent is spaces
+    final OptionalInt spacing = beginLineSpacing(out, paragraph);
+    final List<List<TextRun>> lines = TextWrapper.wrap(paragraph.runs(), firstWidth, restWidth);
+    for (int i = 0; i < lines.size(); i++) {
+      final int pad = (i == 0) ? firstPad : restPad;
+      current = clearInlineStyle(out, current);
+      if (pad > 0) {
+        enc.emit(" ".repeat(pad));
+      }
+      if (paragraph.alignment() == Alignment.LEFT) {
+        current = emitRuns(out, enc, current, lines.get(i));
+      } else {
+        current = emitCell(out, enc, current, lines.get(i), (i == 0) ? firstWidth : restWidth, paragraph.alignment());
+      }
+      if (i == lines.size() - 1) {
+        current = clearInlineStyle(out, current);
+      }
+      out.writeBytes(PrintCommands.LINE_FEED.getCode());
+    }
+    endLineSpacing(out, spacing);
     return current;
   }
 
