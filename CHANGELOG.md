@@ -22,6 +22,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   dependency-free JDK HTTP print server, shipped as a GraalVM native binary.
 - **Cash drawer** - a `<cash-drawer>` element pulses the drawer-kick connector
   (`ESC p`), with a `pin` attribute selecting connector pin 2 (default) or 5.
+- **Manual cut & feed** - `<cut>` (`mode="partial"`/`"full"`) and `<feed>`
+  (`lines="n"`) elements cut the paper or feed blank lines at an explicit point,
+  so a single job can hold several receipts. A trailing `<cut>` replaces the
+  automatic end-of-job cut.
 
 ### Notes
 

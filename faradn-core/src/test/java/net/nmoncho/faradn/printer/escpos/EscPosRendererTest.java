@@ -258,6 +258,36 @@ public class EscPosRendererTest {
   }
 
   @Test
+  void endToEndPartialCutFromHtml() {
+    // A trailing <cut> is the document's own end, so it suppresses the auto cut.
+    byte[] out = renderer.render(Document.from("<cut></cut>").blocks());
+
+    assertBytes(cat(HEAD, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void endToEndFullCutFromHtml() {
+    byte[] out = renderer.render(Document.from("<cut mode=\"full\"></cut>").blocks());
+
+    assertBytes(cat(HEAD, FULL_CUT), out);
+  }
+
+  @Test
+  void endToEndFeedFromHtml() {
+    // A <feed> is not a cut, so the renderer still frames the job end (feed + cut).
+    byte[] out = renderer.render(Document.from("<feed lines=\"3\"></feed>").blocks());
+
+    assertBytes(cat(HEAD, feed(3), FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void midDocumentCutSeparatesTwoReceipts() {
+    byte[] out = renderer.render(Document.from("<p>a</p><cut></cut><p>b</p>").blocks());
+
+    assertBytes(cat(HEAD, "a", LF, PARTIAL_CUT, "b", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
   void emptyDocumentStillFramesTheJob() {
     byte[] out = renderer.render(List.of());
 

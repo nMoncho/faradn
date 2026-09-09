@@ -901,4 +901,57 @@ public class BlockBuilderTest {
     assertInstanceOf(Paragraph.class, blocks.get(0));
     assertInstanceOf(Drawer.class, blocks.get(1));
   }
+
+  @Test
+  void cutElementBecomesPartialCutByDefault() {
+    final List<Block> blocks = Document.from("<cut></cut>").blocks();
+
+    assertEquals(1, blocks.size());
+    assertTrue(assertInstanceOf(Cut.class, blocks.get(0)).partial());
+  }
+
+  @Test
+  void cutModeFullBecomesFullCut() {
+    final List<Block> blocks = Document.from("<cut mode=\"full\"></cut>").blocks();
+
+    assertFalse(assertInstanceOf(Cut.class, blocks.get(0)).partial());
+  }
+
+  @Test
+  void cutModePartialIsExplicitPartial() {
+    final List<Block> blocks = Document.from("<cut mode=\"partial\"></cut>").blocks();
+
+    assertTrue(assertInstanceOf(Cut.class, blocks.get(0)).partial());
+  }
+
+  @Test
+  void feedElementDefaultsToOneLine() {
+    final List<Block> blocks = Document.from("<feed></feed>").blocks();
+
+    assertEquals(1, assertInstanceOf(Feed.class, blocks.get(0)).lines());
+  }
+
+  @Test
+  void feedLinesAttributeSetsLength() {
+    final List<Block> blocks = Document.from("<feed lines=\"4\"></feed>").blocks();
+
+    assertEquals(4, assertInstanceOf(Feed.class, blocks.get(0)).lines());
+  }
+
+  @Test
+  void feedLinesClampsToAtLeastOne() {
+    final List<Block> blocks = Document.from("<feed lines=\"0\"></feed>").blocks();
+
+    assertEquals(1, assertInstanceOf(Feed.class, blocks.get(0)).lines());
+  }
+
+  @Test
+  void cutSeparatesBlocksIntoMultipleReceipts() {
+    final List<Block> blocks = Document.from("<p>a</p><cut></cut><p>b</p>").blocks();
+
+    assertEquals(3, blocks.size());
+    assertInstanceOf(Paragraph.class, blocks.get(0));
+    assertInstanceOf(Cut.class, blocks.get(1));
+    assertInstanceOf(Paragraph.class, blocks.get(2));
+  }
 }

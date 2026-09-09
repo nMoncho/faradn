@@ -40,6 +40,8 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
   private static final String BARCODE_TAG = "bar-code";
   private static final String BARCODE_CLASS_PREFIX = "bar-code--";
   private static final String CASH_DRAWER_TAG = "cash-drawer";
+  private static final String CUT_TAG = "cut";
+  private static final String FEED_TAG = "feed";
 
   // The current block accumulator. Normally the root output list, but while
   // inside a bordered container it is that box's child list (see boxes).
@@ -158,6 +160,14 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
     } else if (tag.equals(CASH_DRAWER_TAG)) {
       flushParagraph();
       blocks.add(new Drawer(drawerPin(el)));
+      consumedSubtree = el;
+    } else if (tag.equals(CUT_TAG)) {
+      flushParagraph();
+      blocks.add(new Cut(cutIsPartial(el)));
+      consumedSubtree = el;
+    } else if (tag.equals(FEED_TAG)) {
+      flushParagraph();
+      blocks.add(new Feed(feedLines(el)));
       consumedSubtree = el;
     } else if (isCanvasContainer(el)) {
       flushParagraph();
@@ -603,6 +613,21 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
   /** The drawer-kick connector pin: {@code pin="5"} selects pin 5, else pin 2. */
   private static int drawerPin(Element el) {
     return el.attr("pin").strip().equals("5") ? 5 : 2;
+  }
+
+  /**
+   * Cut mode: {@code mode="full"} makes a full cut, anything else a partial cut.
+   */
+  private static boolean cutIsPartial(Element el) {
+    return !el.attr("mode").strip().equalsIgnoreCase("full");
+  }
+
+  /**
+   * Feed length: the {@code lines} attribute clamped to {@code [1, 255]}, default
+   * 1.
+   */
+  private static int feedLines(Element el) {
+    return clamp(intAttr(el, "lines", 1), 1, 255);
   }
 
   private static Optional<String> barcodeData(Element el) {
