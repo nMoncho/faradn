@@ -151,6 +151,7 @@ golden-byte tests.
 | `<table>`, `<tr>`, `<td>`, `<th>` | character-grid table: content-sized columns, `colspan`, per-cell `text-align`, inline styling, bold `<th>`, optional grid borders (below) |
 | `<img>`                           | image (URL or Base64 `data:` URI; PNG, JPEG, BMP, WBMP)                                                    |
 | `<em>`, `<i>`                     | italic (`ESC 4`/`ESC 5`); printers without italic ignore the command                                       |
+| `<cash-drawer>`                   | pulses the cash-drawer kick connector (`ESC p`); `pin="2"` (default) or `pin="5"` (below)                  |
 
 **Inline CSS**
 
@@ -309,6 +310,19 @@ Rendering is configurable per barcode through attributes:
 <bar-code symbology="ean13" height="80" module="3" hri="below">123456789012</bar-code>
 <bar-code symbology="qr" module="8" ec="h">https://example.com</bar-code>
 ```
+
+**Cash drawer.** A `<cash-drawer>` element pulses the printer's drawer-kick connector
+(`ESC p`), popping the till open. It is a control action, not text: the element renders
+nothing and any content inside it is ignored. Place it where the pulse should fire, usually
+at the end of the receipt:
+
+```html
+<cash-drawer></cash-drawer>            <!-- pin 2, the usual drawer -->
+<cash-drawer pin="5"></cash-drawer>    <!-- pin 5, for a second drawer -->
+```
+
+The `pin` attribute selects the connector pin (`2` by default, or `5`); any other value
+falls back to `2`. A printer with no drawer wired to that pin ignores the pulse.
 
 **Positioned layout (page mode).** Most receipts flow top to bottom, but a bounded region -
 a header, a coupon, a label - can place its pieces at exact coordinates using ESC/POS *page

@@ -26,6 +26,7 @@ import net.nmoncho.faradn.document.Cell;
 import net.nmoncho.faradn.document.ComputedStyle;
 import net.nmoncho.faradn.document.ComputedStyle.Alignment;
 import net.nmoncho.faradn.document.Cut;
+import net.nmoncho.faradn.document.Drawer;
 import net.nmoncho.faradn.document.Feed;
 import net.nmoncho.faradn.document.ImageBlock;
 import net.nmoncho.faradn.document.Paragraph;
@@ -72,6 +73,8 @@ public class EscPosRendererTest {
   private static final byte[] FF = { 0x0C };
   private static final byte[] ESC_2 = { ESC, 0x32 };
   private static final byte[] FULL_CUT = { GS, 0x56, 0x00 };
+  private static final byte[] DRAWER_2 = { ESC, 0x70, 0x00, 25, (byte) 250 };
+  private static final byte[] DRAWER_5 = { ESC, 0x70, 0x01, 25, (byte) 250 };
 
   // Box-drawing glyphs in PC437 (single / double), for bordered-table goldens.
   private static final byte[] VBAR = { (byte) 0xB3 }; // │
@@ -231,6 +234,27 @@ public class EscPosRendererTest {
     byte[] out = renderer.render(List.of(new Cut(true)));
 
     assertBytes(cat(HEAD, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void drawerBlockPulsesPin2() {
+    byte[] out = renderer.render(List.of(new Drawer(2)));
+
+    assertBytes(cat(HEAD, DRAWER_2, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void drawerBlockPulsesPin5() {
+    byte[] out = renderer.render(List.of(new Drawer(5)));
+
+    assertBytes(cat(HEAD, DRAWER_5, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void endToEndCashDrawerFromHtml() {
+    byte[] out = renderer.render(Document.from("<cash-drawer></cash-drawer>").blocks());
+
+    assertBytes(cat(HEAD, DRAWER_2, FEED_4, PARTIAL_CUT), out);
   }
 
   @Test

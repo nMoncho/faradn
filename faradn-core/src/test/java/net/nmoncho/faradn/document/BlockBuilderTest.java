@@ -869,4 +869,36 @@ public class BlockBuilderTest {
     assertFalse(p.runs().get(0).style().invert());
     assertTrue(p.runs().get(1).style().invert());
   }
+
+  @Test
+  void cashDrawerElementBecomesDrawerBlockOnPin2() {
+    final List<Block> blocks = Document.from("<cash-drawer></cash-drawer>").blocks();
+
+    assertEquals(1, blocks.size());
+    assertEquals(2, assertInstanceOf(Drawer.class, blocks.get(0)).pin());
+  }
+
+  @Test
+  void cashDrawerPinAttributeSelectsPin5() {
+    final List<Block> blocks = Document.from("<cash-drawer pin=\"5\"></cash-drawer>").blocks();
+
+    assertEquals(5, assertInstanceOf(Drawer.class, blocks.get(0)).pin());
+  }
+
+  @Test
+  void cashDrawerUnknownPinFallsBackToPin2() {
+    final List<Block> blocks = Document.from("<cash-drawer pin=\"9\"></cash-drawer>").blocks();
+
+    assertEquals(2, assertInstanceOf(Drawer.class, blocks.get(0)).pin());
+  }
+
+  @Test
+  void cashDrawerContentIsIgnored() {
+    // The element is a control action, not text: its body never reaches the IR.
+    final List<Block> blocks = Document.from("<p>total</p><cash-drawer>ignored</cash-drawer>").blocks();
+
+    assertEquals(2, blocks.size());
+    assertInstanceOf(Paragraph.class, blocks.get(0));
+    assertInstanceOf(Drawer.class, blocks.get(1));
+  }
 }

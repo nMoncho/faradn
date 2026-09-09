@@ -20,6 +20,7 @@ import net.nmoncho.faradn.document.Cell;
 import net.nmoncho.faradn.document.ComputedStyle;
 import net.nmoncho.faradn.document.ComputedStyle.Alignment;
 import net.nmoncho.faradn.document.Cut;
+import net.nmoncho.faradn.document.Drawer;
 import net.nmoncho.faradn.document.Feed;
 import net.nmoncho.faradn.document.ImageBlock;
 import net.nmoncho.faradn.document.LeaderLine;
@@ -131,6 +132,9 @@ public final class EscPosRenderer {
       return current;
     } else if (block instanceof Cut cut) {
       out.writeBytes(cutCommand(cut.partial()));
+      return current;
+    } else if (block instanceof Drawer drawer) {
+      out.writeBytes(drawerCommand(drawer.pin()));
       return current;
     } else if (block instanceof ImageBlock image) {
       return renderImage(out, current, image);
@@ -1132,6 +1136,11 @@ public final class EscPosRenderer {
 
   private static byte[] cutCommand(boolean partial) {
     return (partial ? MechanismControlCommands.PARTIAL_CUT : MechanismControlCommands.FULL_CUT).getCode();
+  }
+
+  private static byte[] drawerCommand(int pin) {
+    return (pin == 5 ? MechanismControlCommands.DRAWER_KICK_PIN_5 : MechanismControlCommands.DRAWER_KICK_PIN_2)
+        .getCode();
   }
 
   private static ComputedStyle withAlignment(ComputedStyle style, Alignment alignment) {

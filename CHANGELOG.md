@@ -20,6 +20,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   check that refuses to print to an offline / out-of-paper / cover-open printer.
 - **CLI & server** - the `faradn` command (`list`, `print`, `serve`) and a
   dependency-free JDK HTTP print server, shipped as a GraalVM native binary.
+- **Cash drawer** - a `<cash-drawer>` element pulses the drawer-kick connector
+  (`ESC p`), with a `pin` attribute selecting connector pin 2 (default) or 5.
 
 ### Notes
 

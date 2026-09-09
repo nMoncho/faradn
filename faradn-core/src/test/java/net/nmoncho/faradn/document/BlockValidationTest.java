@@ -126,6 +126,15 @@ public class BlockValidationTest {
   }
 
   @Test
+  void drawerRejectsPinsOtherThanTwoOrFive() {
+    assertThrows(IllegalArgumentException.class, () -> new Drawer(0));
+    assertThrows(IllegalArgumentException.class, () -> new Drawer(3));
+    assertEquals(2, new Drawer().pin());
+    assertEquals(2, new Drawer(2).pin());
+    assertEquals(5, new Drawer(5).pin());
+  }
+
+  @Test
   void placementRejectsNegativePositionAndMissingContent() {
     Paragraph content = new Paragraph(List.of(RUN), Alignment.LEFT);
     assertThrows(IllegalArgumentException.class, () -> new Placement(-1, 0, content));

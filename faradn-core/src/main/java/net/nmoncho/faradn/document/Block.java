@@ -9,5 +9,5 @@ package net.nmoncho.faradn.document;
  * printer bytes; nothing in this package knows about ESC/POS commands.
  */
 public sealed interface Block
-    permits Paragraph, ImageBlock, Barcode, Rule, Feed, Cut, Table, Canvas, Box, LeaderLine, Space {
+    permits Paragraph, ImageBlock, Barcode, Rule, Feed, Cut, Table, Canvas, Box, LeaderLine, Space, Drawer {
 }
