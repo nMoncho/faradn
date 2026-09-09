@@ -26,10 +26,6 @@ public class Document {
     this.doc = doc;
   }
 
-  public org.jsoup.nodes.Document getDoc() {
-    return doc;
-  }
-
   /**
    * Translates this document into the intermediate representation: a flat,
    * reading-order sequence of blocks with fully resolved styles. Renderers
