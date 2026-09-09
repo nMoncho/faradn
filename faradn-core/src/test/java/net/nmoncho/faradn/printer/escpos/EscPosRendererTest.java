@@ -37,6 +37,7 @@ import net.nmoncho.faradn.printer.CodePage;
 import net.nmoncho.faradn.printer.Font;
 import net.nmoncho.faradn.printer.PrinterProfile;
 import net.nmoncho.faradn.printer.EscPosRenderer;
+import net.nmoncho.faradn.printer.Renderer;
 import net.nmoncho.faradn.printer.escpos.commands.BarcodeCommands;
 
 /**
@@ -293,6 +294,14 @@ public class EscPosRendererTest {
     byte[] out = renderer.render(List.of());
 
     assertBytes(cat(HEAD, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void exposesTheRendererInterface() {
+    // Callers can depend on the Renderer seam rather than the concrete class.
+    Renderer asInterface = new EscPosRenderer(TM_T88V);
+
+    assertBytes(cat(HEAD, FEED_4, PARTIAL_CUT), asInterface.render(List.of()));
   }
 
   @Test

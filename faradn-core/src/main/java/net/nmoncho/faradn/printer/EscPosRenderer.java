@@ -71,8 +71,12 @@ import net.nmoncho.faradn.printer.escpos.commands.PrintPositionCommands.Word16;
  * dropping them to {@code '?'}. Paragraphs are word-wrapped to the profile's
  * column budget; images rasterize to {@code GS v 0}; barcodes go through
  * {@link BarcodeCommands}; tables are laid out on a character grid.
+ * <p>
+ * <strong>Thread-safety:</strong> instances are immutable (only the final
+ * profile is held) and each {@link #render(List)} call is self-contained, so a
+ * single renderer is safe to share across threads.
  */
-public final class EscPosRenderer {
+public final class EscPosRenderer implements Renderer {
 
   private static final Logger log = LoggerFactory.getLogger(EscPosRenderer.class);
 
