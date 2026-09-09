@@ -53,6 +53,16 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   reports it lacks; loadable profiles are discoverable via
   `PrinterProfile.available()` and the new `faradn profiles` command; and the
   README device matrix distinguishes verified from best-effort support.
+- **Security hardening** - the renderer fetches no image URLs by default (only
+  `data:` URIs), closing the server-side request-forgery (SSRF) hole; `file:` and
+  `http(s)` fetching is opt-in via `Image.policy(...)` / `--allow-remote-images`,
+  scheme-restricted, redirect-free, and bounded by timeouts and a size cap. The
+  PNG and ImageIO decoders cap dimensions and PNG decompression before allocating,
+  preventing decompression and dimension bombs. `faradn serve` now binds loopback
+  by default (widen with `--bind`), bounds request/response time against
+  slow-client denial of service, and returns generic error bodies (details are
+  logged server-side). A CycloneDX SBOM is generated per module and a Trivy
+  dependency scan runs in CI.
 
 ### Notes
 

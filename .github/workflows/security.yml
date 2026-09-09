@@ -1,0 +1,28 @@
+name: Security
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  schedule:
+    # Re-scan weekly so newly disclosed CVEs in unchanged dependencies still surface.
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-scan:
+    name: dependency vulnerability scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
