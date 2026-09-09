@@ -25,6 +25,20 @@ public final class PngDecoder {
   private static final int IDAT = 0x49444154;
   private static final int IEND = 0x49454E44;
 
+  /**
+   * Reject a single chunk larger than this, so a bogus length cannot exhaust
+   * memory.
+   */
+  private static final int MAX_CHUNK_BYTES = 64 * 1024 * 1024;
+
+  /**
+   * Reject decompressing to more than a full RGBA image of
+   * {@link RasterImage#MAX_SIDE}
+   * squared plus one filter byte per scanline, guarding against decompression
+   * bombs.
+   */
+  private static final long MAX_INFLATED_BYTES = 4L * RasterImage.MAX_PIXELS + RasterImage.MAX_SIDE;
+
   private PngDecoder() {
   }
 
@@ -65,6 +79,9 @@ public final class PngDecoder {
     boolean done = false;
     while (!done) {
       final int length = in.readInt();
+      if (length < 0 || length > MAX_CHUNK_BYTES) {
+        throw new PrintingException("PNG chunk length " + length + " is out of bounds");
+      }
       final int type = in.readInt();
       switch (type) {
         case IHDR -> {
@@ -75,6 +92,7 @@ public final class PngDecoder {
           in.readUnsignedByte(); // compression method
           in.readUnsignedByte(); // filter method
           interlace = in.readUnsignedByte();
+          RasterImage.checkDimensions(width, height); // before any width*height allocation
         }
         case PLTE -> {
           palette = new byte[length];
@@ -99,19 +117,25 @@ public final class PngDecoder {
       throw new PrintingException("Interlaced PNG images are not supported");
     }
 
-    final byte[] raw = inflate(idat.toByteArray());
+    final byte[] raw = inflate(idat.toByteArray(), MAX_INFLATED_BYTES);
     return toRaster(raw, width, height, bitDepth, colorType, palette, transparency);
   }
 
-  private static byte[] inflate(byte[] compressed) throws DataFormatException {
+  private static byte[] inflate(byte[] compressed, long maxOutput) throws DataFormatException {
     final Inflater inflater = new Inflater();
     inflater.setInput(compressed);
     final ByteArrayOutputStream out = new ByteArrayOutputStream(Math.max(64, compressed.length * 4));
     final byte[] buffer = new byte[8192];
+    long total = 0;
     while (!inflater.finished()) {
       final int n = inflater.inflate(buffer);
       if (n == 0 && (inflater.needsInput() || inflater.needsDictionary())) {
         break;
+      }
+      total += n;
+      if (total > maxOutput) {
+        inflater.end();
+        throw new PrintingException("PNG decompresses to more than the allowed " + maxOutput + " bytes");
       }
       out.write(buffer, 0, n);
     }
