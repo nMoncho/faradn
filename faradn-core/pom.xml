@@ -66,10 +66,13 @@
   <build>
     <plugins>
       <!--
-        Claim a stable JPMS module name for the published library. The public API
-        exposes javax.usb types from a non-modular jar, so a full module-info would
-        have to `requires` filename-derived automatic modules; until those deps
-        modularize, an Automatic-Module-Name is the stable, low-risk commitment.
+        Declare a stable JPMS module name without committing to a strict
+        module-info. faradn-core bundles USB support, whose non-modular usb4java
+        dependency loads a JNI native that does not link on the module path; an
+        Automatic-Module-Name keeps the library usable from both the classpath
+        (the common case) and the module path, without forcing usb4java onto the
+        module path. Promote to a full module-info once USB is split into its own
+        module or usb4java modularizes.
       -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

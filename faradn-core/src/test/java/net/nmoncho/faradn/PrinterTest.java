@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 
 import net.nmoncho.faradn.printer.PrinterProfile;
-import net.nmoncho.faradn.printer.escpos.EscPosRenderer;
+import net.nmoncho.faradn.printer.EscPosRenderer;
 import net.nmoncho.faradn.transport.DumpTransport;
 import net.nmoncho.faradn.transport.PrinterNotReadyException;
 import net.nmoncho.faradn.transport.PrinterStatus;

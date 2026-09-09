@@ -2,14 +2,12 @@ package net.nmoncho.faradn;
 
 import java.util.Optional;
 
-import javax.usb.UsbDevice;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import net.nmoncho.faradn.printer.Devices;
+import net.nmoncho.faradn.internal.usb.UsbDevices;
 import net.nmoncho.faradn.printer.PrinterProfile;
-import net.nmoncho.faradn.printer.escpos.EscPosRenderer;
+import net.nmoncho.faradn.printer.EscPosRenderer;
 import net.nmoncho.faradn.transport.PrinterNotReadyException;
 import net.nmoncho.faradn.transport.PrinterStatus;
 import net.nmoncho.faradn.transport.Transport;
@@ -20,10 +18,12 @@ public class Printer {
 
   private static final Logger log = LoggerFactory.getLogger(Printer.class);
 
-  private final UsbDevice device;
+  private final int vendorId;
+  private final int productId; // negative means "any product for this vendor"
 
-  private Printer(UsbDevice device) {
-    this.device = device;
+  private Printer(int vendorId, int productId) {
+    this.vendorId = vendorId;
+    this.productId = productId;
   }
 
   /**
@@ -52,7 +52,7 @@ public class Printer {
    *        capabilities of the target printer
    */
   public void print(Document doc, PrinterProfile profile) {
-    try (UsbTransport transport = new UsbTransport(device)) {
+    try (UsbTransport transport = openTransport()) {
       print(transport, doc, profile);
     }
   }
@@ -63,9 +63,13 @@ public class Printer {
    * @return the decoded status
    */
   public PrinterStatus status() {
-    try (UsbTransport transport = new UsbTransport(device)) {
+    try (UsbTransport transport = openTransport()) {
       return transport.status();
     }
+  }
+
+  private UsbTransport openTransport() {
+    return productId < 0 ? UsbTransport.open(vendorId) : UsbTransport.open(vendorId, productId);
   }
 
   /**
@@ -122,9 +126,9 @@ public class Printer {
    * @return Some printer if found, empty otherwise
    */
   public static Optional<Printer> from(int vendorId) {
-    return Devices
+    return UsbDevices
         .findDevice((short) vendorId)
-        .map(Printer::new);
+        .map(device -> new Printer(vendorId, -1));
   }
 
   /**
@@ -141,9 +145,9 @@ public class Printer {
    * @return Some printer if found, empty otherwise
    */
   public static Optional<Printer> from(int vendorId, int productId) {
-    return Devices
+    return UsbDevices
         .findDevice((short) vendorId, (short) productId)
-        .map(Printer::new);
+        .map(device -> new Printer(vendorId, productId));
   }
 
 }

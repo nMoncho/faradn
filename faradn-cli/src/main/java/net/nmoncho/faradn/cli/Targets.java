@@ -1,13 +1,7 @@
 package net.nmoncho.faradn.cli;
 
-import java.util.Optional;
-
-import javax.usb.UsbDevice;
-
-import net.nmoncho.faradn.printer.Devices;
 import net.nmoncho.faradn.transport.NetworkTransport;
 import net.nmoncho.faradn.transport.Transport;
-import net.nmoncho.faradn.transport.TransportException;
 import net.nmoncho.faradn.transport.UsbTransport;
 
 /**
@@ -40,11 +34,9 @@ final class Targets {
   private static Transport usb(String printer) {
     final String[] parts = printer.split(":", 2);
     final int vendorId = parseHex(parts[0]);
-    final Optional<UsbDevice> device = parts.length > 1
-        ? Devices.findDevice((short) vendorId, (short) parseHex(parts[1]))
-        : Devices.findDevice((short) vendorId);
-    return new UsbTransport(device
-        .orElseThrow(() -> new TransportException("No USB printer found for " + printer)));
+    return parts.length > 1
+        ? UsbTransport.open(vendorId, parseHex(parts[1]))
+        : UsbTransport.open(vendorId);
   }
 
   private static int parseHex(String value) {

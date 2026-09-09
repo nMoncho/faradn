@@ -21,7 +21,7 @@ import net.nmoncho.faradn.printer.CodePage;
  * costs a single switch, and ASCII never forces one. A character no candidate
  * page can encode falls back to {@code '?'} in the current page.
  */
-final class CodePageEncoder {
+public final class CodePageEncoder {
 
   private final ByteArrayOutputStream out;
   private final List<CodePage> candidates;
@@ -37,7 +37,7 @@ final class CodePageEncoder {
    * @param candidates
    *        the pages that may be switched to, in preference order
    */
-  CodePageEncoder(ByteArrayOutputStream out, CodePage initial, List<CodePage> candidates) {
+  public CodePageEncoder(ByteArrayOutputStream out, CodePage initial, List<CodePage> candidates) {
     this.out = out;
     this.current = initial;
     // Try the already-selected page first, then the rest in preference order.
@@ -60,7 +60,7 @@ final class CodePageEncoder {
    * Encodes {@code text}, writing any needed {@code ESC t} switches and the
    * bytes.
    */
-  void emit(String text) {
+  public void emit(String text) {
     int i = 0;
     final int length = text.length();
 

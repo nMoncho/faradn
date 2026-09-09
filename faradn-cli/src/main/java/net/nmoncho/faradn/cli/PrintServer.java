@@ -8,16 +8,14 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.function.Supplier;
 
-import javax.usb.UsbDevice;
-import javax.usb.UsbDeviceDescriptor;
-
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
 import net.nmoncho.faradn.Document;
 import net.nmoncho.faradn.printer.Devices;
+import net.nmoncho.faradn.printer.UsbPrinter;
 import net.nmoncho.faradn.printer.PrinterProfile;
-import net.nmoncho.faradn.printer.escpos.EscPosRenderer;
+import net.nmoncho.faradn.printer.EscPosRenderer;
 import net.nmoncho.faradn.transport.PrinterStatus;
 import net.nmoncho.faradn.transport.Transport;
 import net.nmoncho.faradn.transport.TransportException;
@@ -99,15 +97,15 @@ public final class PrintServer {
   }
 
   private Response printers(HttpExchange exchange) {
-    final List<UsbDevice> devices = Devices.listPrinterDevices();
+    final List<UsbPrinter> devices = Devices.list();
     final StringBuilder array = new StringBuilder("[");
     for (int i = 0; i < devices.size(); i++) {
-      final UsbDeviceDescriptor descriptor = devices.get(i).getUsbDeviceDescriptor();
+      final UsbPrinter printer = devices.get(i);
       if (i > 0) {
         array.append(",");
       }
-      array.append(json("vendor", String.format("0x%04x", descriptor.idVendor() & 0xFFFF),
-          "product", String.format("0x%04x", descriptor.idProduct() & 0xFFFF)));
+      array.append(json("vendor", String.format("0x%04x", printer.vendorId()),
+          "product", String.format("0x%04x", printer.productId())));
     }
     return new Response(200, array.append("]").toString());
   }

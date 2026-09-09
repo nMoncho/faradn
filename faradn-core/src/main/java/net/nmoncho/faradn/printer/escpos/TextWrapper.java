@@ -15,7 +15,7 @@ import net.nmoncho.faradn.document.TextRun;
  * Each returned line is itself a list of runs (segments), with adjacent
  * same-style characters merged, ready for the renderer to diff and emit.
  */
-final class TextWrapper {
+public final class TextWrapper {
 
   private record StyledChar(char ch, ComputedStyle style) {
   }
@@ -23,7 +23,7 @@ final class TextWrapper {
   private TextWrapper() {
   }
 
-  static List<List<TextRun>> wrap(List<TextRun> runs, int maxColumns) {
+  public static List<List<TextRun>> wrap(List<TextRun> runs, int maxColumns) {
     return wrap(runs, maxColumns, maxColumns);
   }
 
@@ -31,7 +31,7 @@ final class TextWrapper {
    * Wraps with a different budget for the first line than the rest - used for
    * first-line / hanging indents where those lines have more or less room.
    */
-  static List<List<TextRun>> wrap(List<TextRun> runs, int firstColumns, int restColumns) {
+  public static List<List<TextRun>> wrap(List<TextRun> runs, int firstColumns, int restColumns) {
     final List<StyledChar> chars = new ArrayList<>();
     for (TextRun run : runs) {
       for (int i = 0; i < run.text().length(); i++) {

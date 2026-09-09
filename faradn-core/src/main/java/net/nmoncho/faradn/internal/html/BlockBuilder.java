@@ -1,4 +1,4 @@
-package net.nmoncho.faradn.document;
+package net.nmoncho.faradn.internal.html;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -15,10 +15,16 @@ import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 
 import net.nmoncho.faradn.Image;
+import net.nmoncho.faradn.PrintingException;
 import net.nmoncho.faradn.Utils;
+import net.nmoncho.faradn.document.*;
 
 /**
  * Builds the IR ({@code List<Block>}) from a jsoup document.
+ * <p>
+ * <strong>Not public API.</strong> This lives in an internal package so jsoup
+ * does not leak into the exported surface; reach the IR through
+ * {@link net.nmoncho.faradn.Document#blocks()} instead.
  * <p>
  * Traverses the body with an explicit style stack: entering an element
  * pushes the combined {@link ComputedStyle}, leaving it pops, so every text
@@ -121,7 +127,7 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
     if (canvasSize(body).isEmpty()) {
       return Optional.empty();
     }
-    return buildCanvas(body, ComputedStyle.INITIAL.process(body));
+    return buildCanvas(body, StyleResolver.resolve(ComputedStyle.INITIAL, body));
   }
 
   @Override
@@ -135,7 +141,7 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
       return;
     }
 
-    styles.push(styles.peek().process(el));
+    styles.push(StyleResolver.resolve(styles.peek(), el));
 
     final String tag = el.normalName();
     if (isBarcode(el)) {
@@ -153,7 +159,7 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
       consumedSubtree = el;
     } else if (tag.equals("img")) {
       flushParagraph();
-      blocks.add(new ImageBlock(Image.fromNode(el), styles.peek().alignment()));
+      blocks.add(new ImageBlock(imageFrom(el), styles.peek().alignment()));
     } else if (tag.equals("hr")) {
       flushParagraph();
       blocks.add(new Rule());
@@ -216,7 +222,7 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
   }
 
   private static boolean isFloatRight(Element el) {
-    return Utils.findStyleValue(el, "float").map(v -> v.strip().equalsIgnoreCase("right")).orElse(false);
+    return HtmlUtil.findStyleValue(el, "float").map(v -> v.strip().equalsIgnoreCase("right")).orElse(false);
   }
 
   private void openFloat(Element el) {
@@ -311,14 +317,14 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
    * values in CSS order top/right/bottom/left).
    */
   private static Optional<String> boxSide(Element el, String longhand) {
-    final Optional<String> direct = Utils.findStyleValue(el, longhand);
+    final Optional<String> direct = HtmlUtil.findStyleValue(el, longhand);
     if (direct.isPresent()) {
       return direct;
     }
     final int dash = longhand.indexOf('-');
     final String shorthand = longhand.substring(0, dash);
     final String side = longhand.substring(dash + 1);
-    return Utils.findStyleValue(el, shorthand).map(value -> shorthandSide(value, side));
+    return HtmlUtil.findStyleValue(el, shorthand).map(value -> shorthandSide(value, side));
   }
 
   private static String shorthandSide(String value, String side) {
@@ -379,12 +385,12 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
    * {@code border}/{@code border-style} shorthand.
    */
   private static boolean sideBordered(Element el, String sideProperty) {
-    final Optional<String> side = Utils.findStyleValue(el, sideProperty);
+    final Optional<String> side = HtmlUtil.findStyleValue(el, sideProperty);
     if (side.isPresent()) {
       return !isNoneBorder(side.get());
     }
-    return Utils.findStyleValue(el, "border").map(v -> !isNoneBorder(v)).orElse(false)
-        || Utils.findStyleValue(el, "border-style").map(v -> !isNoneBorder(v)).orElse(false);
+    return HtmlUtil.findStyleValue(el, "border").map(v -> !isNoneBorder(v)).orElse(false)
+        || HtmlUtil.findStyleValue(el, "border-style").map(v -> !isNoneBorder(v)).orElse(false);
   }
 
   private static boolean isNoneBorder(String value) {
@@ -395,7 +401,7 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
   private static boolean mentionsDouble(Element el) {
     for (String property : new String[] { "border", "border-style", "border-top", "border-right", "border-bottom",
         "border-left" }) {
-      if (Utils.findStyleValue(el, property).map(v -> v.toLowerCase().contains("double")).orElse(false)) {
+      if (HtmlUtil.findStyleValue(el, property).map(v -> v.toLowerCase().contains("double")).orElse(false)) {
         return true;
       }
     }
@@ -413,7 +419,7 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
   private BlockLayout blockLayout(Element el) {
     int left = indentColumns(el, "margin-left") + indentColumns(el, "padding-left");
     int right = indentColumns(el, "margin-right") + indentColumns(el, "padding-right");
-    int firstLine = signedColumns(Utils.findStyleValue(el, "text-indent"));
+    int firstLine = signedColumns(HtmlUtil.findStyleValue(el, "text-indent"));
     if (el.normalName().equals("li") && !liMarkers.isEmpty()) {
       final int marker = liMarkers.peek();
       left += marker;
@@ -610,6 +616,20 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
     return el.normalName().equals(BARCODE_TAG) || el.hasClass(BARCODE_TAG);
   }
 
+  /**
+   * Builds an {@link Image} from an {@code <img>} element: its resolved
+   * {@code src} (a URL or a {@code data:} URI) and optional {@code width}/
+   * {@code height} attributes. This keeps jsoup out of {@link Image}.
+   */
+  private static Image imageFrom(Element el) {
+    if (el.attr("src").trim().isEmpty()) {
+      throw new PrintingException("Element [" + el + "] must be a <img /> tag, and have a valid `src` attribute");
+    }
+    final Integer height = HtmlUtil.parseAttribute(el, "height").orElse(null);
+    final Integer width = HtmlUtil.parseAttribute(el, "width").orElse(null);
+    return Image.fromSrc(el.absUrl("src"), height, width);
+  }
+
   /** The drawer-kick connector pin: {@code pin="5"} selects pin 5, else pin 2. */
   private static int drawerPin(Element el) {
     return el.attr("pin").strip().equals("5") ? 5 : 2;
@@ -701,7 +721,7 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
    * {@link Canvas} (see {@link #buildCanvas}).
    */
   private boolean isCanvasContainer(Element el) {
-    final Optional<String> position = Utils.findStyleValue(el, "position");
+    final Optional<String> position = HtmlUtil.findStyleValue(el, "position");
     if (position.isEmpty()) {
       return false;
     }
@@ -729,7 +749,7 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
    * Resolves a CSS length property on an element to dots, if present and valid.
    */
   private OptionalInt styleLength(Element el, String property, int referenceDots) {
-    final Optional<String> raw = Utils.findStyleValue(el, property);
+    final Optional<String> raw = HtmlUtil.findStyleValue(el, property);
     return raw.isPresent() ? Utils.lengthToDots(raw.get(), dpi, referenceDots) : OptionalInt.empty();
   }
 
@@ -755,7 +775,7 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
         Utils.log.debug("Ignoring non-absolutely-positioned <{}> in page-mode container", child.normalName());
         continue;
       }
-      final ComputedStyle childStyle = base.process(child);
+      final ComputedStyle childStyle = StyleResolver.resolve(base, child);
       final int x = Math.max(0, styleLength(child, "left", widthDots).orElse(0));
       final int y = Math.max(0, styleLength(child, "top", heightDots).orElse(0));
       // A `transform: rotate(…)` on the child rotates just that placement (a
@@ -783,7 +803,7 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
    * direction) and for an absolutely-positioned child (a per-placement rotation).
    */
   private static Optional<Canvas.Direction> rotationOf(Element el) {
-    final Optional<String> transform = Utils.findStyleValue(el, "transform");
+    final Optional<String> transform = HtmlUtil.findStyleValue(el, "transform");
     if (transform.isEmpty()) {
       return Optional.empty();
     }
@@ -803,7 +823,7 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
   }
 
   private static boolean isAbsolutelyPositioned(Element el) {
-    return Utils.findStyleValue(el, "position")
+    return HtmlUtil.findStyleValue(el, "position")
         .map(p -> p.strip().equalsIgnoreCase("absolute"))
         .orElse(false);
   }
@@ -819,7 +839,7 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
           data, barcodeSymbology(el).orElse(null), style.alignment(), barcodeOptions(el)));
     }
     if (el.normalName().equals("img")) {
-      return Optional.of(new ImageBlock(Image.fromNode(el), style.alignment()));
+      return Optional.of(new ImageBlock(imageFrom(el), style.alignment()));
     }
     final List<TextRun> runs = cellContent(el, style);
     return runs.isEmpty() ? Optional.empty() : Optional.of(new Paragraph(runs, style.alignment()));
@@ -834,7 +854,8 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
         if (!tag.equals("td") && !tag.equals("th")) {
           continue;
         }
-        final ComputedStyle cellStyle = tag.equals("th") ? asHeader(base.process(cell)) : base.process(cell);
+        final ComputedStyle cellStyle = tag.equals("th") ? asHeader(StyleResolver.resolve(base, cell))
+            : StyleResolver.resolve(base, cell);
         cells.add(new Cell(cellContent(cell, cellStyle), cellStyle.alignment(), colSpan(cell)));
       }
       if (!cells.isEmpty()) {
@@ -856,8 +877,8 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
    */
   private static Border tableBorder(Element table) {
     final String attr = table.attr("border").strip();
-    final Optional<String> css = Utils.findStyleValue(table, "border").map(v -> v.toLowerCase());
-    final Optional<String> cssStyle = Utils.findStyleValue(table, "border-style").map(v -> v.toLowerCase());
+    final Optional<String> css = HtmlUtil.findStyleValue(table, "border").map(v -> v.toLowerCase());
+    final Optional<String> cssStyle = HtmlUtil.findStyleValue(table, "border-style").map(v -> v.toLowerCase());
 
     // An explicit CSS "none"/"0" turns borders off, even if the attribute is set.
     if (css.map(v -> v.equals("none") || v.equals("0")).orElse(false)
@@ -925,7 +946,7 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
         if (el.normalName().equals("br")) {
           pendingSpace[0] = pendingSpace[0] || !runs.isEmpty();
         } else {
-          collectInline(el, style.process(el), runs, pendingSpace);
+          collectInline(el, StyleResolver.resolve(style, el), runs, pendingSpace);
         }
       }
     }

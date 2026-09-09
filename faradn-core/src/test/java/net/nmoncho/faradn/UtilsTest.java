@@ -10,6 +10,8 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.junit.jupiter.api.Test;
 
+import net.nmoncho.faradn.internal.html.HtmlUtil;
+
 public class UtilsTest {
 
   private static Element withStyle(String style) {
@@ -18,62 +20,62 @@ public class UtilsTest {
 
   @Test
   void findsValueWithTrailingSemicolon() {
-    assertEquals(Optional.of("center"), Utils.findStyleValue(withStyle("text-align: center;"), "text-align"));
+    assertEquals(Optional.of("center"), HtmlUtil.findStyleValue(withStyle("text-align: center;"), "text-align"));
   }
 
   @Test
   void findsValueWithoutTrailingSemicolon() {
-    assertEquals(Optional.of("center"), Utils.findStyleValue(withStyle("text-align: center"), "text-align"));
+    assertEquals(Optional.of("center"), HtmlUtil.findStyleValue(withStyle("text-align: center"), "text-align"));
   }
 
   @Test
   void findsValueAmongMultipleDeclarations() {
     final Element el = withStyle("text-align: center; font-weight: bold; text-decoration: underline");
 
-    assertEquals(Optional.of("center"), Utils.findStyleValue(el, "text-align"));
-    assertEquals(Optional.of("bold"), Utils.findStyleValue(el, "font-weight"));
-    assertEquals(Optional.of("underline"), Utils.findStyleValue(el, "text-decoration"));
+    assertEquals(Optional.of("center"), HtmlUtil.findStyleValue(el, "text-align"));
+    assertEquals(Optional.of("bold"), HtmlUtil.findStyleValue(el, "font-weight"));
+    assertEquals(Optional.of("underline"), HtmlUtil.findStyleValue(el, "text-decoration"));
   }
 
   @Test
   void toleratesWhitespace() {
-    assertEquals(Optional.of("bold"), Utils.findStyleValue(withStyle("  font-weight  :   bold  ; "), "font-weight"));
+    assertEquals(Optional.of("bold"), HtmlUtil.findStyleValue(withStyle("  font-weight  :   bold  ; "), "font-weight"));
   }
 
   @Test
   void propertyNameIsCaseInsensitive() {
-    assertEquals(Optional.of("bold"), Utils.findStyleValue(withStyle("Font-Weight: bold"), "font-weight"));
+    assertEquals(Optional.of("bold"), HtmlUtil.findStyleValue(withStyle("Font-Weight: bold"), "font-weight"));
   }
 
   @Test
   void matchesWholePropertyNamesOnly() {
     // "text-decoration" must not match a "text-decoration-line" declaration
     // and vice versa
-    assertTrue(Utils.findStyleValue(withStyle("text-decoration-line: underline"), "text-decoration").isEmpty());
-    assertTrue(Utils.findStyleValue(withStyle("text-decoration: underline"), "text-decoration-line").isEmpty());
+    assertTrue(HtmlUtil.findStyleValue(withStyle("text-decoration-line: underline"), "text-decoration").isEmpty());
+    assertTrue(HtmlUtil.findStyleValue(withStyle("text-decoration: underline"), "text-decoration-line").isEmpty());
   }
 
   @Test
   void absentPropertyIsEmpty() {
-    assertTrue(Utils.findStyleValue(withStyle("font-weight: bold"), "text-align").isEmpty());
+    assertTrue(HtmlUtil.findStyleValue(withStyle("font-weight: bold"), "text-align").isEmpty());
   }
 
   @Test
   void missingStyleAttributeIsEmpty() {
     final Element el = Jsoup.parseBodyFragment("<div>x</div>").body().child(0);
 
-    assertTrue(Utils.findStyleValue(el, "text-align").isEmpty());
+    assertTrue(HtmlUtil.findStyleValue(el, "text-align").isEmpty());
   }
 
   @Test
   void emptyValueIsEmpty() {
-    assertTrue(Utils.findStyleValue(withStyle("text-align: ;"), "text-align").isEmpty());
+    assertTrue(HtmlUtil.findStyleValue(withStyle("text-align: ;"), "text-align").isEmpty());
   }
 
   @Test
   void malformedDeclarationsAreSkipped() {
     assertEquals(Optional.of("bold"),
-        Utils.findStyleValue(withStyle("nonsense; : orphan; font-weight: bold"), "font-weight"));
+        HtmlUtil.findStyleValue(withStyle("nonsense; : orphan; font-weight: bold"), "font-weight"));
   }
 
   @Test

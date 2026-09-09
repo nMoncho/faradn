@@ -27,9 +27,14 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   so a single job can hold several receipts. A trailing `<cut>` replaces the
   automatic end-of-job cut.
 - **Module name** - the published `faradn-core` jar declares a stable JPMS module
-  name, `net.nmoncho.faradn`, via `Automatic-Module-Name`, so consumers on the
-  module path can `requires net.nmoncho.faradn;` against a name that will not
-  change between releases.
+  name, `net.nmoncho.faradn`, via `Automatic-Module-Name`, so a modular consumer
+  can `requires net.nmoncho.faradn;`. jsoup and `javax.usb` are used internally
+  only and are not exposed on the public API; the ESC/POS emission layer and the
+  `internal.*` packages are marked internal (see their `package-info`).
+- **USB API** - USB printers are opened with
+  `UsbTransport.open(vendorId[, productId])` and enumerated with `Devices.list()`
+  (returning neutral `UsbPrinter` values), so the public API no longer exposes
+  `javax.usb` types.
 
 ### Notes
 

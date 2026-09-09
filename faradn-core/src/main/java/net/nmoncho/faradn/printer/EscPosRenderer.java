@@ -1,4 +1,4 @@
-package net.nmoncho.faradn.printer.escpos;
+package net.nmoncho.faradn.printer;
 
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
@@ -31,7 +31,11 @@ import net.nmoncho.faradn.document.Rule;
 import net.nmoncho.faradn.document.Space;
 import net.nmoncho.faradn.document.Table;
 import net.nmoncho.faradn.document.TextRun;
-import net.nmoncho.faradn.printer.PrinterProfile;
+import net.nmoncho.faradn.printer.escpos.BoxDrawing;
+import net.nmoncho.faradn.printer.escpos.Code;
+import net.nmoncho.faradn.printer.escpos.CodePageEncoder;
+import net.nmoncho.faradn.printer.escpos.ImageRasterizer;
+import net.nmoncho.faradn.printer.escpos.TextWrapper;
 import net.nmoncho.faradn.printer.escpos.commands.BarcodeCommands;
 import net.nmoncho.faradn.printer.escpos.commands.CharacterCommands;
 import net.nmoncho.faradn.printer.escpos.commands.CharacterCommands.CharacterSize;

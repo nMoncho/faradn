@@ -8,7 +8,7 @@ import java.util.List;
 import org.jsoup.Jsoup;
 
 import net.nmoncho.faradn.document.Block;
-import net.nmoncho.faradn.document.BlockBuilder;
+import net.nmoncho.faradn.internal.html.BlockBuilder;
 
 public class Document {
 

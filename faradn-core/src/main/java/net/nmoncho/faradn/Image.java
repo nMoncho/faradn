@@ -1,7 +1,5 @@
 package net.nmoncho.faradn;
 
-import org.jsoup.nodes.Element;
-
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
@@ -122,26 +120,21 @@ public class Image {
   }
 
   /**
-   * Creates an image element from an {@link Element}, handling either a URL or a
-   * Base64 {@code data:} URI.
+   * Creates an image from an already-resolved {@code src} - either a
+   * {@code data:} URI (Base64) or a URL - with optional target dimensions.
    *
-   * @param el
-   *        HTML element
+   * @param src
+   *        a {@code data:image/...;base64,...} URI or an image URL
+   * @param height
+   *        target height, or {@code null} to keep the decoded height
+   * @param width
+   *        target width, or {@code null} to keep the decoded width
    * @return image element
    */
-  public static Image fromNode(Element el) {
-    if (el.tag().getName().equals("img") && !el.attr("src").trim().isEmpty()) {
-      final String src = el.absUrl("src");
-      final Optional<Integer> height = Utils.parseAttribute(el, "height");
-      final Optional<Integer> width = Utils.parseAttribute(el, "width");
-
-      final Matcher matcher = BASE64_REGEX.matcher(src);
-      if (matcher.matches()) {
-        return new Image(base64Loader(matcher.group(2)), height, width);
-      }
-      return new Image(urlLoader(src), height, width);
-    }
-    throw new PrintingException("Element [" + el + "] must be a <img /> tag, and have a valid `src` attribute");
+  public static Image fromSrc(String src, Integer height, Integer width) {
+    final Matcher matcher = BASE64_REGEX.matcher(src);
+    final Supplier<RasterImage> loader = matcher.matches() ? base64Loader(matcher.group(2)) : urlLoader(src);
+    return new Image(loader, Optional.ofNullable(height), Optional.ofNullable(width));
   }
 
   private static Supplier<RasterImage> base64Loader(String base64) {

@@ -6,8 +6,6 @@ import java.io.File;
 import java.util.List;
 import java.util.Optional;
 
-import javax.usb.UsbDevice;
-
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
@@ -19,9 +17,8 @@ import net.nmoncho.faradn.document.Cut;
 import net.nmoncho.faradn.document.Feed;
 import net.nmoncho.faradn.document.Paragraph;
 import net.nmoncho.faradn.document.TextRun;
-import net.nmoncho.faradn.printer.Devices;
 import net.nmoncho.faradn.printer.PrinterProfile;
-import net.nmoncho.faradn.printer.escpos.EscPosRenderer;
+import net.nmoncho.faradn.printer.EscPosRenderer;
 import net.nmoncho.faradn.transport.NetworkTransport;
 import net.nmoncho.faradn.transport.UsbTransport;
 
@@ -163,12 +160,9 @@ public class HardwarePrintTest {
         .build();
     byte[] job = new EscPosRenderer(profile).render(List.of(canvas, new Feed(3), new Cut(true)));
 
-    Optional<UsbDevice> device = Devices.findDevice((short) 0x04b8);
-    device.ifPresentOrElse(dev -> {
-      try (UsbTransport transport = new UsbTransport(dev)) {
-        transport.write(job);
-      }
-    }, () -> fail("No Epson printer (USB vendor 0x04b8) found"));
+    try (UsbTransport transport = UsbTransport.open(0x04b8)) {
+      transport.write(job);
+    }
   }
 
   @Test

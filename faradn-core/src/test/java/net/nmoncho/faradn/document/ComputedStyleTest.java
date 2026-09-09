@@ -11,6 +11,7 @@ import org.jsoup.nodes.Element;
 import org.junit.jupiter.api.Test;
 
 import net.nmoncho.faradn.document.ComputedStyle.Alignment;
+import net.nmoncho.faradn.internal.html.StyleResolver;
 
 public class ComputedStyleTest {
 
@@ -30,50 +31,54 @@ public class ComputedStyleTest {
 
   @Test
   void boldTags() {
-    assertTrue(ComputedStyle.INITIAL.process(element("<b>x</b>")).bold());
-    assertTrue(ComputedStyle.INITIAL.process(element("<strong>x</strong>")).bold());
+    assertTrue(StyleResolver.resolve(ComputedStyle.INITIAL, element("<b>x</b>")).bold());
+    assertTrue(StyleResolver.resolve(ComputedStyle.INITIAL, element("<strong>x</strong>")).bold());
   }
 
   @Test
   void underlineTag() {
-    assertTrue(ComputedStyle.INITIAL.process(element("<u>x</u>")).underline());
+    assertTrue(StyleResolver.resolve(ComputedStyle.INITIAL, element("<u>x</u>")).underline());
   }
 
   @Test
   void smallTagSelectsFontB() {
     assertEquals(0, ComputedStyle.INITIAL.font());
-    assertEquals(1, ComputedStyle.INITIAL.process(element("<small>x</small>")).font());
+    assertEquals(1, StyleResolver.resolve(ComputedStyle.INITIAL, element("<small>x</small>")).font());
   }
 
   @Test
   void fontFamilyCssSelectsFontSlot() {
-    assertEquals(1, ComputedStyle.INITIAL.process(element("<span style=\"font-family: font-b\">x</span>")).font());
-    assertEquals(0, ComputedStyle.INITIAL.process(element("<span style=\"font-family: font-a\">x</span>")).font());
-    assertEquals(2, ComputedStyle.INITIAL.process(element("<span style=\"font-family: font-c\">x</span>")).font());
+    assertEquals(1,
+        StyleResolver.resolve(ComputedStyle.INITIAL, element("<span style=\"font-family: font-b\">x</span>")).font());
+    assertEquals(0,
+        StyleResolver.resolve(ComputedStyle.INITIAL, element("<span style=\"font-family: font-a\">x</span>")).font());
+    assertEquals(2,
+        StyleResolver.resolve(ComputedStyle.INITIAL, element("<span style=\"font-family: font-c\">x</span>")).font());
     // A quoted name inside a font stack still matches.
     assertEquals(1,
-        ComputedStyle.INITIAL.process(element("<div style=\"font-family: 'font-b', monospace\">x</div>")).font());
+        StyleResolver.resolve(ComputedStyle.INITIAL, element("<div style=\"font-family: 'font-b', monospace\">x</div>"))
+            .font());
   }
 
   @Test
   void fontFamilyCssOverridesSmallTag() {
     assertEquals(0,
-        ComputedStyle.INITIAL.process(element("<small style=\"font-family: font-a\">x</small>")).font());
+        StyleResolver.resolve(ComputedStyle.INITIAL, element("<small style=\"font-family: font-a\">x</small>")).font());
   }
 
   @Test
   void headings() {
-    final ComputedStyle h1 = ComputedStyle.INITIAL.process(element("<h1>x</h1>"));
+    final ComputedStyle h1 = StyleResolver.resolve(ComputedStyle.INITIAL, element("<h1>x</h1>"));
     assertTrue(h1.bold());
     assertEquals(2, h1.widthMultiple());
     assertEquals(2, h1.heightMultiple());
 
-    final ComputedStyle h2 = ComputedStyle.INITIAL.process(element("<h2>x</h2>"));
+    final ComputedStyle h2 = StyleResolver.resolve(ComputedStyle.INITIAL, element("<h2>x</h2>"));
     assertTrue(h2.bold());
     assertEquals(1, h2.widthMultiple());
     assertEquals(2, h2.heightMultiple());
 
-    final ComputedStyle h3 = ComputedStyle.INITIAL.process(element("<h3>x</h3>"));
+    final ComputedStyle h3 = StyleResolver.resolve(ComputedStyle.INITIAL, element("<h3>x</h3>"));
     assertTrue(h3.bold());
     assertEquals(1, h3.widthMultiple());
     assertEquals(1, h3.heightMultiple());
@@ -81,80 +86,94 @@ public class ComputedStyleTest {
 
   @Test
   void centerTag() {
-    assertEquals(Alignment.CENTER, ComputedStyle.INITIAL.process(element("<center>x</center>")).alignment());
+    assertEquals(Alignment.CENTER,
+        StyleResolver.resolve(ComputedStyle.INITIAL, element("<center>x</center>")).alignment());
   }
 
   @Test
   void italicTags() {
-    assertTrue(ComputedStyle.INITIAL.process(element("<em>x</em>")).italic());
-    assertTrue(ComputedStyle.INITIAL.process(element("<i>x</i>")).italic());
+    assertTrue(StyleResolver.resolve(ComputedStyle.INITIAL, element("<em>x</em>")).italic());
+    assertTrue(StyleResolver.resolve(ComputedStyle.INITIAL, element("<i>x</i>")).italic());
   }
 
   @Test
   void fontStyleCssSelectsItalic() {
-    assertTrue(ComputedStyle.INITIAL.process(element("<span style=\"font-style: italic\">x</span>")).italic());
-    assertTrue(ComputedStyle.INITIAL.process(element("<span style=\"font-style: oblique\">x</span>")).italic());
+    assertTrue(
+        StyleResolver.resolve(ComputedStyle.INITIAL, element("<span style=\"font-style: italic\">x</span>")).italic());
+    assertTrue(
+        StyleResolver.resolve(ComputedStyle.INITIAL, element("<span style=\"font-style: oblique\">x</span>")).italic());
     // font-style: normal switches italic off again inside an <em>
-    assertFalse(ComputedStyle.INITIAL.process(element("<em style=\"font-style: normal\">x</em>")).italic());
+    assertFalse(
+        StyleResolver.resolve(ComputedStyle.INITIAL, element("<em style=\"font-style: normal\">x</em>")).italic());
   }
 
   @Test
   void darkBackgroundTurnsInvertOn() {
-    assertTrue(ComputedStyle.INITIAL.process(element("<div style=\"background: black\">x</div>")).invert());
-    assertTrue(ComputedStyle.INITIAL.process(element("<div style=\"background-color: #000\">x</div>")).invert());
+    assertTrue(
+        StyleResolver.resolve(ComputedStyle.INITIAL, element("<div style=\"background: black\">x</div>")).invert());
+    assertTrue(StyleResolver.resolve(ComputedStyle.INITIAL, element("<div style=\"background-color: #000\">x</div>"))
+        .invert());
     // any non-white colour inks the line on a monochrome printer
-    assertTrue(ComputedStyle.INITIAL.process(element("<div style=\"background: #c00\">x</div>")).invert());
+    assertTrue(
+        StyleResolver.resolve(ComputedStyle.INITIAL, element("<div style=\"background: #c00\">x</div>")).invert());
   }
 
   @Test
   void whiteOrTransparentBackgroundTurnsInvertOff() {
-    final ComputedStyle inverted = ComputedStyle.INITIAL.process(element("<div style=\"background: black\">x</div>"));
+    final ComputedStyle inverted = StyleResolver.resolve(ComputedStyle.INITIAL,
+        element("<div style=\"background: black\">x</div>"));
     assertTrue(inverted.invert());
     // an explicit white/transparent background inside a dark one turns it back off
-    assertFalse(inverted.process(element("<span style=\"background: white\">x</span>")).invert());
-    assertFalse(inverted.process(element("<span style=\"background: transparent\">x</span>")).invert());
+    assertFalse(StyleResolver.resolve(inverted, element("<span style=\"background: white\">x</span>")).invert());
+    assertFalse(StyleResolver.resolve(inverted, element("<span style=\"background: transparent\">x</span>")).invert());
   }
 
   @Test
   void unstyledElementReturnsTheSameInstance() {
     // An element that changes nothing returns this, so identity detects transitions.
-    assertSame(ComputedStyle.INITIAL, ComputedStyle.INITIAL.process(element("<span>x</span>")));
+    assertSame(ComputedStyle.INITIAL, StyleResolver.resolve(ComputedStyle.INITIAL, element("<span>x</span>")));
   }
 
   @Test
   void cssFontWeight() {
-    assertTrue(ComputedStyle.INITIAL.process(element("<span style=\"font-weight: bold;\">x</span>")).bold());
-    assertTrue(ComputedStyle.INITIAL.process(element("<span style=\"font-weight: 700;\">x</span>")).bold());
-    assertFalse(ComputedStyle.INITIAL.process(element("<span style=\"font-weight: normal;\">x</span>")).bold());
+    assertTrue(
+        StyleResolver.resolve(ComputedStyle.INITIAL, element("<span style=\"font-weight: bold;\">x</span>")).bold());
+    assertTrue(
+        StyleResolver.resolve(ComputedStyle.INITIAL, element("<span style=\"font-weight: 700;\">x</span>")).bold());
+    assertFalse(
+        StyleResolver.resolve(ComputedStyle.INITIAL, element("<span style=\"font-weight: normal;\">x</span>")).bold());
   }
 
   @Test
   void cssOverridesTagDefault() {
-    assertFalse(ComputedStyle.INITIAL.process(element("<b style=\"font-weight: normal;\">x</b>")).bold());
+    assertFalse(
+        StyleResolver.resolve(ComputedStyle.INITIAL, element("<b style=\"font-weight: normal;\">x</b>")).bold());
   }
 
   @Test
   void cssTextDecoration() {
-    assertTrue(ComputedStyle.INITIAL.process(element("<span style=\"text-decoration: underline;\">x</span>"))
-        .underline());
+    assertTrue(
+        StyleResolver.resolve(ComputedStyle.INITIAL, element("<span style=\"text-decoration: underline;\">x</span>"))
+            .underline());
 
     final ComputedStyle underlined = new ComputedStyle(false, true, 1, 1, Alignment.LEFT, false);
-    assertFalse(underlined.process(element("<span style=\"text-decoration: none;\">x</span>")).underline());
+    assertFalse(
+        StyleResolver.resolve(underlined, element("<span style=\"text-decoration: none;\">x</span>")).underline());
   }
 
   @Test
   void cssTextAlignWithoutTrailingSemicolon() {
     // Regression: the old parser required a ';' after every declaration
     assertEquals(Alignment.CENTER,
-        ComputedStyle.INITIAL.process(element("<div style=\"text-align: center\">x</div>")).alignment());
+        StyleResolver.resolve(ComputedStyle.INITIAL, element("<div style=\"text-align: center\">x</div>")).alignment());
     assertEquals(Alignment.RIGHT,
-        ComputedStyle.INITIAL.process(element("<div style=\"text-align: right\">x</div>")).alignment());
+        StyleResolver.resolve(ComputedStyle.INITIAL, element("<div style=\"text-align: right\">x</div>")).alignment());
   }
 
   @Test
   void inheritsFromCurrentStyle() {
-    final ComputedStyle bold = ComputedStyle.INITIAL.process(element("<b>x</b>"));
-    final ComputedStyle boldUnderlined = bold.process(element("<u>x</u>"));
+    final ComputedStyle bold = StyleResolver.resolve(ComputedStyle.INITIAL, element("<b>x</b>"));
+    final ComputedStyle boldUnderlined = StyleResolver.resolve(bold, element("<u>x</u>"));
 
     assertTrue(boldUnderlined.bold());
     assertTrue(boldUnderlined.underline());
@@ -167,7 +186,7 @@ public class ComputedStyleTest {
   }
 
   private static ComputedStyle sized(String css) {
-    return ComputedStyle.INITIAL.process(element("<span style=\"font-size: " + css + "\">x</span>"));
+    return StyleResolver.resolve(ComputedStyle.INITIAL, element("<span style=\"font-size: " + css + "\">x</span>"));
   }
 
   @Test
@@ -198,7 +217,8 @@ public class ComputedStyleTest {
   @Test
   void fontSizeOverridesHeadingSize() {
     // <h2> is normally 1x wide, 2x tall; an explicit font-size wins on both axes.
-    final ComputedStyle s = ComputedStyle.INITIAL.process(element("<h2 style=\"font-size: 300%\">x</h2>"));
+    final ComputedStyle s = StyleResolver.resolve(ComputedStyle.INITIAL,
+        element("<h2 style=\"font-size: 300%\">x</h2>"));
     assertEquals(3, s.widthMultiple());
     assertEquals(3, s.heightMultiple());
     assertTrue(s.bold()); // heading bold still applies
@@ -212,7 +232,7 @@ public class ComputedStyleTest {
   }
 
   private static ComputedStyle font(String css) {
-    return ComputedStyle.INITIAL.process(element("<span style=\"font: " + css + "\">x</span>"));
+    return StyleResolver.resolve(ComputedStyle.INITIAL, element("<span style=\"font: " + css + "\">x</span>"));
   }
 
   @Test
@@ -252,7 +272,7 @@ public class ComputedStyleTest {
   @Test
   void fontShorthandResetsOmittedComponents() {
     // The shorthand omits weight, so it resets <b>'s bold to normal (per CSS).
-    assertFalse(ComputedStyle.INITIAL.process(element("<b style=\"font: 2em font-a\">x</b>")).bold());
+    assertFalse(StyleResolver.resolve(ComputedStyle.INITIAL, element("<b style=\"font: 2em font-a\">x</b>")).bold());
   }
 
   @Test

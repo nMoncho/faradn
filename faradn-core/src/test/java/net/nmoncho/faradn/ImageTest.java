@@ -1,6 +1,5 @@
 package net.nmoncho.faradn;
 
-import org.jsoup.nodes.Element;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -42,11 +41,8 @@ public class ImageTest {
   }
 
   @Test
-  void createElementImage() {
-    Element el = new Element("img");
-    el.attr("src", "data:image/jpeg;base64," + tuxBase64);
-
-    Image img = Image.fromNode(el);
+  void createImageFromDataUri() {
+    Image img = Image.fromSrc("data:image/jpeg;base64," + tuxBase64, null, null);
     RasterImage bi = img.raster();
 
     assertNotNull(bi);
@@ -55,13 +51,8 @@ public class ImageTest {
   }
 
   @Test
-  void elementImageAppliesWidthAndHeightAttributes() {
-    Element el = new Element("img");
-    el.attr("src", "data:image/jpeg;base64," + tuxBase64);
-    el.attr("width", "120");
-    el.attr("height", "80");
-
-    RasterImage bi = Image.fromNode(el).raster();
+  void fromSrcAppliesWidthAndHeight() {
+    RasterImage bi = Image.fromSrc("data:image/jpeg;base64," + tuxBase64, 80, 120).raster();
 
     assertNotNull(bi);
     assertEquals(120, bi.width());

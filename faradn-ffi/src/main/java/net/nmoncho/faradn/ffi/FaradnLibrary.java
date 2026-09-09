@@ -10,7 +10,7 @@ import org.graalvm.nativeimage.c.type.CTypeConversion;
 
 import net.nmoncho.faradn.Document;
 import net.nmoncho.faradn.printer.PrinterProfile;
-import net.nmoncho.faradn.printer.escpos.EscPosRenderer;
+import net.nmoncho.faradn.printer.EscPosRenderer;
 
 /**
  * C-callable rendering entry points for the Farad'n shared library. Built with

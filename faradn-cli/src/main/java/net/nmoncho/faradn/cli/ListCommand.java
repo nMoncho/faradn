@@ -3,10 +3,8 @@ package net.nmoncho.faradn.cli;
 import java.util.List;
 import java.util.concurrent.Callable;
 
-import javax.usb.UsbDevice;
-import javax.usb.UsbDeviceDescriptor;
-
 import net.nmoncho.faradn.printer.Devices;
+import net.nmoncho.faradn.printer.UsbPrinter;
 
 import picocli.CommandLine.Command;
 
@@ -19,21 +17,16 @@ final class ListCommand implements Callable<Integer> {
 
   @Override
   public Integer call() {
-    final List<UsbDevice> printers = Devices.listPrinterDevices();
+    final List<UsbPrinter> printers = Devices.list();
     if (printers.isEmpty()) {
       System.out.println("No USB printers found.");
       return 0;
     }
 
     System.out.println("USB printers:");
-    for (UsbDevice printer : printers) {
-      final UsbDeviceDescriptor descriptor = printer.getUsbDeviceDescriptor();
-      final String vendor = Devices.findVendorName(descriptor.idVendor()).orElse("N/A");
-      System.out.printf(
-          "  0x%04x:0x%04x (%s)%n",
-          descriptor.idVendor() & 0xFFFF,
-          descriptor.idProduct() & 0xFFFF,
-          vendor);
+    for (UsbPrinter printer : printers) {
+      final String vendor = Devices.vendorName(printer.vendorId()).orElse("N/A");
+      System.out.printf("  0x%04x:0x%04x (%s)%n", printer.vendorId(), printer.productId(), vendor);
     }
     return 0;
   }

@@ -7,7 +7,7 @@ import javax.usb.UsbInterface;
 import javax.usb.UsbIrp;
 import javax.usb.UsbPipe;
 
-import net.nmoncho.faradn.printer.Devices;
+import net.nmoncho.faradn.internal.usb.UsbDevices;
 import net.nmoncho.faradn.printer.escpos.Code;
 import net.nmoncho.faradn.printer.escpos.commands.StatusCommands;
 
@@ -32,7 +32,60 @@ public final class UsbTransport implements Transport {
   private final UsbPipe inPipe; // null when the printer has no status endpoint
   private final int statusTimeoutMillis;
 
-  public UsbTransport(UsbDevice device) {
+  /**
+   * Opens the first USB printer with the given vendor id.
+   *
+   * @param vendorId
+   *        the USB vendor id (e.g. {@code 0x04b8} for Epson)
+   * @return an open transport to that printer
+   * @throws TransportException
+   *         if no matching USB printer is connected
+   */
+  public static UsbTransport open(int vendorId) {
+    return new UsbTransport(requireDevice(UsbDevices.findDevice((short) vendorId),
+        "No USB printer found for vendor 0x" + Integer.toHexString(vendorId)));
+  }
+
+  /**
+   * Opens the USB printer with the given vendor and product id.
+   *
+   * @param vendorId
+   *        the USB vendor id
+   * @param productId
+   *        the USB product id
+   * @return an open transport to that printer
+   * @throws TransportException
+   *         if no matching USB printer is connected
+   */
+  public static UsbTransport open(int vendorId, int productId) {
+    return open(vendorId, productId, DEFAULT_STATUS_TIMEOUT_MILLIS);
+  }
+
+  /**
+   * Opens the USB printer with the given vendor and product id, using a custom
+   * status-read timeout.
+   *
+   * @param vendorId
+   *        the USB vendor id
+   * @param productId
+   *        the USB product id
+   * @param statusTimeoutMillis
+   *        how long a single {@link #status()} read waits for each response byte
+   * @return an open transport to that printer
+   * @throws TransportException
+   *         if no matching USB printer is connected
+   */
+  public static UsbTransport open(int vendorId, int productId, int statusTimeoutMillis) {
+    return new UsbTransport(requireDevice(UsbDevices.findDevice((short) vendorId, (short) productId),
+        "No USB printer found for 0x" + Integer.toHexString(vendorId) + ":0x" + Integer.toHexString(productId)),
+        statusTimeoutMillis);
+  }
+
+  private static UsbDevice requireDevice(java.util.Optional<UsbDevice> device, String message) {
+    return device.orElseThrow(() -> new TransportException(message));
+  }
+
+  UsbTransport(UsbDevice device) {
     this(device, DEFAULT_STATUS_TIMEOUT_MILLIS);
   }
 
@@ -43,17 +96,17 @@ public final class UsbTransport implements Transport {
    *        how long a single {@link #status()} read waits for each response
    *        byte before failing, so a silent printer cannot block the caller
    */
-  public UsbTransport(UsbDevice device, int statusTimeoutMillis) {
+  UsbTransport(UsbDevice device, int statusTimeoutMillis) {
     if (statusTimeoutMillis < 1) {
       throw new IllegalArgumentException("statusTimeoutMillis must be positive, got " + statusTimeoutMillis);
     }
 
     this.statusTimeoutMillis = statusTimeoutMillis;
-    this.iface = Devices.findPrinterInterface(device)
+    this.iface = UsbDevices.findPrinterInterface(device)
         .orElseThrow(() -> new TransportException("Device has no USB printer interface"));
-    final UsbEndpoint outEndpoint = Devices.findOutEndpoint(iface)
+    final UsbEndpoint outEndpoint = UsbDevices.findOutEndpoint(iface)
         .orElseThrow(() -> new TransportException("Printer interface has no OUT endpoint"));
-    final UsbPipe in = Devices.findInEndpoint(iface).map(UsbEndpoint::getUsbPipe).orElse(null);
+    final UsbPipe in = UsbDevices.findInEndpoint(iface).map(UsbEndpoint::getUsbPipe).orElse(null);
 
     try {
       iface.claim(claimed -> true); // force claim: detaches the kernel driver on Linux

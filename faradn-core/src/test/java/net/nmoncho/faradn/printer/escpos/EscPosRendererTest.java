@@ -36,6 +36,7 @@ import net.nmoncho.faradn.document.TextRun;
 import net.nmoncho.faradn.printer.CodePage;
 import net.nmoncho.faradn.printer.Font;
 import net.nmoncho.faradn.printer.PrinterProfile;
+import net.nmoncho.faradn.printer.EscPosRenderer;
 import net.nmoncho.faradn.printer.escpos.commands.BarcodeCommands;
 
 /**

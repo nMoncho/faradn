@@ -8,7 +8,7 @@ import java.util.concurrent.Callable;
 import net.nmoncho.faradn.Document;
 import net.nmoncho.faradn.Printer;
 import net.nmoncho.faradn.printer.PrinterProfile;
-import net.nmoncho.faradn.printer.escpos.EscPosRenderer;
+import net.nmoncho.faradn.printer.EscPosRenderer;
 import net.nmoncho.faradn.transport.Transport;
 
 import picocli.CommandLine.Command;

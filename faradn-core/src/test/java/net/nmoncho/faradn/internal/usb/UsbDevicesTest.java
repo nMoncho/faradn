@@ -1,4 +1,4 @@
-package net.nmoncho.faradn.printer;
+package net.nmoncho.faradn.internal.usb;
 
 import javax.usb.UsbConfiguration;
 import javax.usb.UsbConst;
@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.usb4java.LibUsb;
 
-import net.nmoncho.faradn.printer.Devices.UsbUtils;
+import net.nmoncho.faradn.internal.usb.UsbDevices.UsbUtils;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -22,7 +22,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-public class DevicesTest {
+public class UsbDevicesTest {
 
   private final String vendorName = "Seiko Epson Corp."; // as registered in vendors.conf
   private final short vendorId = 1208;
@@ -32,15 +32,15 @@ public class DevicesTest {
   public void findDevice_empty() {
     withMockedRootUsbHub(Collections.emptyList(), () -> {
       // find by vendor id
-      Optional<UsbDevice> devByVendorId = Devices.findDevice(vendorId);
+      Optional<UsbDevice> devByVendorId = UsbDevices.findDevice(vendorId);
       assertTrue(devByVendorId.isEmpty());
 
       // find by vendor id, and product id
-      Optional<UsbDevice> dev = Devices.findDevice(vendorId, productId);
+      Optional<UsbDevice> dev = UsbDevices.findDevice(vendorId, productId);
       assertTrue(dev.isEmpty());
 
       // find by vendor name
-      Optional<UsbDevice> devByVendorName = Devices.findDevice(vendorName);
+      Optional<UsbDevice> devByVendorName = UsbDevices.findDevice(vendorName);
       assertTrue(devByVendorName.isEmpty());
     });
   }
@@ -55,22 +55,22 @@ public class DevicesTest {
 
     withMockedRootUsbHub(devices, () -> {
       // find by vendor id
-      Optional<UsbDevice> devByVendorId = Devices.findDevice(vendorId);
+      Optional<UsbDevice> devByVendorId = UsbDevices.findDevice(vendorId);
       assertTrue(devByVendorId.isPresent());
       assertEquals(Optional.of(device), devByVendorId);
 
       // find by vendor id, and product id
-      Optional<UsbDevice> dev = Devices.findDevice(vendorId, productId);
+      Optional<UsbDevice> dev = UsbDevices.findDevice(vendorId, productId);
       assertTrue(dev.isPresent());
       assertEquals(Optional.of(device), dev);
 
       // find by vendor id, and product id (not first match)
-      Optional<UsbDevice> specificDev = Devices.findDevice(vendorId, anotherProductId);
+      Optional<UsbDevice> specificDev = UsbDevices.findDevice(vendorId, anotherProductId);
       assertTrue(specificDev.isPresent());
       assertNotEquals(Optional.of(device), specificDev);
 
       // find by vendor name
-      Optional<UsbDevice> devByVendorName = Devices.findDevice(vendorName);
+      Optional<UsbDevice> devByVendorName = UsbDevices.findDevice(vendorName);
       assertTrue(devByVendorName.isPresent());
       assertEquals(Optional.of(device), devByVendorName);
     });
@@ -83,15 +83,15 @@ public class DevicesTest {
 
     withMockedRootUsbHub(devices, () -> {
       // find by vendor id
-      Optional<UsbDevice> devByVendorId = Devices.findDevice(vendorId);
+      Optional<UsbDevice> devByVendorId = UsbDevices.findDevice(vendorId);
       assertTrue(devByVendorId.isPresent());
 
       // find by vendor id, and product id
-      Optional<UsbDevice> dev = Devices.findDevice(vendorId, productId);
+      Optional<UsbDevice> dev = UsbDevices.findDevice(vendorId, productId);
       assertTrue(dev.isPresent());
 
       // find by vendor name
-      Optional<UsbDevice> devByVendorName = Devices.findDevice(vendorName);
+      Optional<UsbDevice> devByVendorName = UsbDevices.findDevice(vendorName);
       assertTrue(devByVendorName.isPresent());
     });
   }
@@ -104,23 +104,23 @@ public class DevicesTest {
 
     withMockedRootUsbHub(List.of(mockUsbPrinter(vendorId, productId)), () -> {
       // find by vendor id
-      Optional<UsbDevice> devByVendorId = Devices.findDevice(wrongVendorId);
+      Optional<UsbDevice> devByVendorId = UsbDevices.findDevice(wrongVendorId);
       assertTrue(devByVendorId.isEmpty());
 
       // find by vendor id (wrong), and product id (wrong)
-      Optional<UsbDevice> devA = Devices.findDevice(wrongVendorId, wrongProductId);
+      Optional<UsbDevice> devA = UsbDevices.findDevice(wrongVendorId, wrongProductId);
       assertTrue(devA.isEmpty());
 
       // find by vendor id, and product id (wrong)
-      Optional<UsbDevice> devB = Devices.findDevice(vendorId, wrongProductId);
+      Optional<UsbDevice> devB = UsbDevices.findDevice(vendorId, wrongProductId);
       assertTrue(devB.isEmpty());
 
       // find by vendor id (wrong), and product id
-      Optional<UsbDevice> devC = Devices.findDevice(wrongProductId, productId);
+      Optional<UsbDevice> devC = UsbDevices.findDevice(wrongProductId, productId);
       assertTrue(devC.isEmpty());
 
       // find by vendor name
-      Optional<UsbDevice> devByVendorName = Devices.findDevice(wrongVendorName);
+      Optional<UsbDevice> devByVendorName = UsbDevices.findDevice(wrongVendorName);
       assertTrue(devByVendorName.isEmpty());
     });
   }
@@ -129,7 +129,7 @@ public class DevicesTest {
   public void listDevices() {
     // No USB Devices available
     withMockedRootUsbHub(Collections.emptyList(), () -> {
-      assertTrue(Devices.listDevices().isEmpty());
+      assertTrue(UsbDevices.listDevices().isEmpty());
     });
 
     // One USB device inside a hub
@@ -137,7 +137,7 @@ public class DevicesTest {
         List.of(mockUsbPrinter(vendorId, productId))));
 
     withMockedRootUsbHub(devices, () -> {
-      List<UsbDevice> devs = Devices.listDevices();
+      List<UsbDevice> devs = UsbDevices.listDevices();
       assertFalse(devs.isEmpty());
       assertEquals(devs.size(), 1); // only count actual devices
     });
@@ -147,7 +147,7 @@ public class DevicesTest {
   public void listPrinters() {
     // No USB Printers available
     withMockedRootUsbHub(Collections.emptyList(), () -> {
-      assertTrue(Devices.listPrinterDevices().isEmpty());
+      assertTrue(UsbDevices.listPrinterDevices().isEmpty());
     });
 
     // One USB printer inside a hub
@@ -156,7 +156,7 @@ public class DevicesTest {
             mockUsbPrinter(vendorId, productId),
             mockUsbDevice(vendorId, productId, false))));
     withMockedRootUsbHub(devices, () -> {
-      List<UsbDevice> devs = Devices.listPrinterDevices();
+      List<UsbDevice> devs = UsbDevices.listPrinterDevices();
       assertFalse(devs.isEmpty());
       assertEquals(devs.size(), 1);
     });

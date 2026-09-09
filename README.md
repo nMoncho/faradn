@@ -125,8 +125,8 @@ golden-byte tests.
 ### Modules
 
 - **`faradn-core`**: the library (published to Maven Central). It carries the
-  stable JPMS module name `net.nmoncho.faradn`, so a modular consumer can add
-  `requires net.nmoncho.faradn;` to its own `module-info`.
+  stable JPMS module name `net.nmoncho.faradn` (via `Automatic-Module-Name`), so a
+  modular consumer can add `requires net.nmoncho.faradn;` to its own `module-info`.
 - **`faradn-cli`**: the command line and HTTP server, shipped as a GraalVM
   native binary and attached to GitHub Releases.
 - **`faradn-ffi`**: a native library that can be used with other languages,
