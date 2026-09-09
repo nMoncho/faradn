@@ -701,9 +701,10 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
   /**
    * Translates a sized, positioned container into a {@link Canvas}: each
    * {@code position: absolute} child is placed at its {@code left}/{@code top}
-   * (dots from the top-left, {@code %} relative to the area, missing → 0).
-   * Non-positioned children are ignored in this version; rotation is not yet
-   * mapped (always {@link Canvas.Direction#NORMAL}).
+   * (dots from the top-left, {@code %} relative to the area, missing → 0). A
+   * {@code transform: rotate(…)} on the container sets the whole canvas
+   * direction, and one on a child rotates just that placement. Non-positioned
+   * children are ignored in this version.
    */
   private Optional<Canvas> buildCanvas(Element container, ComputedStyle base) {
     final Optional<int[]> size = canvasSize(container);
@@ -722,7 +723,10 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
       final ComputedStyle childStyle = base.process(child);
       final int x = Math.max(0, styleLength(child, "left", widthDots).orElse(0));
       final int y = Math.max(0, styleLength(child, "top", heightDots).orElse(0));
-      placeableOf(child, childStyle).ifPresent(content -> placements.add(new Placement(x, y, content)));
+      // A `transform: rotate(…)` on the child rotates just that placement (a
+      // caption down the side); no transform inherits the canvas direction (null).
+      final Canvas.Direction rotation = rotationOf(child).orElse(null);
+      placeableOf(child, childStyle).ifPresent(content -> placements.add(new Placement(x, y, content, rotation)));
     }
     return Optional.of(new Canvas(widthDots, heightDots, directionOf(container), placements));
   }
@@ -735,23 +739,32 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
       "rotate\\(\\s*(-?\\d+(?:\\.\\d+)?)\\s*(?:deg)?\\s*\\)", Pattern.CASE_INSENSITIVE);
 
   private static Canvas.Direction directionOf(Element container) {
-    final Optional<String> transform = Utils.findStyleValue(container, "transform");
+    return rotationOf(container).orElse(Canvas.Direction.NORMAL);
+  }
+
+  /**
+   * The {@link Canvas.Direction} for an element's {@code transform: rotate(…)},
+   * or empty when it has no rotation. Used both for a container (the canvas
+   * direction) and for an absolutely-positioned child (a per-placement rotation).
+   */
+  private static Optional<Canvas.Direction> rotationOf(Element el) {
+    final Optional<String> transform = Utils.findStyleValue(el, "transform");
     if (transform.isEmpty()) {
-      return Canvas.Direction.NORMAL;
+      return Optional.empty();
     }
     final Matcher matcher = ROTATE.matcher(transform.get());
     if (!matcher.find()) {
-      return Canvas.Direction.NORMAL;
+      return Optional.empty();
     }
     // Snap to the nearest right angle and normalize to [0, 360). CSS rotation is
     // clockwise, so 90deg = a clockwise quarter turn.
     final int degrees = ((int) Math.round(Double.parseDouble(matcher.group(1)) / 90.0) * 90 % 360 + 360) % 360;
-    return switch (degrees) {
+    return Optional.of(switch (degrees) {
       case 90 -> Canvas.Direction.ROTATE_90_CW;
       case 180 -> Canvas.Direction.ROTATE_180;
       case 270 -> Canvas.Direction.ROTATE_90_CCW;
       default -> Canvas.Direction.NORMAL;
-    };
+    });
   }
 
   private static boolean isAbsolutelyPositioned(Element el) {

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Rotated captions</title>
+</head>
+<!-- A page-mode region (position: relative + size) whose children are placed
+     absolutely. Most sit upright, but a child with `transform: rotate(...)` is
+     rotated on its own — a caption running down the side of the coupon, drawn
+     with a re-issued ESC T that is restored for the following upright children.
+     The region itself is NOT rotated (per-placement rotation is independent of
+     the container's orientation). -->
+<body>
+    <center><b>ROTATED CAPTIONS</b></center>
+    <hr>
+
+    <div style="position: relative; width: 512px; height: 220px">
+        <span style="position: absolute; left: 84px; top: 0"><b>ADMIT ONE</b></span>
+        <span style="position: absolute; left: 84px; top: 48px">Row F, Seat 12</span>
+        <span style="position: absolute; left: 84px; top: 84px">2026-09-08 20:00</span>
+
+        <!-- caption down the right side, rotated a clockwise quarter turn -->
+        <span style="position: absolute; left: 476px; top: 8px; transform: rotate(90deg)"><b>VOID IF DETACHED</b></span>
+
+        <!-- caption down the left side, rotated a counter-clockwise quarter turn -->
+        <span style="position: absolute; left: 32px; top: 180px; transform: rotate(-90deg)">SERIAL 004217</span>
+
+        <span style="position: absolute; left: 84px; top: 150px">Gate B &middot; Doors 19:00</span>
+    </div>
+</body>
+</html>

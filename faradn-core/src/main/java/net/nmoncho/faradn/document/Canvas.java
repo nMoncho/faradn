@@ -64,6 +64,15 @@ public record Canvas(int widthDots, int heightDots, Direction direction, List<Pl
       return this;
     }
 
+    /**
+     * Places content rotated independently of the canvas (per-placement
+     * {@code ESC T}).
+     */
+    public Builder place(int xDots, int yDots, Placeable content, Direction rotation) {
+      placements.add(new Placement(xDots, yDots, content, rotation));
+      return this;
+    }
+
     public Canvas build() {
       return new Canvas(widthDots, heightDots, direction, placements);
     }

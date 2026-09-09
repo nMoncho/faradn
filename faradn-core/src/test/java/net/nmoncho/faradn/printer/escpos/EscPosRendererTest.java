@@ -628,6 +628,64 @@ public class EscPosRendererTest {
   }
 
   @Test
+  void canvasReissuesEscTForARotatedPlacementAndRestores() {
+    Canvas canvas = Canvas.of(512, 160)
+        .place(0, 0, new Paragraph(List.of(new TextRun("A", ComputedStyle.INITIAL)), Alignment.LEFT))
+        .place(480, 8, new Paragraph(List.of(new TextRun("VOID", ComputedStyle.INITIAL)), Alignment.LEFT),
+            Canvas.Direction.ROTATE_90_CW)
+        .place(0, 120, new Paragraph(List.of(new TextRun("z", ComputedStyle.INITIAL)), Alignment.LEFT))
+        .build();
+
+    byte[] out = renderer.render(List.of(canvas));
+
+    // "A" is upright: ESC $ = x, GS $ = y + one Font A cell (24). "VOID" switches
+    // to ESC T 3 (top-to-bottom, 90 CW) and its upright (480, 8) maps into that
+    // frame as (y, w - x) = (8, 32) with no baseline drop. "z" restores ESC T 0
+    // and is upright again at (0, 120 + 24).
+    assertBytes(cat(HEAD, GS_P_180, SELECT_PAGE_MODE, escW(512, 160), ESC_T_0,
+        escDollar(0), gsDollar(24), "A",
+        ESC_T_3, escDollar(8), gsDollar(32), "VOID",
+        ESC_T_0, escDollar(0), gsDollar(144), "z",
+        FF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void canvasMapsCounterClockwisePlacementToLeftEdge() {
+    // rotate(-90deg) = ESC T 1 (bottom-to-top): an upright (x, y) maps to
+    // (h - y, x). x drives GS $, so a left-edge caption (x=8) stays at the left
+    // (GS $ = 8) instead of drifting to mid-width.
+    Canvas canvas = Canvas.of(512, 220)
+        .place(8, 200, new Paragraph(List.of(new TextRun("S", ComputedStyle.INITIAL)), Alignment.LEFT),
+            Canvas.Direction.ROTATE_90_CCW)
+        .build();
+
+    byte[] out = renderer.render(List.of(canvas));
+
+    assertBytes(cat(HEAD, GS_P_180, SELECT_PAGE_MODE, escW(512, 220), ESC_T_0,
+        ESC_T_1, escDollar(20), gsDollar(8), "S", // (h - y, x) = (220 - 200, 8)
+        FF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void canvasKeepsOneEscTForConsecutiveSameDirectionPlacements() {
+    // Two rotated placements in a row emit ESC T once, not per placement.
+    Canvas canvas = Canvas.of(512, 160)
+        .place(400, 0, new Paragraph(List.of(new TextRun("a", ComputedStyle.INITIAL)), Alignment.LEFT),
+            Canvas.Direction.ROTATE_90_CW)
+        .place(440, 0, new Paragraph(List.of(new TextRun("b", ComputedStyle.INITIAL)), Alignment.LEFT),
+            Canvas.Direction.ROTATE_90_CW)
+        .build();
+
+    byte[] out = renderer.render(List.of(canvas));
+
+    // Both rotate 90 CW (ESC T 3): (400, 0) -> (y, w - x) = (0, 112); (440, 0) -> (0, 72).
+    assertBytes(cat(HEAD, GS_P_180, SELECT_PAGE_MODE, escW(512, 160), ESC_T_0,
+        ESC_T_3, escDollar(0), gsDollar(112), "a",
+        escDollar(0), gsDollar(72), "b", // same direction: no second ESC T
+        FF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
   void htmlPositionedContainerRendersPageMode() {
     // End-to-end: HTML position:relative container + absolute children -> Canvas -> page mode.
     byte[] out = renderer.render(Document.from(

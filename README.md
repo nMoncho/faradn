@@ -333,6 +333,20 @@ a region: each child is drawn at its `left`/`top`, and the whole area prints at 
   area is clipped by the printer, so give the container enough height.
 - `transform: rotate(90deg | 180deg | 270deg)` on the container rotates the whole region
   (mapped to the ESC/POS print direction); other angles snap to the nearest right angle.
+- `transform: rotate(…)` on a **positioned child** rotates just that placement — a caption running
+  down the side of an otherwise-upright coupon (a serial, a `VOID` stamp). The renderer re-issues
+  `ESC T` for that child and restores the region's direction for the following ones. The child's
+  upright `left`/`top` is mapped into the rotated print direction's axes (which anchor at a
+  different corner of the area), so a `rotate(90deg)` caption at `left: 496px` sits at the right
+  edge and a `rotate(-90deg)` one at `left: 8px` sits at the left. Designed for an upright region;
+  combining it with a rotated *container* isn't modelled.
+
+  ```html
+  <div style="position: relative; width: 512px; height: 220px">
+    <span style="position: absolute; left: 0; top: 0"><b>ADMIT ONE</b></span>
+    <span style="position: absolute; left: 496px; top: 8px; transform: rotate(90deg)">VOID IF DETACHED</span>
+  </div>
+  ```
 
 Giving the **`<body>` itself** a `width` and `height` makes the *whole job* one such area - a
 fixed-size label, badge, or ticket rather than a flowing receipt:

@@ -571,17 +571,40 @@ public final class EscPosRenderer {
     out.writeBytes(PrintCommands.SELECT_PAGE_MODE.getCode()); // ESC L (must be at a line start)
     out.writeBytes(PrintPositionCommands.SET_PRINT_AREA
         .getCode(new PrintArea(0, 0, canvas.widthDots(), canvas.heightDots()))); // ESC W
-    out.writeBytes(PrintPositionCommands.SELECT_PRINT_DIRECTION.getCode(direction(canvas.direction()))); // ESC T
+    Canvas.Direction currentDir = canvas.direction();
+    out.writeBytes(PrintPositionCommands.SELECT_PRINT_DIRECTION.getCode(direction(currentDir))); // ESC T
 
     for (Placement placement : canvas.placements()) {
-      // Placement (x, y) is the top-left of the content, but in page mode GS $
-      // anchors baseline-drawn content (text, 1D barcodes) at its *bottom* - the
-      // glyphs/bars are drawn upward from there - while rasters (images, 2D codes)
-      // develop downward from the position. So drop the vertical position of the
-      // former by its height to put its top at y; leave the latter at y.
-      final int yDots = placement.yDots() + baselineOffsetDots(placement.content());
-      out.writeBytes(PrintPositionCommands.SET_ABSOLUTE_PRINT_POSITION.getCode(new Word16(placement.xDots()))); // ESC $
-      out.writeBytes(PrintPositionCommands.SET_ABSOLUTE_VERTICAL_PRINT_POSITION.getCode(new Word16(yDots))); // GS $
+      // A placement may rotate independently of the canvas (a caption down the
+      // side): ESC T can be re-issued between placements, so switch to the
+      // placement's direction and back. A null rotation inherits the canvas.
+      final Canvas.Direction dir = placement.rotation() != null ? placement.rotation() : canvas.direction();
+      if (dir != currentDir) {
+        out.writeBytes(PrintPositionCommands.SELECT_PRINT_DIRECTION.getCode(direction(dir))); // ESC T
+        currentDir = dir;
+      }
+      final int escDollar;
+      final int gsDollar;
+      if (placement.rotation() != null && canvas.direction() == Canvas.Direction.NORMAL) {
+        // Per-placement rotation on an upright canvas: a re-issued ESC T makes the
+        // printer read ESC $ / GS $ along the rotated axes (origin at a different
+        // corner), so map the placement's upright (x, y) into that frame. The
+        // baseline drop is a NORMAL-frame correction, so it is not applied here.
+        final int[] pos = rotatedPosition(placement.xDots(), placement.yDots(), dir,
+            canvas.widthDots(), canvas.heightDots());
+        escDollar = pos[0];
+        gsDollar = pos[1];
+      } else {
+        // Upright (or whole-canvas-rotated) placement: (x, y) are in the base
+        // frame. GS $ anchors baseline-drawn content (text, 1D barcodes) at its
+        // *bottom* - glyphs/bars are drawn upward from there - while rasters
+        // (images, 2D codes) develop downward. So drop the former's y by its
+        // height to put its top at y; leave the latter at y.
+        escDollar = placement.xDots();
+        gsDollar = placement.yDots() + baselineOffsetDots(placement.content());
+      }
+      out.writeBytes(PrintPositionCommands.SET_ABSOLUTE_PRINT_POSITION.getCode(new Word16(escDollar))); // ESC $
+      out.writeBytes(PrintPositionCommands.SET_ABSOLUTE_VERTICAL_PRINT_POSITION.getCode(new Word16(gsDollar))); // GS $
       current = renderPlacement(out, enc, current, placement, canvas.widthDots());
     }
 
@@ -645,6 +668,31 @@ public final class EscPosRenderer {
       return barcode.options().heightDots();
     }
     return 0;
+  }
+
+  /**
+   * Maps an upright {@code (x, y)} (top-left origin, x right, y down) into the
+   * {@code ESC $}/{@code GS $} axes of a re-issued {@code ESC T} print direction,
+   * for a per-placement rotation on a NORMAL canvas of {@code w × h} dots. Each
+   * direction anchors at a different corner of the print area:
+   * <ul>
+   * <li>{@code NORMAL}: origin top-left → {@code (x, y)}.</li>
+   * <li>{@code ROTATE_90_CW} (ESC T 3, top→bottom): origin top-right; ESC $ runs
+   * down, GS $ runs left → {@code (y, w − x)}.</li>
+   * <li>{@code ROTATE_90_CCW} (ESC T 1, bottom→top): origin bottom-left; ESC $
+   * runs up, GS $ runs right → {@code (h − y, x)}.</li>
+   * <li>{@code ROTATE_180} (ESC T 2, right→left): origin bottom-right → {@code (w
+   * − x, h − y)}.</li>
+   * </ul>
+   * Returns {@code [escDollar, gsDollar]}.
+   */
+  private static int[] rotatedPosition(int x, int y, Canvas.Direction dir, int w, int h) {
+    return switch (dir) {
+      case NORMAL -> new int[] { x, y };
+      case ROTATE_90_CW -> new int[] { y, Math.max(0, w - x) };
+      case ROTATE_90_CCW -> new int[] { Math.max(0, h - y), x };
+      case ROTATE_180 -> new int[] { Math.max(0, w - x), Math.max(0, h - y) };
+    };
   }
 
   /** Maps a canvas direction to the {@code ESC T} print direction. */

@@ -3,6 +3,7 @@ package net.nmoncho.faradn.document;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
@@ -466,6 +467,22 @@ public class BlockBuilderTest {
     assertEquals(Canvas.Direction.NORMAL, canvasDirection("; transform: scale(2)")); // no rotate()
     assertEquals(Canvas.Direction.ROTATE_90_CW,
         canvasDirection("; transform: translate(4px, 4px) rotate(90deg)")); // combined
+  }
+
+  @Test
+  void placementTransformSetsPerPlacementRotation() {
+    final List<Block> blocks = Document.from(
+        "<div style=\"position: relative; width: 512px; height: 160px\">"
+            + "<span style=\"position: absolute; left: 0; top: 0\">flat</span>"
+            + "<span style=\"position: absolute; left: 480px; top: 8px; transform: rotate(90deg)\">VOID</span>"
+            + "</div>")
+        .blocks();
+
+    final Canvas canvas = assertInstanceOf(Canvas.class, blocks.get(0));
+    assertEquals(Canvas.Direction.NORMAL, canvas.direction());
+    // A child without a transform inherits the canvas (null); one with a transform rotates on its own.
+    assertNull(canvas.placements().get(0).rotation());
+    assertEquals(Canvas.Direction.ROTATE_90_CW, canvas.placements().get(1).rotation());
   }
 
   // ----- whole-job labels: a sized <body> becomes one Canvas -----

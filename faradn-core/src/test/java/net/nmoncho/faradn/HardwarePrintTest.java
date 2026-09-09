@@ -122,6 +122,7 @@ public class HardwarePrintTest {
   private static final File SPACING = new File("src/test/resources/printjobs/spacing.html");
   private static final File MARGIN_PADDING = new File("src/test/resources/printjobs/margin-padding.html");
   private static final File SECTION_HEADERS = new File("src/test/resources/printjobs/section-headers.html");
+  private static final File ROTATED_CAPTIONS = new File("src/test/resources/printjobs/rotated-captions.html");
   private static final File HEADINGS = new File("src/test/resources/printjobs/headings.html");
 
   @Test
@@ -363,6 +364,21 @@ public class HardwarePrintTest {
     // bars). Verify the whole line is inked (no white gaps at the ends), the label
     // sits where its text-align says, and an inline inverted word is NOT a full bar.
     Document doc = Document.from(SECTION_HEADERS);
+
+    Optional<Printer> printer = Printer.from(0x04b8);
+    printer.ifPresentOrElse(
+        p -> p.print(doc, "TM-T88V"),
+        () -> fail("No Epson printer (USB vendor 0x04b8) found"));
+  }
+
+  @Test
+  @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
+  void printsRotatedCaptionsOverUsb() {
+    // Per-placement rotation in page mode: an upright coupon with captions running
+    // down the sides (transform: rotate on absolute children). Verify the side
+    // captions are rotated while the upright children stay upright, and note where
+    // each caption's (left, top) anchor actually lands (the ESC T anchor pass).
+    Document doc = Document.from(ROTATED_CAPTIONS);
 
     Optional<Printer> printer = Printer.from(0x04b8);
     printer.ifPresentOrElse(
