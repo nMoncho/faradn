@@ -56,8 +56,8 @@ public final class FaradnLibrary {
 
   private static final String DEFAULT_PROFILE = "TM-T88V";
 
-  // Tracks faradn-parent's version; bump on release.
-  private static final String VERSION = "0.1.0-SNAPSHOT";
+  // Filtered from ${project.version} at build time (see BuildInfo / java-templates).
+  private static final String VERSION = BuildInfo.VERSION;
 
   /**
    * Last error message for the calling thread, or {@code null} when its last call

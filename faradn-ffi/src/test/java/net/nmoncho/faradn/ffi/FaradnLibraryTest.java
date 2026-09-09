@@ -2,6 +2,7 @@ package net.nmoncho.faradn.ffi;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -62,6 +63,12 @@ class FaradnLibraryTest {
     assertEquals(-3, FaradnLibrary.FARADN_ERR_UNKNOWN_PROFILE);
     assertEquals(-4, FaradnLibrary.FARADN_ERR_RENDER);
     assertEquals(-5, FaradnLibrary.FARADN_ERR_OUT_OF_MEMORY);
+  }
+
+  @Test
+  void versionIsFilteredFromTheBuild() {
+    assertFalse(BuildInfo.VERSION.isBlank());
+    assertFalse(BuildInfo.VERSION.contains("$"), "the ${project.version} placeholder was not filtered");
   }
 
   @Test

@@ -51,6 +51,22 @@
 
   <build>
     <plugins>
+      <!-- Filters ${project.version} into BuildInfo.java (src/main/java-templates)
+           so the CLI version flag reports the real build version, no hardcoded string. -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>templating-maven-plugin</artifactId>
+        <version>3.0.0</version>
+        <executions>
+          <execution>
+            <id>filter-src</id>
+            <goals>
+              <goal>filter-sources</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>

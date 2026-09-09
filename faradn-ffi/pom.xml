@@ -43,6 +43,26 @@
     </dependency>
   </dependencies>
 
+  <build>
+    <plugins>
+      <!-- Filters ${project.version} into BuildInfo.java (src/main/java-templates)
+           so faradn_version reports the real build version, no hardcoded string. -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>templating-maven-plugin</artifactId>
+        <version>3.0.0</version>
+        <executions>
+          <execution>
+            <id>filter-src</id>
+            <goals>
+              <goal>filter-sources</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
   <profiles>
     <!-- Build the C ABI shared library with GraalVM: mvn -Pnative-shared -pl faradn-ffi -am package -->
     <profile>
