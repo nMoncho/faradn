@@ -1,3 +1,8 @@
+//
+// SPDX-FileCopyrightText: Copyright 2026 the original author or authors
+// SPDX-License-Identifier: MIT
+//
+
 package net.nmoncho.faradn;
 
 import java.io.ByteArrayInputStream;

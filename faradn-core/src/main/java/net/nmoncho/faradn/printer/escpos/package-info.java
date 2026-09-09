@@ -1,3 +1,8 @@
+//
+// SPDX-FileCopyrightText: Copyright 2026 the original author or authors
+// SPDX-License-Identifier: MIT
+//
+
 /**
  * Internal ESC/POS byte-emission layer: the command primitives and the encoding
  * machinery the renderer drives.

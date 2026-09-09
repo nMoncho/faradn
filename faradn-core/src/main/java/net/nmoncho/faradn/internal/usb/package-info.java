@@ -1,3 +1,8 @@
+//
+// SPDX-FileCopyrightText: Copyright 2026 the original author or authors
+// SPDX-License-Identifier: MIT
+//
+
 /**
  * Internal {@code javax.usb} discovery and I/O plumbing.
  * <p>

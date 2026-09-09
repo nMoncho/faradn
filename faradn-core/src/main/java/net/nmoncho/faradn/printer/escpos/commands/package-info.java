@@ -1,3 +1,8 @@
+//
+// SPDX-FileCopyrightText: Copyright 2026 the original author or authors
+// SPDX-License-Identifier: MIT
+//
+
 /**
  * Internal ESC/POS command definitions used by the renderer.
  * <p>

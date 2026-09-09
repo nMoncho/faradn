@@ -1,3 +1,8 @@
+//
+// SPDX-FileCopyrightText: Copyright 2026 the original author or authors
+// SPDX-License-Identifier: MIT
+//
+
 /**
  * Internal HTML-to-IR construction: jsoup parsing, the block builder, and CSS
  * style resolution.
