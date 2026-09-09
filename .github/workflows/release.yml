@@ -110,7 +110,11 @@ jobs:
           fi
       - uses: softprops/action-gh-release@v3
         with:
+          # LICENSE / NOTICE / THIRD-PARTY.txt travel with the bundled binaries.
           files: |
             ${{ matrix.asset }}
             ${{ matrix.libasset }}
             ${{ matrix.asset }}.sha256
+            LICENSE
+            NOTICE
+            THIRD-PARTY.txt
