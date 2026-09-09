@@ -6,7 +6,7 @@
 
   <groupId>net.nmoncho</groupId>
   <artifactId>faradn-parent</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>1.0.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Farad'n Parent</name>
@@ -76,6 +76,29 @@
   </properties>
 
   <build>
+    <pluginManagement>
+      <plugins>
+        <!--
+          THIRD-PARTY.txt generator. Kept in pluginManagement (not the active
+          plugin list) on purpose: it shares the `license` goal prefix with the
+          com.mycila license-maven-plugin below, and only one plugin can own a
+          prefix. Parking it here lets `license:format` / `license:check` resolve
+          to the mycila header plugin, while this one stays runnable by its full
+          coordinates (see RELEASING.md), picking up the config below:
+            mvn org.codehaus.mojo:license-maven-plugin:aggregate-add-third-party
+        -->
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>license-maven-plugin</artifactId>
+          <version>${licensemojo.version}</version>
+          <configuration>
+            <outputDirectory>${maven.multiModuleProjectDirectory}</outputDirectory>
+            <thirdPartyFilename>THIRD-PARTY.txt</thirdPartyFilename>
+            <excludedScopes>test,provided</excludedScopes>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
     <plugins>
       <plugin>
         <groupId>net.revelc.code.formatter</groupId>
@@ -127,19 +150,6 @@
             </configuration>
           </execution>
         </executions>
-      </plugin>
-      <!-- Regenerate the bundled dependency attribution with
-           `mvn license:aggregate-add-third-party` (writes THIRD-PARTY.txt at the
-           repo root). Runtime deps only; test/provided are excluded. -->
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>license-maven-plugin</artifactId>
-        <version>${licensemojo.version}</version>
-        <configuration>
-          <outputDirectory>${maven.multiModuleProjectDirectory}</outputDirectory>
-          <thirdPartyFilename>THIRD-PARTY.txt</thirdPartyFilename>
-          <excludedScopes>test,provided</excludedScopes>
-        </configuration>
       </plugin>
       <!-- Generates a CycloneDX SBOM (target/bom.json + bom.xml) for each module,
            for supply-chain review and scanning of the published artifacts. -->
