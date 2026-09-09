@@ -1,5 +1,6 @@
 package net.nmoncho.faradn;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -8,6 +9,12 @@ import java.io.File;
 import java.net.MalformedURLException;
 
 public class ImageTest {
+
+  @AfterEach
+  void resetPolicy() {
+    // The image policy is process-wide; keep the secure default between tests.
+    Image.policy(ImagePolicy.DATA_URIS_ONLY);
+  }
 
   @Test
   void createBase64Image() {
@@ -21,6 +28,7 @@ public class ImageTest {
 
   @Test
   void createLocalUrlImage() throws MalformedURLException {
+    Image.policy(ImagePolicy.LOCAL_FILES); // opt into local file: images
     File f = new File("src/test/resources/tux.jpg");
     Image img = Image.fromUrl(f.toURI().toURL().toString());
     RasterImage bi = img.raster();
@@ -28,6 +36,20 @@ public class ImageTest {
     assertNotNull(bi);
     assertEquals(bi.width(), 206);
     assertEquals(bi.height(), 245);
+  }
+
+  @Test
+  void remoteAndFileUrlsAreRefusedByDefault() throws MalformedURLException {
+    // Default policy is data: only, so untrusted HTML cannot make us fetch a URL.
+    final File f = new File("src/test/resources/tux.jpg");
+    assertThrows(PrintingException.class, () -> Image.fromUrl("http://169.254.169.254/latest/meta-data/").raster());
+    assertThrows(PrintingException.class, () -> Image.fromUrl(f.toURI().toURL().toString()).raster());
+  }
+
+  @Test
+  void remoteFetchStaysOffWhenOnlyLocalFilesAreAllowed() {
+    Image.policy(ImagePolicy.LOCAL_FILES); // file: yes, network no
+    assertThrows(PrintingException.class, () -> Image.fromUrl("http://internal.example/secret").raster());
   }
 
   @Test

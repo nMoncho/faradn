@@ -1,12 +1,18 @@
 package net.nmoncho.faradn;
 
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLConnection;
 import java.util.Base64;
+import java.util.Iterator;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
@@ -24,6 +30,11 @@ public class Image {
 
   private static final Pattern BASE64_REGEX = Pattern.compile("^data:image\\/(.+?);base64,(.+?)$");
 
+  // Secure by default: only data: URIs are decoded, so untrusted HTML cannot make
+  // the process fetch an arbitrary URL (SSRF). Widen with policy(...) for trusted
+  // input only. Volatile: this is a process-wide security posture set at startup.
+  private static volatile ImagePolicy policy = ImagePolicy.DATA_URIS_ONLY;
+
   private final Supplier<RasterImage> source;
   private final Optional<Integer> height;
   private final Optional<Integer> width;
@@ -34,6 +45,27 @@ public class Image {
     this.source = source;
     this.height = height;
     this.width = width;
+  }
+
+  /**
+   * Sets the process-wide {@link ImagePolicy} governing how {@code <img src>}
+   * URLs
+   * are fetched. The default is {@link ImagePolicy#DATA_URIS_ONLY} (fetch
+   * nothing); widen it only when the HTML being rendered is trusted.
+   *
+   * @param imagePolicy
+   *        the policy to apply
+   */
+  public static void policy(ImagePolicy imagePolicy) {
+    if (imagePolicy == null) {
+      throw new IllegalArgumentException("policy must not be null");
+    }
+    policy = imagePolicy;
+  }
+
+  /** The current image-fetch policy. */
+  public static ImagePolicy policy() {
+    return policy;
   }
 
   /**
@@ -142,13 +174,55 @@ public class Image {
   }
 
   private static Supplier<RasterImage> urlLoader(String url) {
-    return () -> {
-      try (InputStream in = new URL(url).openStream()) {
-        return decode(in.readAllBytes());
-      } catch (IOException ex) {
-        throw new PrintingException("Failed to read image from url [" + url + "]", ex);
+    return () -> fetch(url);
+  }
+
+  /**
+   * Fetches an image URL under the current {@link ImagePolicy}: the scheme must
+   * be
+   * allowed (nothing but {@code data:} by default), network fetches use the
+   * policy's timeouts and do not follow redirects, and the read is capped at the
+   * policy's byte limit. A disallowed scheme throws rather than reaching out.
+   */
+  private static RasterImage fetch(String url) {
+    final ImagePolicy pol = policy;
+    final String scheme = schemeOf(url);
+    if (!pol.allows(scheme)) {
+      throw new PrintingException("image URL scheme [" + scheme
+          + "] is not permitted by the current image policy; only data: URIs are allowed by default");
+    }
+    try {
+      final URLConnection connection = new URL(url).openConnection();
+      if (connection instanceof HttpURLConnection http) {
+        http.setInstanceFollowRedirects(false); // a redirect could reach an unallowed target
       }
-    };
+      if (pol.connectTimeoutMillis() > 0) {
+        connection.setConnectTimeout(pol.connectTimeoutMillis());
+      }
+      if (pol.readTimeoutMillis() > 0) {
+        connection.setReadTimeout(pol.readTimeoutMillis());
+      }
+      connection.setUseCaches(false);
+      try (InputStream in = connection.getInputStream()) {
+        return decode(readCapped(in, pol.maxBytes(), url));
+      }
+    } catch (IOException ex) {
+      throw new PrintingException("Failed to read image from url [" + url + "]", ex);
+    }
+  }
+
+  private static String schemeOf(String url) {
+    final int colon = url.indexOf(':');
+    return colon > 0 ? url.substring(0, colon).toLowerCase(Locale.ROOT) : "";
+  }
+
+  private static byte[] readCapped(InputStream in, long maxBytes, String url) throws IOException {
+    final int limit = (int) Math.min(maxBytes, Integer.MAX_VALUE - 8);
+    final byte[] data = in.readNBytes(limit + 1);
+    if (data.length > limit) {
+      throw new PrintingException("image at [" + url + "] exceeds the maximum allowed size of " + maxBytes + " bytes");
+    }
+    return data;
   }
 
   /**
@@ -164,16 +238,29 @@ public class Image {
   }
 
   private static RasterImage decodeWithImageIo(byte[] data) {
-    try (ByteArrayInputStream in = new ByteArrayInputStream(data)) {
-      final BufferedImage image = ImageIO.read(in);
-      if (image == null) {
+    try (ImageInputStream stream = ImageIO.createImageInputStream(new ByteArrayInputStream(data))) {
+      if (stream == null) {
         throw new PrintingException("Unsupported image format");
       }
-      final int w = image.getWidth();
-      final int h = image.getHeight();
-      final int[] argb = new int[w * h];
-      image.getRGB(0, 0, w, h, argb, 0, w);
-      return new RasterImage(w, h, argb);
+      final Iterator<ImageReader> readers = ImageIO.getImageReaders(stream);
+      if (!readers.hasNext()) {
+        throw new PrintingException("Unsupported image format");
+      }
+      final ImageReader reader = readers.next();
+      try {
+        reader.setInput(stream);
+        // Read the declared dimensions from the header and reject a bomb before
+        // reader.read() allocates the full (attacker-controlled) pixel buffer.
+        RasterImage.checkDimensions(reader.getWidth(0), reader.getHeight(0));
+        final BufferedImage image = reader.read(0);
+        final int w = image.getWidth();
+        final int h = image.getHeight();
+        final int[] argb = new int[w * h];
+        image.getRGB(0, 0, w, h, argb, 0, w);
+        return new RasterImage(w, h, argb);
+      } finally {
+        reader.dispose();
+      }
     } catch (IOException ex) {
       throw new PrintingException("Couldn't read image", ex);
     }
@@ -183,6 +270,8 @@ public class Image {
     if (targetWidth == src.width() && targetHeight == src.height()) {
       return src;
     }
+    // The target size can come from attacker-controlled width/height attributes.
+    RasterImage.checkDimensions(targetWidth, targetHeight);
     final int[] out = new int[targetWidth * targetHeight];
     for (int y = 0; y < targetHeight; y++) {
       final int sourceY = y * src.height() / targetHeight;
