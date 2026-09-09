@@ -40,6 +40,11 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   out of memory) instead of a bare `-1`, and adds `faradn_last_error` (a
   per-thread message) and `faradn_version`. The transport-free render and
   error-classification logic is now unit-tested.
+- **Renderer API & diagnostics** - `EscPosRenderer` implements a public
+  `Renderer` interface (the stable seam for future backends); thread-safety and
+  thrown exceptions are documented on the public types (`Printer`, `Transport`,
+  `PrinterProfile`, `EscPosRenderer`, `Document`); and the print path emits SLF4J
+  debug logging at renderer entry/exit and on transport writes.
 
 ### Notes
 

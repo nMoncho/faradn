@@ -14,6 +14,15 @@ import net.nmoncho.faradn.transport.Transport;
 import net.nmoncho.faradn.transport.TransportException;
 import net.nmoncho.faradn.transport.UsbTransport;
 
+/**
+ * Prints a {@link Document} to a USB printer, or to any {@link Transport}.
+ * <p>
+ * <strong>Thread-safety:</strong> a {@code Printer} is immutable and safe to
+ * share, but each {@link #print(Document, String)} / {@link #status()} call
+ * opens
+ * its own {@link UsbTransport}. A printer serializes work at the device, so do
+ * not run concurrent jobs against the same one.
+ */
 public class Printer {
 
   private static final Logger log = LoggerFactory.getLogger(Printer.class);
@@ -38,6 +47,11 @@ public class Printer {
    *        device name to look up, e.g. {@code "TM-T88V"}
    * @throws IllegalArgumentException
    *         if no profile matches {@code profileName}
+   * @throws PrinterNotReadyException
+   *         if the printer reports it is not ready (offline, cover open, out of
+   *         paper)
+   * @throws net.nmoncho.faradn.transport.TransportException
+   *         if the USB printer cannot be opened or written to
    */
   public void print(Document doc, String profileName) {
     print(doc, profile(profileName));
@@ -50,6 +64,10 @@ public class Printer {
    *        document to print
    * @param profile
    *        capabilities of the target printer
+   * @throws PrinterNotReadyException
+   *         if the printer reports it is not ready
+   * @throws net.nmoncho.faradn.transport.TransportException
+   *         if the USB printer cannot be opened or written to
    */
   public void print(Document doc, PrinterProfile profile) {
     try (UsbTransport transport = openTransport()) {
@@ -61,6 +79,8 @@ public class Printer {
    * Reads the printer's real-time status over USB.
    *
    * @return the decoded status
+   * @throws net.nmoncho.faradn.transport.TransportException
+   *         if the USB printer cannot be opened or its status cannot be read
    */
   public PrinterStatus status() {
     try (UsbTransport transport = openTransport()) {
@@ -85,6 +105,10 @@ public class Printer {
    *        document to print
    * @param profile
    *        capabilities of the target printer
+   * @throws PrinterNotReadyException
+   *         if the pre-flight check reports the printer is not ready
+   * @throws net.nmoncho.faradn.transport.TransportException
+   *         if the payload cannot be written to the transport
    */
   public static void print(Transport transport, Document doc, PrinterProfile profile) {
     final byte[] payload = new EscPosRenderer(profile).render(doc.blocks(profile.dpi()));

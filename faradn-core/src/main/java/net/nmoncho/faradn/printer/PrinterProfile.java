@@ -8,6 +8,8 @@ import java.util.Optional;
  * respect: how wide the paper is, how many characters fit on a line, its
  * resolution, and whether it can cut. These are physical facts about the
  * device, not rendering preferences.
+ * <p>
+ * Profiles are immutable value objects and safe to share between threads.
  */
 public interface PrinterProfile {
 

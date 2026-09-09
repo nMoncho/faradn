@@ -10,6 +10,18 @@ import org.jsoup.Jsoup;
 import net.nmoncho.faradn.document.Block;
 import net.nmoncho.faradn.internal.html.BlockBuilder;
 
+/**
+ * A parsed HTML document, the entry point for rendering: {@link #from(String)}
+ * parses HTML and {@link #blocks()} projects it into the intermediate
+ * representation the renderer consumes.
+ * <p>
+ * <strong>Thread-safety:</strong> a {@code Document} is effectively immutable
+ * after parsing and {@link #blocks()} is a read-only projection, but sharing
+ * one
+ * across threads is not a supported guarantee. A document is cheap, so prefer
+ * one
+ * per rendering.
+ */
 public class Document {
 
   /**
@@ -73,6 +85,8 @@ public class Document {
    * @param f
    *        the HTML file to parse
    * @return a valid Document
+   * @throws PrintingException
+   *         if the file cannot be read
    */
   public static Document from(File f) {
     try {
