@@ -79,4 +79,39 @@ class PrinterProfileLoadTest {
     // The generic 'default' profile reports width "Unknown": it cannot render.
     assertTrue(PrinterProfile.load("default").isEmpty());
   }
+
+  @Test
+  void surfacesCapabilityFlagsFromTheDatabase() {
+    PrinterProfile profile = PrinterProfile.load("TM-T88V").orElseThrow();
+
+    assertTrue(profile.supportsBarcodes());
+    assertTrue(profile.supportsQrCode());
+    assertTrue(profile.supportsPdf417());
+    assertTrue(profile.supportsImages());
+  }
+
+  @Test
+  void rejectsProfilesWithInconsistentGeometry() {
+    // AF-240 / OCD-100 are ESC/POS customer displays (100-dot "width"); TSP800
+    // lists 42 Font A columns on an 833-dot line and NT-80-V-UL 12 columns on 576
+    // dots - character grids no real printer has. The verbatim escpos-printer-db
+    // import carries these, so the sanity check keeps them from silently
+    // corrupting layout.
+    assertTrue(PrinterProfile.load("AF-240").isEmpty());
+    assertTrue(PrinterProfile.load("OCD-100").isEmpty());
+    assertTrue(PrinterProfile.load("TSP800").isEmpty());
+    assertTrue(PrinterProfile.load("NT-80-V-UL").isEmpty());
+  }
+
+  @Test
+  void availableListsOnlyLoadableProfiles() {
+    List<String> available = PrinterProfile.available();
+
+    assertFalse(available.isEmpty());
+    assertTrue(available.contains("TM-T88V"), "the verified model is listed");
+    assertFalse(available.contains("TSP800"), "a geometry-inconsistent profile is not offered");
+    for (String name : available) {
+      assertTrue(PrinterProfile.load(name).isPresent(), name + " should resolve with load()");
+    }
+  }
 }

@@ -551,6 +551,7 @@ public final class EscPosRenderer implements Renderer {
   }
 
   private ComputedStyle renderImage(ByteArrayOutputStream out, ComputedStyle current, ImageBlock image) {
+    warnIfImageUnsupported();
     current = clearInlineStyle(out, current);
     current = applyAlignment(out, current, image.alignment());
     out.writeBytes(ImageRasterizer.raster(image.image().raster(), profile.dotsPerLine()));
@@ -558,11 +559,35 @@ public final class EscPosRenderer implements Renderer {
   }
 
   private ComputedStyle renderBarcode(ByteArrayOutputStream out, ComputedStyle current, Barcode barcode) {
+    warnIfBarcodeUnsupported(barcode.symbology());
     current = clearInlineStyle(out, current);
     current = applyAlignment(out, current, barcode.alignment());
     out.writeBytes(BarcodeCommands.encode(barcode.symbology(), barcode.data(), barcode.options()));
     out.writeBytes(PrintCommands.LINE_FEED.getCode());
     return current;
+  }
+
+  /**
+   * Logs a warning when a feature is emitted to a profile whose capability data
+   * says the printer does not support it. The bytes are still emitted (the
+   * profile data may be incomplete), but a device that truly lacks the feature
+   * prints garbage, so the mismatch is surfaced rather than hidden.
+   */
+  private void warnIfImageUnsupported() {
+    if (!profile.supportsImages()) {
+      log.warn("Profile [{}] does not report raster image support; the image may not print", profile.name());
+    }
+  }
+
+  private void warnIfBarcodeUnsupported(String symbology) {
+    final boolean supported = switch (symbology.toLowerCase()) {
+      case "qr", "qrcode" -> profile.supportsQrCode();
+      case "pdf417" -> profile.supportsPdf417();
+      default -> profile.supportsBarcodes();
+    };
+    if (!supported) {
+      log.warn("Profile [{}] does not report support for barcode [{}]; it may not print", profile.name(), symbology);
+    }
   }
 
   /**
@@ -647,8 +672,10 @@ public final class EscPosRenderer implements Renderer {
         enc.emit(segment.text());
       }
     } else if (content instanceof ImageBlock image) {
+      warnIfImageUnsupported();
       out.writeBytes(ImageRasterizer.raster(image.image().raster(), Math.max(1, areaWidthDots - placement.xDots())));
     } else if (content instanceof Barcode barcode) {
+      warnIfBarcodeUnsupported(barcode.symbology());
       out.writeBytes(BarcodeCommands.encode(barcode.symbology(), barcode.data(), barcode.options()));
     }
     return current;

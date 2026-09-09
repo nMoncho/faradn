@@ -65,6 +65,40 @@ public interface PrinterProfile {
   }
 
   /**
+   * Whether the printer can print 1D barcodes ({@code GS k}). The renderer still
+   * emits barcodes regardless; a {@code false} is a hint (logged as a warning)
+   * that the device may not decode them. Defaults to {@code true}; the capability
+   * database sets it per model.
+   */
+  default boolean supportsBarcodes() {
+    return true;
+  }
+
+  /**
+   * Whether the printer can print QR codes ({@code GS ( k}). See
+   * {@link #supportsBarcodes()}.
+   */
+  default boolean supportsQrCode() {
+    return true;
+  }
+
+  /**
+   * Whether the printer can print PDF417 codes ({@code GS ( k}). See
+   * {@link #supportsBarcodes()}.
+   */
+  default boolean supportsPdf417() {
+    return true;
+  }
+
+  /**
+   * Whether the printer can print raster images ({@code GS v 0}). See
+   * {@link #supportsBarcodes()}.
+   */
+  default boolean supportsImages() {
+    return true;
+  }
+
+  /**
    * The code page selected at reset (the initial {@code ESC t}); usually
    * slot&nbsp;0.
    */
@@ -89,6 +123,17 @@ public interface PrinterProfile {
    */
   static Optional<PrinterProfile> load(String name) {
     return CapabilityProfiles.find(name);
+  }
+
+  /**
+   * The names of every profile in the bundled capability database that loads to a
+   * usable profile (a plausible printable width and Font&nbsp;A column budget),
+   * sorted. Any name here resolves with {@link #load(String)}.
+   *
+   * @return the loadable profile names
+   */
+  static List<String> available() {
+    return CapabilityProfiles.available();
   }
 
   /**
