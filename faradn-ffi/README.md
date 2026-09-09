@@ -24,16 +24,33 @@ Produces, under `faradn-ffi/target/`:
 ## API
 
 ```c
-int  faradn_render(graal_isolatethread_t *thread,
-                   char *html, char *profile,
-                   char **out_buffer, long long *out_length);
-void faradn_free(graal_isolatethread_t *thread, char *buffer);
+int   faradn_render(graal_isolatethread_t *thread,
+                    char *html, char *profile,
+                    char **out_buffer, long long *out_length);
+char *faradn_last_error(graal_isolatethread_t *thread);
+char *faradn_version(graal_isolatethread_t *thread);
+void  faradn_free(graal_isolatethread_t *thread, char *buffer);
 ```
 
-`faradn_render` returns `0` on success and writes a freshly allocated buffer of
-ESC/POS bytes - and its length - to the out-parameters; release it with
-`faradn_free`. Strings are UTF-8 and null-terminated. A negative return means the
-render failed.
+`faradn_render` returns `0` (`FARADN_OK`) on success and writes a freshly
+allocated buffer of ESC/POS bytes - and its length - to the out-parameters;
+release it with `faradn_free`. On failure it returns one of these codes, which
+are a **stable part of the C ABI**:
+
+| Code | Name                          | Meaning                                                    |
+|------|-------------------------------|------------------------------------------------------------|
+| `0`  | `FARADN_OK`                   | success                                                    |
+| `-1` | `FARADN_ERR_UNKNOWN`          | an unexpected or unclassified failure                      |
+| `-2` | `FARADN_ERR_INVALID_ARGUMENT` | a null or invalid argument (null HTML or out-parameter)    |
+| `-3` | `FARADN_ERR_UNKNOWN_PROFILE`  | the named profile is not in the capability database        |
+| `-4` | `FARADN_ERR_RENDER`           | the HTML could not be parsed or rendered                   |
+| `-5` | `FARADN_ERR_OUT_OF_MEMORY`    | a memory allocation failed                                 |
+
+After a failure, `faradn_last_error` returns a human-readable message for the
+calling thread (or `NULL` after a success); it is valid until that thread's next
+call. `faradn_version` returns the library version. Both, like the render buffer,
+are freshly allocated C strings you release with `faradn_free`. All strings are
+UTF-8 and null-terminated.
 
 ## Isolate / threading contract
 

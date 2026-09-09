@@ -17,7 +17,11 @@ int main(void) {
 
   int rc = faradn_render(thread, (char *) html, (char *) "tm-t88v", &buffer, &length);
   if (rc != 0) {
-    fprintf(stderr, "faradn_render failed: %d\n", rc);
+    char *message = faradn_last_error(thread);
+    fprintf(stderr, "faradn_render failed: %d (%s)\n", rc, message ? message : "no detail");
+    if (message) {
+      faradn_free(thread, message);
+    }
     graal_tear_down_isolate(thread);
     return 1;
   }

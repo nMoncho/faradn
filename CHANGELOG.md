@@ -35,6 +35,11 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `UsbTransport.open(vendorId[, productId])` and enumerated with `Devices.list()`
   (returning neutral `UsbPrinter` values), so the public API no longer exposes
   `javax.usb` types.
+- **FFI error contract** - the shared library's `faradn_render` returns a stable
+  set of `FARADN_ERR_*` codes (invalid argument, unknown profile, render failure,
+  out of memory) instead of a bare `-1`, and adds `faradn_last_error` (a
+  per-thread message) and `faradn_version`. The transport-free render and
+  error-classification logic is now unit-tested.
 
 ### Notes
 
