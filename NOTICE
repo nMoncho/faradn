@@ -1,0 +1,18 @@
+Farad'n
+Copyright (c) 2026 Gustavo De Micheli
+
+This product is licensed under the MIT License (see LICENSE).
+
+Distributions of Farad'n that bundle their dependencies (the shaded
+faradn-cli jar and the native CLI binary / shared library) include third-party
+components under their own licenses. The full list is in THIRD-PARTY.txt;
+regenerate it with `mvn license:aggregate-add-third-party`.
+
+Components licensed under the Apache License, Version 2.0 include:
+
+  - com.typesafe:config
+  - info.picocli:picocli
+  - org.apache.commons:commons-lang3
+
+A copy of the Apache License, Version 2.0 is available at
+https://www.apache.org/licenses/LICENSE-2.0
