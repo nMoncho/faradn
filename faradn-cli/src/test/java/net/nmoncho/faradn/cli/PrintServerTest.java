@@ -1,6 +1,7 @@
 package net.nmoncho.faradn.cli;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -14,6 +15,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import net.nmoncho.faradn.Image;
+import net.nmoncho.faradn.ImagePolicy;
 import net.nmoncho.faradn.printer.PrinterProfile;
 import net.nmoncho.faradn.transport.DumpTransport;
 
@@ -24,6 +27,7 @@ public class PrintServerTest {
 
   @BeforeEach
   void setUp() throws IOException {
+    Image.policy(ImagePolicy.DATA_URIS_ONLY); // the server renders untrusted input
     transport = new DumpTransport();
     server = new PrintServer(0, PrinterProfile.load("TM-T88V").orElseThrow(), () -> transport);
     server.start();

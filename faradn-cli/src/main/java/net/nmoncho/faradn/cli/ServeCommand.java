@@ -1,9 +1,12 @@
 package net.nmoncho.faradn.cli;
 
+import java.net.InetSocketAddress;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Supplier;
 
+import net.nmoncho.faradn.Image;
+import net.nmoncho.faradn.ImagePolicy;
 import net.nmoncho.faradn.printer.PrinterProfile;
 import net.nmoncho.faradn.transport.Transport;
 

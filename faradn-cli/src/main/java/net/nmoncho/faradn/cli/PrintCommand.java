@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.concurrent.Callable;
 
 import net.nmoncho.faradn.Document;
+import net.nmoncho.faradn.Image;
+import net.nmoncho.faradn.ImagePolicy;
 import net.nmoncho.faradn.Printer;
 import net.nmoncho.faradn.printer.PrinterProfile;
 import net.nmoncho.faradn.printer.EscPosRenderer;
@@ -40,8 +42,14 @@ final class PrintCommand implements Callable<Integer> {
   @Option(names = "--dry-run", description = "render and write the ESC/POS bytes to stdout instead of printing")
   boolean dryRun;
 
+  @Option(names = "--allow-remote-images", description = "also fetch <img src> from http(s) URLs")
+  boolean allowRemoteImages;
+
   @Override
   public Integer call() {
+    // Local HTML is the operator's own file, so local file: images are allowed;
+    // http(s) stays opt-in.
+    Image.policy(allowRemoteImages ? ImagePolicy.allowingRemote() : ImagePolicy.LOCAL_FILES);
     try {
       final PrinterProfile prof = Profiles.byName(profile);
       for (File file : files) {
