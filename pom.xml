@@ -128,6 +128,19 @@
           </execution>
         </executions>
       </plugin>
+      <!-- Regenerate the bundled dependency attribution with
+           `mvn license:aggregate-add-third-party` (writes THIRD-PARTY.txt at the
+           repo root). Runtime deps only; test/provided are excluded. -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>license-maven-plugin</artifactId>
+        <version>${licensemojo.version}</version>
+        <configuration>
+          <outputDirectory>${maven.multiModuleProjectDirectory}</outputDirectory>
+          <thirdPartyFilename>THIRD-PARTY.txt</thirdPartyFilename>
+          <excludedScopes>test,provided</excludedScopes>
+        </configuration>
+      </plugin>
       <!-- Generates a CycloneDX SBOM (target/bom.json + bom.xml) for each module,
            for supply-chain review and scanning of the published artifacts. -->
       <plugin>
