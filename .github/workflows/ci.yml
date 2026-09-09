@@ -30,7 +30,7 @@ jobs:
         run: mvn -B --no-transfer-progress clean verify
 
   format:
-    name: formatter check
+    name: formatter & license check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -42,3 +42,5 @@ jobs:
           cache: maven
       - name: Verify formatting
         run: mvn -B --no-transfer-progress net.revelc.code.formatter:formatter-maven-plugin:validate
+      - name: Verify license headers
+        run: mvn -B --no-transfer-progress com.mycila:license-maven-plugin:check

@@ -58,6 +58,8 @@
     <shade.version>3.6.2</shade.version>
     <jar.version>3.5.0</jar.version>
     <cyclonedx.version>2.9.1</cyclonedx.version>
+    <licensemojo.version>2.5.0</licensemojo.version>
+    <licenseheader.version>4.6</licenseheader.version>
     <nativemaven.version>0.10.3</nativemaven.version>
     <!-- Must match the GraalVM used to build the native images. JDK 17 GraalVM
          is the 23.0.x line (17.0.9-graalce == 23.0.2); do not bump past 23.0.x
@@ -138,6 +140,42 @@
             <phase>package</phase>
             <goals>
               <goal>makeBom</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <!--
+        Enforces the SPDX license header on every source file. `check` runs in the
+        verify phase (and in CI), failing the build on a missing or altered header;
+        `mvn license:format` stamps new files. The header uses `//` line comments
+        (DOUBLESLASH_STYLE) on purpose: the eclipse formatter reformats block
+        comments but leaves line comments alone, so the two plugins never fight.
+      -->
+      <plugin>
+        <groupId>com.mycila</groupId>
+        <artifactId>license-maven-plugin</artifactId>
+        <version>${licenseheader.version}</version>
+        <configuration>
+          <licenseSets>
+            <licenseSet>
+              <header>${maven.multiModuleProjectDirectory}/license-header.txt</header>
+              <includes>
+                <include>src/main/java/**/*.java</include>
+                <include>src/test/java/**/*.java</include>
+                <include>src/main/java-templates/**/*.java</include>
+              </includes>
+            </licenseSet>
+          </licenseSets>
+          <mapping>
+            <java>DOUBLESLASH_STYLE</java>
+          </mapping>
+        </configuration>
+        <executions>
+          <execution>
+            <id>check-license-headers</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>check</goal>
             </goals>
           </execution>
         </executions>
