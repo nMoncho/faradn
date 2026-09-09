@@ -21,10 +21,12 @@ Releases. Pushing a `vX.Y.Z` tag runs
    ```
 3. Update `CHANGELOG.md`: rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD`,
    open a fresh empty `## [Unreleased]`, and add the compare/tag links at the bottom.
-4. Regenerate the dependency attribution if dependencies changed:
+4. Regenerate the dependency attribution if dependencies changed (full plugin
+   coordinates, because the short `license:` prefix belongs to the header plugin):
    ```console
-   $ ./mvnw license:aggregate-add-third-party   # rewrites THIRD-PARTY.txt
+   $ ./mvnw org.codehaus.mojo:license-maven-plugin:aggregate-add-third-party
    ```
+   This rewrites `THIRD-PARTY.txt` at the repo root.
 5. **For the 1.0.0 release only** (the SemVer stability commitment): remove the
    "Pre-1.0: the public API is not yet stable" lines from `README.md`,
    `CHANGELOG.md`, and `SECURITY.md`, and change `SECURITY.md`'s supported-versions

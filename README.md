@@ -71,6 +71,12 @@ $ faradn serve --port 8080 --host 192.168.1.50    # run the HTTP print server
 
 `print` also accepts `--profile` (a name from `faradn profiles`) and `--copies`.
 
+The native binaries on GitHub Releases are **not code-signed or notarized**, so the
+first run is blocked by the OS. On macOS, clear the quarantine flag with
+`xattr -d com.apple.quarantine ./faradn` (or right-click the binary and choose Open);
+on Windows, choose "More info" then "Run anyway" on the SmartScreen prompt. Each
+release also ships a `.sha256` you can verify before running.
+
 ## HTTP server
 
 `faradn serve` starts a small, dependency-free HTTP server:
@@ -137,26 +143,26 @@ golden-byte tests.
 
 **Tags**
 
-| Markup                            | Effect                                                                                                     |
-|-----------------------------------|------------------------------------------------------------------------------------------------------------|
-| `<b>`, `<strong>`                 | bold                                                                                                       |
-| `<u>`                             | underline                                                                                                  |
-| `<small>`                         | narrower Font B (`ESC M`) - more columns per line                                                          |
-| `<span>`                          | inline styling span - applies its inline CSS (below) to the enclosed text                                  |
-| `<h1>`                            | bold, double width and height                                                                              |
-| `<h2>`                            | bold, double height                                                                                        |
-| `<h3>`                            | bold                                                                                                       |
-| `<center>`                        | centered                                                                                                   |
-| `<p>`, `<div>`, headings          | paragraph (block) boundaries                                                                               |
-| `<ul>`, `<ol>`, `<li>`            | list items with `- ` / `1. ` markers (nested indents)                                                      |
-| `<pre>`                           | preformatted: whitespace and line breaks preserved                                                         |
-| `<br>`, `<hr>`                    | line break, horizontal rule                                                                                |
+| Markup                            | Effect                                                                                                                                    |
+|-----------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
+| `<b>`, `<strong>`                 | bold                                                                                                                                      |
+| `<u>`                             | underline                                                                                                                                 |
+| `<small>`                         | narrower Font B (`ESC M`) - more columns per line                                                                                         |
+| `<span>`                          | inline styling span - applies its inline CSS (below) to the enclosed text                                                                 |
+| `<h1>`                            | bold, double width and height                                                                                                             |
+| `<h2>`                            | bold, double height                                                                                                                       |
+| `<h3>`                            | bold                                                                                                                                      |
+| `<center>`                        | centered                                                                                                                                  |
+| `<p>`, `<div>`, headings          | paragraph (block) boundaries                                                                                                              |
+| `<ul>`, `<ol>`, `<li>`            | list items with `- ` / `1. ` markers (nested indents)                                                                                     |
+| `<pre>`                           | preformatted: whitespace and line breaks preserved                                                                                        |
+| `<br>`, `<hr>`                    | line break, horizontal rule                                                                                                               |
 | `<table>`, `<tr>`, `<td>`, `<th>` | character-grid table: content-sized columns, `colspan`, per-cell `text-align`, inline styling, bold `<th>`, optional grid borders (below) |
-| `<img>`                           | image (URL or Base64 `data:` URI; PNG, JPEG, BMP, WBMP)                                                    |
-| `<em>`, `<i>`                     | italic (`ESC 4`/`ESC 5`); printers without italic ignore the command                                       |
-| `<cash-drawer>`                   | pulses the cash-drawer kick connector (`ESC p`); `pin="2"` (default) or `pin="5"` (below)                  |
-| `<cut>`                           | cuts the paper (`GS V`); `mode="partial"` (default) or `mode="full"` (below)                               |
-| `<feed>`                          | feeds blank lines (`ESC d`); `lines="n"` (default `1`, below)                                              |
+| `<img>`                           | image (URL or Base64 `data:` URI; PNG, JPEG, BMP, WBMP)                                                                                   |
+| `<em>`, `<i>`                     | italic (`ESC 4`/`ESC 5`); printers without italic ignore the command                                                                      |
+| `<cash-drawer>`                   | pulses the cash-drawer kick connector (`ESC p`); `pin="2"` (default) or `pin="5"` (below)                                                 |
+| `<cut>`                           | cuts the paper (`GS V`); `mode="partial"` (default) or `mode="full"` (below)                                                              |
+| `<feed>`                          | feeds blank lines (`ESC d`); `lines="n"` (default `1`, below)                                                                             |
 
 **Inline CSS**
 
@@ -188,7 +194,7 @@ the tag defaults:
   are ignored. As in CSS, the shorthand resets the components it omits (so `font: 2em font-a` is
   not bold even on a `<b>`).
 - `background` / `background-color`: inverts the text (white-on-black, ESC/POS `GS B`). On a block
-  it becomes a **full-width reverse-video section header** — the whole line is inked into a solid
+  it becomes a **full-width reverse-video section header** - the whole line is inked into a solid
   bar and the label is positioned by `text-align` (see below); on an inline `<span>` it inverts
   just that word. A monochrome printer has only black ink, so *any* non-white colour inks the line
   (`black`, `#000`, `navy`, `#c00`, …); an explicit `white`/`transparent` turns it back off.
@@ -203,7 +209,7 @@ carries a `double`. `border: none` / `border="0"` / absent means no border. Colo
 
 Three things can be bordered:
 
-- **Tables** — the HTML `border` attribute or CSS `border` on a `<table>` frames it and draws
+- **Tables** - the HTML `border` attribute or CSS `border` on a `<table>` frames it and draws
   separators between every cell (the border spends `columnCount + 1` columns of width). A
   `colspan` cell merges correctly, and the grid joins around it pick the right glyph (`┴`/`┬`/`─`)
   so the lines meet cleanly.
@@ -213,9 +219,9 @@ Three things can be bordered:
   <table style="border-style: double">…</table>   <!-- double grid -->
   ```
 
-- **Paragraph rules and boxes** — `border-top`/`border-bottom` on a `<p>`/`<div>` draws a
-  full-width rule above/below (a line under a total). Add the left/right sides — or the `border`
-  shorthand (all four) — to draw a **full box**: corners, `│` side rails, and content wrapped to
+- **Paragraph rules and boxes** - `border-top`/`border-bottom` on a `<p>`/`<div>` draws a
+  full-width rule above/below (a line under a total). Add the left/right sides - or the `border`
+  shorthand (all four) - to draw a **full box**: corners, `│` side rails, and content wrapped to
   `columns − 2` and aligned inside per `text-align`.
 
   ```html
@@ -223,7 +229,7 @@ Three things can be bordered:
   <p style="border: 1px solid">Keep this receipt for any returns.</p>
   ```
 
-- **Grouped blocks** — a bordered `<div>` wrapping **several** blocks frames the whole group in one
+- **Grouped blocks** - a bordered `<div>` wrapping **several** blocks frames the whole group in one
   box. Paragraph children are wrapped inside the side rails; other block types (a table, an image)
   render between the top and bottom edges without rails, and the box is full paper width.
 
@@ -235,7 +241,7 @@ Three things can be bordered:
   ```
 
 **Leader lines.** A `float: right` span pushes its content to the right edge of the line, with the
-gap between the label and the value filled — the `Subtotal········9,00` receipt idiom. The label
+gap between the label and the value filled - the `Subtotal········9,00` receipt idiom. The label
 flows on the left; the span is the value. The fill is a space by default, or the `data-leader`
 character (e.g. dots):
 
@@ -245,14 +251,14 @@ character (e.g. dots):
 ```
 
 Both sides keep their inline styling (`<b>`, `font-size`, …). If the two don't fit on one line, the
-value drops to its own right-aligned line. This is a single-line feature — it's the useful slice of
+value drops to its own right-aligned line. This is a single-line feature - it's the useful slice of
 CSS `float`, not full float layout (`float: left` and wrap-around aren't supported).
 
 **Indentation.** `margin-left`/`margin-right` (and `padding-left`/`padding-right`) on a `<p>`/`<div>`
 indent the block: each line is padded and the text wraps within the narrower width. `text-indent`
 offsets the first line (positive indents it, negative hangs the wrapped lines). Indents are measured
 in **character columns**, so use `ch` or a plain number (`margin-left: 4ch`); `px`/`mm`/`%` aren't
-mapped for indentation. Wrapped **list items** hang automatically — continuation lines align under
+mapped for indentation. Wrapped **list items** hang automatically - continuation lines align under
 the text, not the marker:
 
 ```
@@ -263,7 +269,7 @@ the text, not the marker:
 **Vertical spacing (margin & padding).** `margin-top`/`margin-bottom` and `padding-top`/
 `padding-bottom` on a `<p>`/`<div>` add blank space above/below the block, in `px` (1 px = 1 dot),
 `mm`, or `cm`. The `margin`/`padding` shorthands work too (`margin: 40px`, etc.). As in CSS, **margin
-is outside the border and padding is inside it** — with a border the difference shows: margin feeds
+is outside the border and padding is inside it** - with a border the difference shows: margin feeds
 blank paper outside the box (`ESC J`, dot-precise), while padding adds blank framed lines inside it
 (so the side rails stay unbroken, rounded to whole lines).
 
@@ -277,7 +283,7 @@ CSS-collapsed); a single margin is capped at 255 dots. Horizontal `margin`/`padd
 the column indent above (use `ch`); vertical margins on tables/images aren't mapped yet.
 
 **Section headers.** A dark `background` on a block turns the whole line into a full-width
-reverse-video bar (white-on-black) — the classic receipt section divider. The line is inked edge to
+reverse-video bar (white-on-black) - the classic receipt section divider. The line is inked edge to
 edge (no white gaps) and the label sits where `text-align` puts it:
 
 ```html
@@ -287,7 +293,7 @@ edge (no white gaps) and the label sits where `text-align` puts it:
 
 Any non-white colour inks the bar (there's only black ink); a `white`/`transparent` background turns
 it off. On an inline `<span>` the same `background` inverts just that word instead of filling the
-line — `Order is <span style="background: black">READY</span>` prints only `READY` in reverse video.
+line - `Order is <span style="background: black">READY</span>` prints only `READY` in reverse video.
 
 **Barcodes**
 
@@ -369,7 +375,7 @@ a region: each child is drawn at its `left`/`top`, and the whole area prints at 
   area is clipped by the printer, so give the container enough height.
 - `transform: rotate(90deg | 180deg | 270deg)` on the container rotates the whole region
   (mapped to the ESC/POS print direction); other angles snap to the nearest right angle.
-- `transform: rotate(…)` on a **positioned child** rotates just that placement — a caption running
+- `transform: rotate(…)` on a **positioned child** rotates just that placement - a caption running
   down the side of an otherwise-upright coupon (a serial, a `VOID` stamp). The renderer re-issues
   `ESC T` for that child and restores the region's direction for the following ones. The child's
   upright `left`/`top` is mapped into the rotated print direction's axes (which anchor at a
@@ -428,15 +434,15 @@ Add this line to the `<head>` of any print job and open it in a browser:
 <link rel="stylesheet" href="docs/faradn-preview.css">
 ```
 
-- **[`docs/faradn-preview.css`](docs/faradn-preview.css)** — the stylesheet. Two
-  knobs at the top: `--columns` (paper width in characters — `42` ≈ 80mm, `32` ≈
+- **[`docs/faradn-preview.css`](docs/faradn-preview.css)** - the stylesheet. Two
+  knobs at the top: `--columns` (paper width in characters - `42` ≈ 80mm, `32` ≈
   58mm) and `--font-size`.
-- **[`docs/preview-demo.html`](docs/preview-demo.html)** — a sample receipt that
+- **[`docs/preview-demo.html`](docs/preview-demo.html)** - a sample receipt that
   exercises every supported feature; open it to see the whole vocabulary at once.
 
 This is an approximation, not an emulator: word-wrap points, exact column widths and
 image dithering are the browser's, not the printer's. It conveys the feel and catches
-layout mistakes early, but is not byte-accurate — the printer is the source of truth.
+layout mistakes early, but is not byte-accurate - the printer is the source of truth.
 
 ## Supported Devices
 
@@ -480,7 +486,12 @@ If you have a printer to verify, please add it to the matrix and see
 ```console
 $ ./mvnw verify                                    # build and test everything
 $ ./mvnw -pl faradn-cli -am -Pnative package       # build the native binary (needs GraalVM)
+$ ./mvnw license:format                            # stamp SPDX headers on new source files
 ```
+
+`./mvnw verify` enforces both the code format (Eclipse formatter) and an SPDX
+license header on every source file; CI fails on a violation. Run
+`./mvnw formatter:format license:format` before committing to fix both.
 
 On **Apple Silicon**, usb4java 1.3.0 ships no `darwin-aarch64` native on Maven
 Central. Build/obtain that `libusb4java` jar once and install it locally:
