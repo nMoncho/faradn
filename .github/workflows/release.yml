@@ -56,6 +56,11 @@ jobs:
             bin: faradn
             lib: libfaradn.so
             libasset: libfaradn-linux-x86_64.so
+          - os: ubuntu-24.04-arm
+            asset: faradn-linux-aarch64
+            bin: faradn
+            lib: libfaradn.so
+            libasset: libfaradn-linux-aarch64.so
           - os: macos-26-intel
             asset: faradn-macos-x86_64
             bin: faradn
