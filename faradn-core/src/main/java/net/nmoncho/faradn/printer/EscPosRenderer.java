@@ -99,8 +99,13 @@ public final class EscPosRenderer implements Renderer {
    * @param blocks
    *        the intermediate representation, in reading order
    * @return the ESC/POS byte stream to send to the printer
+   * @throws net.nmoncho.faradn.UnsupportedBlockException
+   *         if a block has no renderer
    */
+  @Override
   public byte[] render(List<Block> blocks) {
+    log.debug("Rendering {} block(s) for profile [{}] (default code page {})", blocks.size(), profile.name(),
+        profile.codePage().id());
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
 
     out.writeBytes(MiscellaneousCommands.INITIALIZE.getCode());
@@ -122,7 +127,9 @@ public final class EscPosRenderer implements Renderer {
     final boolean endsWithCut = !blocks.isEmpty() && blocks.get(blocks.size() - 1) instanceof Cut;
     endOfJob(out, endsWithCut);
 
-    return out.toByteArray();
+    final byte[] job = out.toByteArray();
+    log.debug("Rendered {} block(s) to {} ESC/POS byte(s)", blocks.size(), job.length);
+    return job;
   }
 
   /**

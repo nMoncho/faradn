@@ -6,6 +6,9 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import net.nmoncho.faradn.printer.escpos.Code;
 import net.nmoncho.faradn.printer.escpos.commands.StatusCommands;
 
@@ -20,6 +23,8 @@ public final class NetworkTransport implements Transport {
 
   private static final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 3_000;
   private static final int DEFAULT_STATUS_TIMEOUT_MILLIS = 3_000;
+
+  private static final Logger log = LoggerFactory.getLogger(NetworkTransport.class);
 
   private final Socket socket;
   private final OutputStream out;
@@ -51,6 +56,7 @@ public final class NetworkTransport implements Transport {
     try {
       out.write(payload);
       out.flush();
+      log.debug("Wrote {} byte(s) to network printer", payload.length);
     } catch (IOException e) {
       throw new TransportException("Failed to write to network printer", e);
     }

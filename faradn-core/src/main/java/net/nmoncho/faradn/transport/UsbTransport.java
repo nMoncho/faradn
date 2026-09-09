@@ -7,6 +7,9 @@ import javax.usb.UsbInterface;
 import javax.usb.UsbIrp;
 import javax.usb.UsbPipe;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import net.nmoncho.faradn.internal.usb.UsbDevices;
 import net.nmoncho.faradn.printer.escpos.Code;
 import net.nmoncho.faradn.printer.escpos.commands.StatusCommands;
@@ -26,6 +29,8 @@ public final class UsbTransport implements Transport {
 
   /** Default bound on a single {@code DLE EOT} status read, in milliseconds. */
   public static final int DEFAULT_STATUS_TIMEOUT_MILLIS = 2000;
+
+  private static final Logger log = LoggerFactory.getLogger(UsbTransport.class);
 
   private final UsbInterface iface;
   private final UsbPipe outPipe;
@@ -126,6 +131,7 @@ public final class UsbTransport implements Transport {
   public void write(byte[] payload) {
     try {
       outPipe.syncSubmit(payload);
+      log.debug("Wrote {} byte(s) to USB printer", payload.length);
     } catch (UsbException e) {
       throw new TransportException("USB write failed", e);
     }
