@@ -26,6 +26,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (`lines="n"`) elements cut the paper or feed blank lines at an explicit point,
   so a single job can hold several receipts. A trailing `<cut>` replaces the
   automatic end-of-job cut.
+- **Module name** - the published `faradn-core` jar declares a stable JPMS module
+  name, `net.nmoncho.faradn`, via `Automatic-Module-Name`, so consumers on the
+  module path can `requires net.nmoncho.faradn;` against a name that will not
+  change between releases.
 
 ### Notes
 

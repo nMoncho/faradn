@@ -63,4 +63,27 @@
     </dependency>
   </dependencies>
 
+  <build>
+    <plugins>
+      <!--
+        Claim a stable JPMS module name for the published library. The public API
+        exposes javax.usb types from a non-modular jar, so a full module-info would
+        have to `requires` filename-derived automatic modules; until those deps
+        modularize, an Automatic-Module-Name is the stable, low-risk commitment.
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>${jar.version}</version>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <Automatic-Module-Name>net.nmoncho.faradn</Automatic-Module-Name>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
 </project>
