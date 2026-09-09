@@ -11,6 +11,9 @@ import java.util.function.Supplier;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import net.nmoncho.faradn.Document;
 import net.nmoncho.faradn.printer.Devices;
 import net.nmoncho.faradn.printer.UsbPrinter;
@@ -32,20 +35,53 @@ import net.nmoncho.faradn.transport.TransportException;
  */
 public final class PrintServer {
 
+  private static final Logger log = LoggerFactory.getLogger(PrintServer.class);
+
   private static final int MAX_BODY_BYTES = 5 * 1024 * 1024;
+
+  /**
+   * The default bind address: loopback only, so the no-auth server is not
+   * exposed.
+   */
+  public static final String DEFAULT_BIND = "127.0.0.1";
+
+  static {
+    // Bound how long a single request/response may take so a slow client
+    // (slowloris) cannot tie up the small worker pool indefinitely. Set before
+    // the first HttpServer.create so the JDK server reads them.
+    setIfAbsent("sun.net.httpserver.maxReqTime", "20");
+    setIfAbsent("sun.net.httpserver.maxRspTime", "20");
+  }
+
+  private static void setIfAbsent(String key, String value) {
+    if (System.getProperty(key) == null) {
+      System.setProperty(key, value);
+    }
+  }
 
   private final HttpServer http;
   private final PrinterProfile profile;
   private final Supplier<Transport> transports;
 
+  /** Binds to {@link #DEFAULT_BIND} (loopback). */
   public PrintServer(int port, PrinterProfile profile, Supplier<Transport> transports) throws IOException {
+    this(DEFAULT_BIND, port, profile, transports);
+  }
+
+  public PrintServer(String bindHost, int port, PrinterProfile profile, Supplier<Transport> transports)
+      throws IOException {
     this.profile = profile;
     this.transports = transports;
-    this.http = HttpServer.create(new InetSocketAddress(port), 0);
+    this.http = HttpServer.create(new InetSocketAddress(bindHost, port), 0);
     this.http.createContext("/print", exchange -> handle(exchange, this::print));
     this.http.createContext("/printers", exchange -> handle(exchange, this::printers));
     this.http.createContext("/health", exchange -> handle(exchange, this::health));
     this.http.setExecutor(Executors.newFixedThreadPool(4));
+  }
+
+  /** The actual bound address (host and port). */
+  public InetSocketAddress address() {
+    return http.getAddress();
   }
 
   public void start() {
@@ -69,7 +105,10 @@ public final class PrintServer {
     try {
       response = route.handle(exchange);
     } catch (Exception e) {
-      response = new Response(500, json("status", "error", "message", String.valueOf(e.getMessage())));
+      // Log the detail server-side; return a generic body so the response cannot
+      // become an SSRF/error oracle that leaks internal targets or paths.
+      log.warn("Request to {} failed", exchange.getRequestURI(), e);
+      response = new Response(500, json("status", "error", "message", "internal error"));
     }
     respond(exchange, response);
   }

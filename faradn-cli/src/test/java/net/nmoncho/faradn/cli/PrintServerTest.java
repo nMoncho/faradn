@@ -36,6 +36,24 @@ public class PrintServerTest {
   @AfterEach
   void tearDown() {
     server.stop();
+    Image.policy(ImagePolicy.DATA_URIS_ONLY);
+  }
+
+  @Test
+  void bindsToLoopbackByDefault() {
+    assertTrue(server.address().getAddress().isLoopbackAddress(),
+        "the no-auth server must not be exposed on all interfaces by default");
+  }
+
+  @Test
+  void remoteImageIsRefusedAndTheErrorIsGeneric() throws IOException {
+    // An attacker-supplied remote <img src> must not be fetched (SSRF), and the
+    // 500 body must not leak the target URL back to the client.
+    Response response = post("/print", "<img src=\"http://169.254.169.254/latest/meta-data/\">");
+
+    assertEquals(500, response.status());
+    assertTrue(response.body().contains("internal error"), response.body());
+    assertFalse(response.body().contains("169.254.169.254"), "the response must not echo the SSRF target");
   }
 
   @Test
