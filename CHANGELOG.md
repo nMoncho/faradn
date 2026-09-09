@@ -45,6 +45,14 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   thrown exceptions are documented on the public types (`Printer`, `Transport`,
   `PrinterProfile`, `EscPosRenderer`, `Document`); and the print path emits SLF4J
   debug logging at renderer entry/exit and on transport writes.
+- **Device support** - capability profiles are validated on load (entries with
+  physically inconsistent width/column data are rejected rather than silently
+  corrupting layout); the database capability flags are surfaced on
+  `PrinterProfile` (`supportsBarcodes`/`supportsQrCode`/`supportsPdf417`/
+  `supportsImages`) and the renderer warns when a job uses a feature the profile
+  reports it lacks; loadable profiles are discoverable via
+  `PrinterProfile.available()` and the new `faradn profiles` command; and the
+  README device matrix distinguishes verified from best-effort support.
 
 ### Notes
 

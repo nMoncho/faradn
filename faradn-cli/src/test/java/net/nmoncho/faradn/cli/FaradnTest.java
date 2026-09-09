@@ -18,4 +18,9 @@ class FaradnTest {
     assertTrue(version[0].startsWith("faradn "), "version should be prefixed with the command name");
     assertFalse(version[0].contains("$"), "the ${project.version} placeholder was not filtered");
   }
+
+  @Test
+  void profilesSubcommandRuns() {
+    assertEquals(0, new CommandLine(new Faradn()).execute("profiles"));
+  }
 }

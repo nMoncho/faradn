@@ -58,17 +58,18 @@ byte[] escpos = new EscPosRenderer(TmT88vProfile.INSTANCE).render(blocks);
 ## Command line
 
 The `faradn` binary (a native executable, or `java -jar faradn-cli.jar`) has
-three modes:
+these modes:
 
 ```console
 $ faradn list                                     # connected USB printers
+$ faradn profiles                                 # available printer profiles
 $ faradn print receipt.html --printer 0x04b8      # print over USB
 $ faradn print receipt.html --host 192.168.1.50   # print over Ethernet (TCP 9100)
 $ faradn print receipt.html --dry-run > job.bin   # render to ESC/POS bytes
 $ faradn serve --port 8080 --host 192.168.1.50    # run the HTTP print server
 ```
 
-`print` also accepts `--profile` and `--copies`.
+`print` also accepts `--profile` (a name from `faradn profiles`) and `--copies`.
 
 ## HTTP server
 
@@ -439,16 +440,33 @@ layout mistakes early, but is not byte-accurate — the printer is the source of
 
 ## Supported Devices
 
-This project aims to support as many devices as possible, not only ESC/POS
-(i.e. Epson) printers, but other thermal printers such as Brother, Zebra, among
-others. If you've access to a printer that's not listed below, and would like
-to contribute, please see [CONTRIBUTING.md](CONTRIBUTING.md).
+Farad'n targets **ESC/POS (Epson-compatible) receipt printers**. The renderer is
+profile-driven: it reads the target's printable width, columns, resolution, fonts,
+code pages, and features from the bundled capability database
+([escpos-printer-db](https://github.com/receipt-print-hq/escpos-printer-db)) and
+adapts its output. Support comes in two tiers:
+
+- **Verified** - checked against the device spec and on real hardware. The Epson
+  **TM-T88V** is the verified reference model.
+- **Best-effort** - any other ESC/POS model whose profile loads from the database.
+  Profiles are geometry-checked (entries with impossible width/column data are
+  rejected), but these models are not hardware-verified, so treat them as
+  likely-compatible rather than guaranteed. List the loadable profiles with
+  `faradn profiles` (or `PrinterProfile.available()`) and select one with
+  `print --profile <name>`.
+
+If you have a printer to verify, please add it to the matrix and see
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
+> **Non-ESC/POS printers** (Brother, Zebra/ZPL, Star, TSPL, and so on) are not
+> supported yet: they speak different page-description languages. Multi-vendor
+> backends are a roadmap item (see `PLAN_LANGUAGES.md`), not part of this release.
 
 ### Capabilities per Device
 
-| Brand    | Model           | Basic Styles       | Images             | Tables             | Barcodes           |
-|----------|-----------------|--------------------|--------------------|--------------------|--------------------|
-| Epson    | TM-T88V         | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Brand | Model   | Tier     | Basic Styles       | Images             | Tables             | Barcodes           |
+|-------|---------|----------|--------------------|--------------------|--------------------|--------------------|
+| Epson | TM-T88V | Verified | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 
 **Basic Styles**
 
