@@ -57,6 +57,7 @@
     <surefire.version>3.5.6</surefire.version>
     <shade.version>3.6.2</shade.version>
     <jar.version>3.5.0</jar.version>
+    <cyclonedx.version>2.9.1</cyclonedx.version>
     <nativemaven.version>0.10.3</nativemaven.version>
     <!-- Must match the GraalVM used to build the native images. JDK 17 GraalVM
          is the 23.0.x line (17.0.9-graalce == 23.0.2); do not bump past 23.0.x
@@ -122,6 +123,22 @@
                 <dependencyConvergence/>
               </rules>
             </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Generates a CycloneDX SBOM (target/bom.json + bom.xml) for each module,
+           for supply-chain review and scanning of the published artifacts. -->
+      <plugin>
+        <groupId>org.cyclonedx</groupId>
+        <artifactId>cyclonedx-maven-plugin</artifactId>
+        <version>${cyclonedx.version}</version>
+        <executions>
+          <execution>
+            <id>sbom</id>
+            <phase>package</phase>
+            <goals>
+              <goal>makeBom</goal>
+            </goals>
           </execution>
         </executions>
       </plugin>
