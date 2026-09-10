@@ -6,7 +6,7 @@
  * roughly how the receipt will come out: a narrow monospace paper roll, with
  * every supported tag mapped to the visual the ESC/POS renderer produces.
  *
- * Usage — add one line to the <head> of your print job (or paste the file into
+ * Usage - add one line to the <head> of your print job (or paste the file into
  * a <style> block):
  *
  *     <link rel="stylesheet" href="faradn-preview.css">
@@ -69,7 +69,7 @@ body {
   position: relative;
 }
 
-/* Torn top and bottom edges — purely decorative paper triangles standing out
+/* Torn top and bottom edges - purely decorative paper triangles standing out
  * over the desk. If they render oddly in some browser, the receipt itself is
  * unaffected; delete this block to get clean straight edges. */
 body::before,
@@ -95,7 +95,7 @@ i, em                                         { font-style: italic; }
 u                                             { text-decoration: underline; }
 
 /* <span> just carries inline CSS (font-weight / font-style / text-decoration /
- * text-align / font-family) — the browser already applies those, nothing to do. */
+ * text-align / font-family) - the browser already applies those, nothing to do. */
 
 /* Font selection. On the printer, Font B (and C) are narrower faces that fit
  * more characters per line; <small> selects Font B. We keep everything
@@ -133,19 +133,19 @@ h3 { font-size: 1em; }                        /* bold only */
 p, div { margin: 0 0 .5em; }
 p:last-child, div:last-child { margin-bottom: 0; }
 
-/* <center> and CSS text-align — the printer justifies the whole line. */
+/* <center> and CSS text-align - the printer justifies the whole line. */
 center { display: block; text-align: center; }
 
-/* <pre> — preformatted, whitespace preserved on the same grid. */
+/* <pre> - preformatted, whitespace preserved on the same grid. */
 pre {
   margin: .4em 0;
   white-space: pre;
   overflow-x: auto;                           /* never widen the paper */
 }
 
-/* <br> — a plain line break, browser default. */
+/* <br> - a plain line break, browser default. */
 
-/* <hr> — Farad'n prints a full-width row of dashes; a dashed rule matches it. */
+/* <hr> - Farad'n prints a full-width row of dashes; a dashed rule matches it. */
 hr {
   border: none;
   border-top: 1px dashed var(--ink);
@@ -200,7 +200,7 @@ img {
 }
 
 /* -------------------------------------------------------------------------
- * <bar-code> — Farad'n's custom element. In a browser it is an unknown inline
+ * <bar-code> - Farad'n's custom element. In a browser it is an unknown inline
  * element showing its own text, so we dress it up: a striped bar (1D) or a
  * code block (2D: qr / pdf417) with the data as a caption underneath.
  * Works for both <bar-code>…</bar-code> and <div class="bar-code">.

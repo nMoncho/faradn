@@ -14,7 +14,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Layout** - word wrapping to the printer's column budget, code-page selection
   (`ESC t`), images rasterized to `GS v 0` with Floyd–Steinberg dithering, 1D
   barcodes (`GS k`) and QR/PDF417 (`GS ( k`), and character-grid `<table>` layout.
-- **Profiles & code pages** - `PrinterProfile` / `TmT88vProfile` and `CodePage`.
+- **Profiles & code pages** - `PrinterProfile`, loaded by device name from the
+  bundled escpos-printer-db capability database, and `CodePage`.
 - **Transports** - `UsbTransport`, `NetworkTransport` (raw TCP 9100) and
   `DumpTransport`, with real-time status (`DLE EOT`) and a pre-flight readiness
   check that refuses to print to an offline / out-of-paper / cover-open printer.
@@ -73,6 +74,20 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the GitHub release. The release workflow builds native binaries for Linux
   x86-64/aarch64, macOS, and Windows; a CI `native` job smoke-tests the CLI and
   FFI builds on every push.
+- **Testing & quality gates** - JaCoCo coverage reporting and a SpotBugs static
+  analysis gate (`check` on the verify phase, and in CI) now run across all
+  modules. New tests cover Floyd-Steinberg dithering of mid-tones, gradients, and
+  colour luminance (not just solid black/white); the HTTP server's 413, 409, and
+  500 responses; the FFI render and error-code path; and a fuzz/property suite for
+  untrusted input (random HTML, corrupt PNG bytes, and malformed `data:` URIs)
+  that asserts malformed input fails as a domain exception rather than a crash.
+
+### Fixed
+
+- The PNG decoder now skips the signature and unknown chunks with `skipNBytes`,
+  so a truncated stream is rejected cleanly instead of being read as if complete.
+- `Image.raster()` returns the memoized pixels from inside its synchronized block,
+  removing an inconsistent-synchronization data race on lazy image decoding.
 
 ### Notes
 
