@@ -21,6 +21,31 @@ native binary. Pre-1.0: the public API is not yet stable.
 - Java 17+ (to use the library)
 - GraalVM (only to build the native binary)
 
+## Installation
+
+`faradn-core` is published to Maven Central from the 1.0.0 release onward. Add it
+to your build, using the latest release for `VERSION`:
+
+Maven:
+
+```xml
+<dependency>
+  <groupId>net.nmoncho</groupId>
+  <artifactId>faradn-core</artifactId>
+  <version>VERSION</version>
+</dependency>
+```
+
+Gradle (Kotlin DSL):
+
+```kotlin
+implementation("net.nmoncho:faradn-core:VERSION")
+```
+
+For building `faradn-core` from source (see [Building](#building)).
+The `faradn` CLI and the FFI shared library are not on  Maven Central; download
+them from the [GitHub Releases](https://github.com/nMoncho/faradn/releases) page.
+
 ## Library usage
 
 Parse an HTML document and send it to a printer:
@@ -52,7 +77,7 @@ straight to ESC/POS bytes:
 
 ```java
 List<Block> blocks = doc.blocks();
-byte[] escpos = new EscPosRenderer(TmT88vProfile.INSTANCE).render(blocks);
+byte[] escpos = new EscPosRenderer(profile).render(blocks);
 ```
 
 ## Command line
@@ -131,9 +156,10 @@ golden-byte tests.
 
 ### Modules
 
-- **`faradn-core`**: the library (published to Maven Central). It carries the
-  stable JPMS module name `net.nmoncho.faradn` (via `Automatic-Module-Name`), so a
-  modular consumer can add `requires net.nmoncho.faradn;` to its own `module-info`.
+- **`faradn-core`**: the library, published to Maven Central from the 1.0.0
+  release onward (see [Installation](#installation)). It carries the stable JPMS
+  module name `net.nmoncho.faradn` (via `Automatic-Module-Name`), so a modular
+  consumer can add `requires net.nmoncho.faradn;` to its own `module-info`.
 - **`faradn-cli`**: the command line and HTTP server, shipped as a GraalVM
   native binary and attached to GitHub Releases.
 - **`faradn-ffi`**: a native library that can be used with other languages,
