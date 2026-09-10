@@ -118,6 +118,18 @@ public interface PrinterProfile {
   List<CodePage> codePages();
 
   /**
+   * The command language this profile renders with, which selects the
+   * {@link Renderer} (see {@link Renderers#forProfile(PrinterProfile)}). Defaults
+   * to {@link PrinterLanguage#ESC_POS} so every existing profile - and every
+   * {@link #of} profile - is unchanged. The protocol is arguably a device fact
+   * alongside the physical capabilities above, and a non-ESC/POS device (a Star
+   * printer) overrides it.
+   */
+  default PrinterLanguage language() {
+    return PrinterLanguage.ESC_POS;
+  }
+
+  /**
    * Loads a printer profile from the bundled escpos-printer-db capability
    * database, matched case-insensitively by device name (the database key or
    * its {@code name} field, e.g. {@code "TM-T88V"}).
@@ -162,11 +174,43 @@ public interface PrinterProfile {
    */
   static PrinterProfile of(String name, int dotsPerLine, List<Font> fonts, int dpi,
       boolean supportsCut, List<CodePage> codePages) {
+    return of(name, dotsPerLine, fonts, dpi, supportsCut, codePages, PrinterLanguage.ESC_POS);
+  }
+
+  /**
+   * Helper method to create a {@link PrinterProfile} on the fly for a specific
+   * command language (see {@link #language()}). Equivalent to
+   * {@link #of(String, int, List, int, boolean, List)} but with an explicit
+   * language, so a Star profile can be minted without the capability database.
+   *
+   * @param name
+   *        Human-readable profile name, e.g. {@code "Star TSP143IV"}
+   * @param dotsPerLine
+   *        Printable width in dots
+   * @param fonts
+   *        the printer's fonts, ascending by slot (must be non-empty and
+   *        include slot&nbsp;0, Font&nbsp;A)
+   * @param dpi
+   *        Print resolution in dots per inch
+   * @param supportsCut
+   *        Whether the printer has an autocutter
+   * @param codePages
+   *        the code pages the printer can select, preference order (must be
+   *        non-empty)
+   * @param language
+   *        the command language the profile renders with
+   * @return a profile backed by the given values
+   */
+  static PrinterProfile of(String name, int dotsPerLine, List<Font> fonts, int dpi,
+      boolean supportsCut, List<CodePage> codePages, PrinterLanguage language) {
     if (codePages == null || codePages.isEmpty()) {
       throw new IllegalArgumentException("codePages must not be empty");
     }
     if (fonts == null || fonts.isEmpty()) {
       throw new IllegalArgumentException("fonts must not be empty");
+    }
+    if (language == null) {
+      throw new IllegalArgumentException("language must not be null");
     }
 
     final List<CodePage> pages = List.copyOf(codePages);
@@ -208,6 +252,11 @@ public interface PrinterProfile {
       @Override
       public List<CodePage> codePages() {
         return List.copyOf(pages);
+      }
+
+      @Override
+      public PrinterLanguage language() {
+        return language;
       }
     };
   }

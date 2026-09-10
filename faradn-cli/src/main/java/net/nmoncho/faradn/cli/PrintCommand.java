@@ -15,7 +15,7 @@ import net.nmoncho.faradn.Image;
 import net.nmoncho.faradn.ImagePolicy;
 import net.nmoncho.faradn.Printer;
 import net.nmoncho.faradn.printer.PrinterProfile;
-import net.nmoncho.faradn.printer.EscPosRenderer;
+import net.nmoncho.faradn.printer.Renderers;
 import net.nmoncho.faradn.transport.Transport;
 
 import picocli.CommandLine.Command;
@@ -60,7 +60,7 @@ final class PrintCommand implements Callable<Integer> {
       for (File file : files) {
         final Document document = Document.from(file);
         if (dryRun) {
-          final byte[] payload = new EscPosRenderer(prof).render(document.blocks(prof.dpi()));
+          final byte[] payload = Renderers.forProfile(prof).render(document.blocks(prof.dpi()));
           for (int i = 0; i < copies; i++) {
             System.out.write(payload);
           }

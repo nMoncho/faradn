@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import net.nmoncho.faradn.internal.usb.UsbDevices;
 import net.nmoncho.faradn.printer.PrinterProfile;
-import net.nmoncho.faradn.printer.EscPosRenderer;
+import net.nmoncho.faradn.printer.Renderers;
 import net.nmoncho.faradn.transport.PrinterNotReadyException;
 import net.nmoncho.faradn.transport.PrinterStatus;
 import net.nmoncho.faradn.transport.Transport;
@@ -116,7 +116,7 @@ public class Printer {
    *         if the payload cannot be written to the transport
    */
   public static void print(Transport transport, Document doc, PrinterProfile profile) {
-    final byte[] payload = new EscPosRenderer(profile).render(doc.blocks(profile.dpi()));
+    final byte[] payload = Renderers.forProfile(profile).render(doc.blocks(profile.dpi()));
     ensureReady(transport);
     transport.write(payload);
   }

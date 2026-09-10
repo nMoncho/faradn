@@ -18,7 +18,7 @@ import org.graalvm.word.WordFactory;
 
 import net.nmoncho.faradn.Document;
 import net.nmoncho.faradn.PrintingException;
-import net.nmoncho.faradn.printer.EscPosRenderer;
+import net.nmoncho.faradn.printer.Renderers;
 import net.nmoncho.faradn.printer.PrinterProfile;
 
 /**
@@ -163,7 +163,7 @@ public final class FaradnLibrary {
    *        the HTML to render
    * @param profileName
    *        the printer profile name, or blank/{@code null} for the default
-   * @return the ESC/POS bytes
+   * @return the rendered printer bytes (the profile's command language)
    */
   static byte[] renderToBytes(String html, String profileName) {
     if (html == null) {
@@ -172,7 +172,7 @@ public final class FaradnLibrary {
     final String target = (profileName == null || profileName.isBlank()) ? DEFAULT_PROFILE : profileName;
     final PrinterProfile profile = PrinterProfile.load(target)
         .orElseThrow(() -> new UnknownProfileException(target));
-    return new EscPosRenderer(profile).render(Document.from(html).blocks());
+    return Renderers.forProfile(profile).render(Document.from(html).blocks(profile.dpi()));
   }
 
   /** Maps a failure to a stable {@code FARADN_ERR_*} code. */

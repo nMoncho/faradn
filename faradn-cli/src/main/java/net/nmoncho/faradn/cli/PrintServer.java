@@ -23,7 +23,7 @@ import net.nmoncho.faradn.Document;
 import net.nmoncho.faradn.printer.Devices;
 import net.nmoncho.faradn.printer.UsbPrinter;
 import net.nmoncho.faradn.printer.PrinterProfile;
-import net.nmoncho.faradn.printer.EscPosRenderer;
+import net.nmoncho.faradn.printer.Renderers;
 import net.nmoncho.faradn.transport.PrinterStatus;
 import net.nmoncho.faradn.transport.Transport;
 import net.nmoncho.faradn.transport.TransportException;
@@ -128,7 +128,7 @@ public final class PrintServer {
     }
 
     final Document document = Document.from(new String(body, StandardCharsets.UTF_8));
-    final byte[] payload = new EscPosRenderer(profile).render(document.blocks(profile.dpi()));
+    final byte[] payload = Renderers.forProfile(profile).render(document.blocks(profile.dpi()));
 
     try (Transport transport = transports.get()) {
       final PrinterStatus status = statusOrNull(transport);
