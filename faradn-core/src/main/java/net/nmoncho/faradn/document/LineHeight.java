@@ -50,7 +50,7 @@ public record LineHeight(Kind kind, double value) {
    */
   private static final int MAX_SPACING_DOTS = 255;
 
-  /** {@code line-height: normal} — the printer default. */
+  /** {@code line-height: normal} - the printer default. */
   public static final LineHeight NORMAL = new LineHeight(Kind.NORMAL, 0);
 
   public LineHeight {

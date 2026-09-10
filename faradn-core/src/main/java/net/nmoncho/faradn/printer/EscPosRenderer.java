@@ -302,8 +302,8 @@ public final class EscPosRenderer implements Renderer {
    * Renders a reverse-video section header: each wrapped line is padded to the
    * full paper width under invert ({@code GS B}) so the whole line is inked
    * (a solid black bar), with the label placed by {@link Paragraph#alignment()}.
-   * The padding spaces carry invert too — unlike {@link #emitCell}, which clears
-   * style for its pad — so there are no white gaps at the ends of the bar.
+   * The padding spaces carry invert too - unlike {@link #emitCell}, which clears
+   * style for its pad - so there are no white gaps at the ends of the bar.
    */
   private ComputedStyle renderBanner(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current,
       Paragraph paragraph) {
