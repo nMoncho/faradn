@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SpotBugs exclusions: reviewed, intentional exceptions only. Keep this list
+  short and justified; prefer fixing a finding over excluding it.
+-->
+<FindBugsFilter>
+  <!--
+    EI_EXPOSE_REP / EI_EXPOSE_REP2: these types deliberately share their byte /
+    int buffers by reference instead of copying. They sit on the rendering hot
+    path (pixel buffers, packed ESC/POS command bytes), where a defensive copy on
+    every construction and accessor would double the work for no safety gain: the
+    buffers are produced and consumed internally and are treated as immutable.
+  -->
+  <Match>
+    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    <Or>
+      <Class name="net.nmoncho.faradn.RasterImage"/>
+      <Class name="net.nmoncho.faradn.printer.escpos.ParametricCode"/>
+      <Class name="net.nmoncho.faradn.printer.escpos.SimpleCode"/>
+      <Class name="net.nmoncho.faradn.printer.escpos.CodePageEncoder"/>
+      <Class name="net.nmoncho.faradn.printer.escpos.commands.CharacterCommands$PrintMode"/>
+      <Class name="net.nmoncho.faradn.internal.html.BlockBuilder"/>
+    </Or>
+  </Match>
+</FindBugsFilter>
