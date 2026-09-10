@@ -70,7 +70,7 @@ public final class PngDecoder {
 
   private static RasterImage doDecode(byte[] data) throws IOException, DataFormatException {
     final DataInputStream in = new DataInputStream(new ByteArrayInputStream(data));
-    in.skipBytes(8); // signature
+    in.skipNBytes(8); // signature: skip exactly 8 bytes or fail on a truncated stream
 
     int width = 0;
     int height = 0;
@@ -113,7 +113,7 @@ public final class PngDecoder {
           idat.write(chunk);
         }
         case IEND -> done = true;
-        default -> in.skipBytes(length);
+        default -> in.skipNBytes(length); // unknown chunk: skip its data, failing on truncation
       }
       in.readInt(); // CRC (unchecked)
     }

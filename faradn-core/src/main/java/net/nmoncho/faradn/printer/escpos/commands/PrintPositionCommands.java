@@ -13,34 +13,35 @@ import net.nmoncho.faradn.printer.escpos.commands.CharacterCommands.MotionUnit2D
 
 public class PrintPositionCommands {
 
-  public static Code HORIZONTAL_TAB = new SimpleCode("HT", 0x09);
+  public static final Code HORIZONTAL_TAB = new SimpleCode("HT", 0x09);
 
   // Horizontal print position (valid in both standard and page mode).
-  public static ParametricCode<Word16> SET_ABSOLUTE_PRINT_POSITION = new ParametricCode<>(
+  public static final ParametricCode<Word16> SET_ABSOLUTE_PRINT_POSITION = new ParametricCode<>(
       new byte[] { Code.ESC, 0x24 }); // ESC $
-  public static ParametricCode<Word16> SET_RELATIVE_PRINT_POSITION = new ParametricCode<>(
+  public static final ParametricCode<Word16> SET_RELATIVE_PRINT_POSITION = new ParametricCode<>(
       new byte[] { Code.ESC, 0x5C }); // ESC '\'
 
   // Vertical print position (page mode only).
-  public static ParametricCode<Word16> SET_ABSOLUTE_VERTICAL_PRINT_POSITION = new ParametricCode<>(
+  public static final ParametricCode<Word16> SET_ABSOLUTE_VERTICAL_PRINT_POSITION = new ParametricCode<>(
       new byte[] { Code.GS, 0x24 }); // GS $
-  public static ParametricCode<Word16> SET_RELATIVE_VERTICAL_PRINT_POSITION = new ParametricCode<>(
+  public static final ParametricCode<Word16> SET_RELATIVE_VERTICAL_PRINT_POSITION = new ParametricCode<>(
       new byte[] { Code.GS, 0x5C }); // GS '\'
 
   // Page-mode print area and direction.
-  public static ParametricCode<PrintArea> SET_PRINT_AREA = new ParametricCode<>(new byte[] { Code.ESC, 0x57 }); // ESC W
-  public static ParametricCode<Direction> SELECT_PRINT_DIRECTION = new ParametricCode<>(
+  public static final ParametricCode<PrintArea> SET_PRINT_AREA = new ParametricCode<>(new byte[] { Code.ESC, 0x57 }); // ESC W
+  public static final ParametricCode<Direction> SELECT_PRINT_DIRECTION = new ParametricCode<>(
       new byte[] { Code.ESC, 0x54 }); // ESC T
 
-  public static ParametricCode<Justification> SELECT_JUSTIFICATION = new ParametricCode<>(
+  public static final ParametricCode<Justification> SELECT_JUSTIFICATION = new ParametricCode<>(
       new byte[] { Code.ESC, 0x61 }); // ESC a
 
   // TODO ESC D Set horizontal tab positions
-  public static ParametricCode<MotionUnit2D> SET_LEFT_MARGIN = new ParametricCode<>(new byte[] { Code.GS, 0x4C }); // GS L
-  public static ParametricCode<MotionUnit2D> SET_PRINT_AREA_WIDTH = new ParametricCode<>(
+  public static final ParametricCode<MotionUnit2D> SET_LEFT_MARGIN = new ParametricCode<>(new byte[] { Code.GS, 0x4C }); // GS L
+  public static final ParametricCode<MotionUnit2D> SET_PRINT_AREA_WIDTH = new ParametricCode<>(
       new byte[] { Code.GS, 0x57 }); // GS W
   // GS P: set the horizontal/vertical motion units to 1/x" and 1/y" (x, y as the two params).
-  public static ParametricCode<MotionUnit2D> SET_MOTION_UNITS = new ParametricCode<>(new byte[] { Code.GS, 0x50 });
+  public static final ParametricCode<MotionUnit2D> SET_MOTION_UNITS = new ParametricCode<>(
+      new byte[] { Code.GS, 0x50 });
 
   public enum Justification implements Byteable {
     LEFT, CENTER, RIGHT;
@@ -78,7 +79,7 @@ public class PrintPositionCommands {
    * positions are 0-65535; relative positions are signed (-32768 to 32767) and
    * encode as two's complement.
    */
-  public static class Word16 implements Byteable {
+  public static final class Word16 implements Byteable {
     private final int value;
 
     public Word16(int value) {
@@ -98,7 +99,7 @@ public class PrintPositionCommands {
    * The page-mode print area for {@code ESC W}: origin {@code (x, y)} and size
    * {@code (dx, dy)} in motion units, each a 16-bit little-endian value.
    */
-  public static class PrintArea implements Byteable {
+  public static final class PrintArea implements Byteable {
     private final int x;
     private final int y;
     private final int dx;

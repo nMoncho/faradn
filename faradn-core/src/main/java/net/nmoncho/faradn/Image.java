@@ -87,8 +87,8 @@ public class Image {
         final int targetHeight = height.orElse(decoded.height());
         raster = scale(decoded, targetWidth, targetHeight);
       }
+      return raster;
     }
-    return raster;
   }
 
   /**

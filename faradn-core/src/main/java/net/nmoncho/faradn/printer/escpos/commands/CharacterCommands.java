@@ -14,34 +14,34 @@ import net.nmoncho.faradn.printer.escpos.SimpleCode;
 
 public class CharacterCommands {
 
-  public static Code CANCEL_PAGE_MODE = new SimpleCode("CAN", 0x18);
+  public static final Code CANCEL_PAGE_MODE = new SimpleCode("CAN", 0x18);
 
-  public static ParametricCode<MotionUnit> SET_RIGHT_SIDE_SPACING = new ParametricCode<>(
+  public static final ParametricCode<MotionUnit> SET_RIGHT_SIDE_SPACING = new ParametricCode<>(
       new byte[] { Code.ESC, 0x20 });
 
-  public static ParametricCode<PrintMode> SELECT_PRINT_MODE = new ParametricCode<>(
+  public static final ParametricCode<PrintMode> SELECT_PRINT_MODE = new ParametricCode<>(
       new byte[] { Code.ESC, 0x21 });
 
-  public static ParametricCode<CharacterSize> SELECT_CHARACTER_SIZE = new ParametricCode<>(
+  public static final ParametricCode<CharacterSize> SELECT_CHARACTER_SIZE = new ParametricCode<>(
       new byte[] { Code.GS, 0x21 });
 
-  public static BooleanCode CANCEL_USER_DEFINED_CHARACTERS = new BooleanCode(new byte[] { Code.ESC, 0x3F });
-  public static BooleanCode USER_DEFINED_CHARACTER_SET = new BooleanCode(new byte[] { Code.ESC, 0x25 });
+  public static final BooleanCode CANCEL_USER_DEFINED_CHARACTERS = new BooleanCode(new byte[] { Code.ESC, 0x3F });
+  public static final BooleanCode USER_DEFINED_CHARACTER_SET = new BooleanCode(new byte[] { Code.ESC, 0x25 });
   // TODO understand following code: ESC & 'Define user-defined characters', SEE Page 107
 
   // TODO define this UNDERLINE with 2px thick, not only true/false
-  public static BooleanCode UNDERLINE = new BooleanCode(new byte[] { Code.ESC, 0x2D });
-  public static BooleanCode EMPHASIZED = new BooleanCode(new byte[] { Code.ESC, 0x45 });
-  public static BooleanCode DOUBLE_STRIKE = new BooleanCode(new byte[] { Code.ESC, 0x47 });
+  public static final BooleanCode UNDERLINE = new BooleanCode(new byte[] { Code.ESC, 0x2D });
+  public static final BooleanCode EMPHASIZED = new BooleanCode(new byte[] { Code.ESC, 0x45 });
+  public static final BooleanCode DOUBLE_STRIKE = new BooleanCode(new byte[] { Code.ESC, 0x47 });
   // ESC M n: select character font by slot (0 = Font A, 1 = Font B, 2 = Font C, …);
   // emitted inline by the renderer since the slot is an arbitrary number, not a flag.
   // ESC 4 / ESC 5: select / cancel italic (ESC/P); printers with italic honour it, the rest ignore it.
-  public static Code SELECT_ITALIC = new SimpleCode("ESC 4", new byte[] { Code.ESC, 0x34 });
-  public static Code CANCEL_ITALIC = new SimpleCode("ESC 5", new byte[] { Code.ESC, 0x35 });
+  public static final Code SELECT_ITALIC = new SimpleCode("ESC 4", new byte[] { Code.ESC, 0x34 });
+  public static final Code CANCEL_ITALIC = new SimpleCode("ESC 5", new byte[] { Code.ESC, 0x35 });
   // TODO 'SELECT_INTERNATIONAL_SET'
-  public static BooleanCode TURN_UPSIDE = new BooleanCode(new byte[] { Code.ESC, 0x7B });
-  public static BooleanCode REVERSE_BACKGROUND = new BooleanCode(new byte[] { Code.GS, 0x42 });
-  public static BooleanCode SMOOTHING = new BooleanCode(new byte[] { Code.GS, 0x62 });
+  public static final BooleanCode TURN_UPSIDE = new BooleanCode(new byte[] { Code.ESC, 0x7B });
+  public static final BooleanCode REVERSE_BACKGROUND = new BooleanCode(new byte[] { Code.GS, 0x42 });
+  public static final BooleanCode SMOOTHING = new BooleanCode(new byte[] { Code.GS, 0x62 });
 
   // Cancel print data in page mode
   // Turn underline mode on/off
@@ -101,7 +101,7 @@ public class CharacterCommands {
    * an integer multiple from 1x to 8x. The byte packs width in the high nibble
    * and height in the low nibble, both zero-based.
    */
-  public static class CharacterSize implements Byteable {
+  public static final class CharacterSize implements Byteable {
     private final int width;
     private final int height;
 
@@ -124,11 +124,11 @@ public class CharacterCommands {
 
   public static class PrintMode implements Byteable {
 
-    static int FONT_FLAG = 0x01;
-    static int EMPHASIZED_FLAG = 0x08;
-    static int DOUBLE_HEIGHT_FLAG = 0x10;
-    static int DOUBLE_WIDTH_FLAG = 0x20;
-    static int UNDERLINE_FLAG = 0x80;
+    static final int FONT_FLAG = 0x01;
+    static final int EMPHASIZED_FLAG = 0x08;
+    static final int DOUBLE_HEIGHT_FLAG = 0x10;
+    static final int DOUBLE_WIDTH_FLAG = 0x20;
+    static final int UNDERLINE_FLAG = 0x80;
 
     private final byte[] bytes;
 

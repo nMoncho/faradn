@@ -13,7 +13,7 @@ import net.nmoncho.faradn.printer.escpos.ParametricCode;
 
 public class BitImageCommands {
 
-  public static ParametricCode<BitImageMode> SELECT_BIT_IMAGE_MODE = new ParametricCode<>(
+  public static final ParametricCode<BitImageMode> SELECT_BIT_IMAGE_MODE = new ParametricCode<>(
       new byte[] { Code.ESC, 0x2A });
 
   static enum BitImageMode implements Byteable {
