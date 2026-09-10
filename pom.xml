@@ -60,7 +60,12 @@
     <cyclonedx.version>2.9.1</cyclonedx.version>
     <licensemojo.version>2.5.0</licensemojo.version>
     <licenseheader.version>4.6</licenseheader.version>
+    <jacoco.version>0.8.13</jacoco.version>
+    <spotbugs.version>4.8.6.6</spotbugs.version>
     <nativemaven.version>0.10.3</nativemaven.version>
+    <!-- Default so surefire's @{jacocoArgLine} resolves even when the JaCoCo
+         agent did not run (e.g. surefire invoked outside a lifecycle phase). -->
+    <jacocoArgLine/>
     <!-- Must match the GraalVM used to build the native images. JDK 17 GraalVM
          is the 23.0.x line (17.0.9-graalce == 23.0.2); do not bump past 23.0.x
          without also upgrading GraalVM. -->
@@ -120,7 +125,9 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>${surefire.version}</version>
         <configuration>
-          <argLine>-XX:+EnableDynamicAgentLoading</argLine>
+          <!-- @{jacocoArgLine} is set by jacoco:prepare-agent so coverage is
+               collected; keep it first so the agent is on the command line. -->
+          <argLine>@{jacocoArgLine} -XX:+EnableDynamicAgentLoading</argLine>
         </configuration>
       </plugin>
       <plugin>
@@ -196,6 +203,55 @@
         <executions>
           <execution>
             <id>check-license-headers</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Code coverage. prepare-agent sets @{jacocoArgLine} (woven into the
+           surefire argLine above); report writes target/site/jacoco after tests.
+           No coverage threshold is enforced yet. -->
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>${jacoco.version}</version>
+        <executions>
+          <execution>
+            <id>prepare-agent</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+            <configuration>
+              <propertyName>jacocoArgLine</propertyName>
+            </configuration>
+          </execution>
+          <execution>
+            <id>report</id>
+            <phase>test</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Static analysis. `check` fails the build (verify phase, and in CI) on
+           medium-or-higher confidence bugs; spotbugs-exclude.xml holds the
+           reviewed, intentional exceptions. Analyses main classes, not tests. -->
+      <plugin>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
+        <version>${spotbugs.version}</version>
+        <configuration>
+          <effort>Max</effort>
+          <threshold>Medium</threshold>
+          <includeTests>false</includeTests>
+          <excludeFilterFile>${maven.multiModuleProjectDirectory}/spotbugs-exclude.xml</excludeFilterFile>
+        </configuration>
+        <executions>
+          <execution>
+            <id>spotbugs-check</id>
             <phase>verify</phase>
             <goals>
               <goal>check</goal>
