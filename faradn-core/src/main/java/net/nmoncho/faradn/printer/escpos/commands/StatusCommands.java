@@ -5,8 +5,8 @@
 
 package net.nmoncho.faradn.printer.escpos.commands;
 
-import net.nmoncho.faradn.printer.escpos.Code;
-import net.nmoncho.faradn.printer.escpos.SimpleCode;
+import net.nmoncho.faradn.printer.command.Code;
+import net.nmoncho.faradn.printer.command.SimpleCode;
 
 /**
  * ESC/POS real-time status commands ({@code DLE EOT n}). The printer answers

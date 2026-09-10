@@ -10,7 +10,7 @@ import java.nio.charset.StandardCharsets;
 
 import net.nmoncho.faradn.BarcodeException;
 import net.nmoncho.faradn.document.BarcodeOptions;
-import net.nmoncho.faradn.printer.escpos.Code;
+import net.nmoncho.faradn.printer.command.Code;
 
 /**
  * Builds ESC/POS barcode byte sequences: 1D symbologies via {@code GS k}

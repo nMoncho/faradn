@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 //
 
-package net.nmoncho.faradn.printer.escpos;
+package net.nmoncho.faradn.printer;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.CharsetEncoder;
@@ -11,40 +11,51 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import net.nmoncho.faradn.printer.CodePage;
+import java.util.function.IntFunction;
 
 /**
- * Encodes text to ESC/POS bytes, switching code pages on the fly.
+ * Encodes text to printer bytes, switching code pages on the fly.
  * <p>
- * ESC/POS selects one code page at a time ({@code ESC t n}); a character
- * outside it would otherwise encode to the replacement byte {@code '?'}. This
- * encoder walks the text and, per character, keeps the currently selected page
- * when it can encode the character and otherwise switches to the first
- * candidate page that can - emitting the {@code ESC t} command inline. Because
- * the current page is always preferred, a run of characters in one script
- * costs a single switch, and ASCII never forces one. A character no candidate
- * page can encode falls back to {@code '?'} in the current page.
+ * A printer selects one code page at a time; a character outside it would
+ * otherwise encode to the replacement byte {@code '?'}. This encoder walks the
+ * text and, per character, keeps the currently selected page when it can encode
+ * the character and otherwise switches to the first candidate page that can -
+ * emitting the page-select command inline. Because the current page is always
+ * preferred, a run of characters in one script costs a single switch, and ASCII
+ * never forces one. A character no candidate page can encode falls back to
+ * {@code '?'} in the current page.
+ * <p>
+ * The page-select bytes are the one language-specific part, supplied as a
+ * {@code selectPage} function: ESC/POS passes {@code id -> {ESC, 0x74, id}}
+ * ({@code ESC t n}), StarPRNT {@code id -> {ESC, GS, 0x74, id}}
+ * ({@code ESC GS t n}). Everything else - the greedy per-character page choice
+ * -
+ * is protocol-neutral.
  */
 public final class CodePageEncoder {
 
   private final ByteArrayOutputStream out;
   private final List<CodePage> candidates;
+  private final IntFunction<byte[]> selectPage;
   private final Map<CodePage, CharsetEncoder> encoders = new HashMap<>();
   private CodePage current;
 
   /**
    * @param out
-   *        the stream to append encoded bytes (and {@code ESC t} switches) to
+   *        the stream to append encoded bytes (and page switches) to
    * @param initial
    *        the page already selected on the printer (tried first, so no switch
    *        is emitted for text it can encode)
    * @param candidates
    *        the pages that may be switched to, in preference order
+   * @param selectPage
+   *        maps a {@link CodePage#id()} to the command bytes that select it
    */
-  public CodePageEncoder(ByteArrayOutputStream out, CodePage initial, List<CodePage> candidates) {
+  public CodePageEncoder(ByteArrayOutputStream out, CodePage initial, List<CodePage> candidates,
+      IntFunction<byte[]> selectPage) {
     this.out = out;
     this.current = initial;
+    this.selectPage = selectPage;
     // Try the already-selected page first, then the rest in preference order.
     final List<CodePage> ordered = new ArrayList<>();
     ordered.add(initial);
@@ -62,8 +73,7 @@ public final class CodePageEncoder {
   }
 
   /**
-   * Encodes {@code text}, writing any needed {@code ESC t} switches and the
-   * bytes.
+   * Encodes {@code text}, writing any needed page switches and the bytes.
    */
   public void emit(String text) {
     int i = 0;
@@ -75,7 +85,7 @@ public final class CodePageEncoder {
       final String unit = text.substring(i, i + width);
       final CodePage page = choose(unit);
       if (page != null && page.id() != current.id()) {
-        out.writeBytes(new byte[] { Code.ESC, 0x74, (byte) page.id() });
+        out.writeBytes(selectPage.apply(page.id()));
         current = page;
       }
       // When no candidate can encode the unit, keep the current page and let it

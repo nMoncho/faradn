@@ -14,7 +14,7 @@ import java.net.Socket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import net.nmoncho.faradn.printer.escpos.Code;
+import net.nmoncho.faradn.printer.command.Code;
 import net.nmoncho.faradn.printer.escpos.commands.StatusCommands;
 
 /**

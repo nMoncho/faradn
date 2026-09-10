@@ -3,10 +3,10 @@
 // SPDX-License-Identifier: MIT
 //
 
-package net.nmoncho.faradn.printer.escpos;
+package net.nmoncho.faradn.printer.command;
 
 /**
- * {@link net.nmoncho.faradn.printer.escpos.Code} implementation for codes that
+ * {@link net.nmoncho.faradn.printer.command.Code} implementation for codes that
  * don't need any special parameters.
  */
 public class SimpleCode implements Code {

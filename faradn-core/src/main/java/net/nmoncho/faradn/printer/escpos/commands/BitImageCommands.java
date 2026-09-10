@@ -7,9 +7,9 @@ package net.nmoncho.faradn.printer.escpos.commands;
 
 import com.typesafe.config.Config;
 
-import net.nmoncho.faradn.printer.escpos.Byteable;
-import net.nmoncho.faradn.printer.escpos.Code;
-import net.nmoncho.faradn.printer.escpos.ParametricCode;
+import net.nmoncho.faradn.printer.command.Byteable;
+import net.nmoncho.faradn.printer.command.Code;
+import net.nmoncho.faradn.printer.command.ParametricCode;
 
 public class BitImageCommands {
 

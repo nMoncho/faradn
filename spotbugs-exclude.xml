@@ -15,9 +15,10 @@
     <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
     <Or>
       <Class name="net.nmoncho.faradn.RasterImage"/>
-      <Class name="net.nmoncho.faradn.printer.escpos.ParametricCode"/>
-      <Class name="net.nmoncho.faradn.printer.escpos.SimpleCode"/>
-      <Class name="net.nmoncho.faradn.printer.escpos.CodePageEncoder"/>
+      <Class name="net.nmoncho.faradn.printer.command.ParametricCode"/>
+      <Class name="net.nmoncho.faradn.printer.command.SimpleCode"/>
+      <Class name="net.nmoncho.faradn.printer.CodePageEncoder"/>
+      <Class name="net.nmoncho.faradn.printer.image.RasterBitmap"/>
       <Class name="net.nmoncho.faradn.printer.escpos.commands.CharacterCommands$PrintMode"/>
       <Class name="net.nmoncho.faradn.internal.html.BlockBuilder"/>
     </Or>

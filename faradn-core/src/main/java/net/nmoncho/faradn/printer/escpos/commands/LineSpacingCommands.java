@@ -5,9 +5,9 @@
 
 package net.nmoncho.faradn.printer.escpos.commands;
 
-import net.nmoncho.faradn.printer.escpos.Code;
-import net.nmoncho.faradn.printer.escpos.ParametricCode;
-import net.nmoncho.faradn.printer.escpos.SimpleCode;
+import net.nmoncho.faradn.printer.command.Code;
+import net.nmoncho.faradn.printer.command.ParametricCode;
+import net.nmoncho.faradn.printer.command.SimpleCode;
 import net.nmoncho.faradn.printer.escpos.commands.CharacterCommands.MotionUnit;
 
 public class LineSpacingCommands {

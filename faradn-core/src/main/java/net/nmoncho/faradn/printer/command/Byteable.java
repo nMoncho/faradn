@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 //
 
-package net.nmoncho.faradn.printer.escpos;
+package net.nmoncho.faradn.printer.command;
 
 public interface Byteable {
 

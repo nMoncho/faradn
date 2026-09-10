@@ -3,10 +3,10 @@
 // SPDX-License-Identifier: MIT
 //
 
-package net.nmoncho.faradn.printer.escpos;
+package net.nmoncho.faradn.printer.command;
 
 /**
- * {@link net.nmoncho.faradn.printer.escpos.ParametricCode} implementation that
+ * {@link net.nmoncho.faradn.printer.command.ParametricCode} implementation that
  * can be turned ON/OFF.
  */
 public class BooleanCode extends ParametricCode<Byteable.Boolean> {

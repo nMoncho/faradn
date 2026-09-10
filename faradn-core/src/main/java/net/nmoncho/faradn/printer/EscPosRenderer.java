@@ -36,11 +36,10 @@ import net.nmoncho.faradn.document.Rule;
 import net.nmoncho.faradn.document.Space;
 import net.nmoncho.faradn.document.Table;
 import net.nmoncho.faradn.document.TextRun;
-import net.nmoncho.faradn.printer.escpos.BoxDrawing;
-import net.nmoncho.faradn.printer.escpos.Code;
-import net.nmoncho.faradn.printer.escpos.CodePageEncoder;
+import net.nmoncho.faradn.printer.text.BoxDrawing;
+import net.nmoncho.faradn.printer.command.Code;
 import net.nmoncho.faradn.printer.escpos.ImageRasterizer;
-import net.nmoncho.faradn.printer.escpos.TextWrapper;
+import net.nmoncho.faradn.printer.text.TextWrapper;
 import net.nmoncho.faradn.printer.escpos.commands.BarcodeCommands;
 import net.nmoncho.faradn.printer.escpos.commands.CharacterCommands;
 import net.nmoncho.faradn.printer.escpos.commands.CharacterCommands.CharacterSize;
@@ -118,7 +117,8 @@ public final class EscPosRenderer implements Renderer {
 
     // Text is encoded through this: it starts on the profile's default page and
     // switches inline (ESC t) among the profile's pages for glyphs outside it.
-    final CodePageEncoder enc = new CodePageEncoder(out, profile.codePage(), profile.codePages());
+    final CodePageEncoder enc = new CodePageEncoder(out, profile.codePage(), profile.codePages(),
+        id -> new byte[] { Code.ESC, 0x74, (byte) id }); // ESC t n
 
     // ESC @ resets the printer to exactly INITIAL, so that is where the tracked
     // "already applied" style starts.
