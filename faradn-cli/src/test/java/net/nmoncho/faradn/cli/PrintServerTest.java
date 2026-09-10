@@ -24,6 +24,9 @@ import net.nmoncho.faradn.Image;
 import net.nmoncho.faradn.ImagePolicy;
 import net.nmoncho.faradn.printer.PrinterProfile;
 import net.nmoncho.faradn.transport.DumpTransport;
+import net.nmoncho.faradn.transport.PrinterStatus;
+import net.nmoncho.faradn.transport.Transport;
+import net.nmoncho.faradn.transport.TransportException;
 
 public class PrintServerTest {
 
@@ -85,6 +88,80 @@ public class PrintServerTest {
   @Test
   void printRejectsNonPost() throws IOException {
     assertEquals(405, get("/print").status());
+  }
+
+  @Test
+  void rejectsABodyOverTheSizeLimitWith413() throws IOException {
+    // A body larger than MAX_BODY_BYTES (5 MiB) must be refused before rendering,
+    // so an oversized upload cannot exhaust memory. 6 MiB of '.' is comfortably
+    // over the cap.
+    String tooBig = ".".repeat(6 * 1024 * 1024);
+    Response response = post("/print", tooBig);
+
+    assertEquals(413, response.status());
+    assertTrue(response.body().contains("too large"), response.body());
+  }
+
+  @Test
+  void returns409WhenThePrinterIsNotReady() throws IOException {
+    restartWith(new NotReadyTransport());
+    Response response = post("/print", "<h1>Hi</h1>");
+
+    assertEquals(409, response.status());
+    assertTrue(response.body().contains("not-ready"), response.body());
+  }
+
+  @Test
+  void returns500WhenTheTransportFails() throws IOException {
+    // A failure while writing to the printer must map to a generic 500 with the
+    // detail kept server-side, never leaking the exception text to the client.
+    restartWith(new FailingTransport());
+    Response response = post("/print", "<h1>Hi</h1>");
+
+    assertEquals(500, response.status());
+    assertTrue(response.body().contains("internal error"), response.body());
+    assertFalse(response.body().contains("simulated"), "the response must not leak the internal error detail");
+  }
+
+  /** Replaces the default server with one backed by {@code transport}. */
+  private void restartWith(Transport transport) throws IOException {
+    server.stop();
+    server = new PrintServer(0, PrinterProfile.load("TM-T88V").orElseThrow(), () -> transport);
+    server.start();
+  }
+
+  /** A printer that is reachable but reports out-of-paper, so it is not ready. */
+  private static final class NotReadyTransport implements Transport {
+    @Override
+    public void write(byte[] payload) {
+      throw new AssertionError("must not write to a not-ready printer");
+    }
+
+    @Override
+    public PrinterStatus status() {
+      return new PrinterStatus(true, false, true, false, false); // paper end
+    }
+
+    @Override
+    public void close() {
+    }
+  }
+
+  /** A ready printer whose write fails, exercising the 500 path. */
+  private static final class FailingTransport implements Transport {
+    @Override
+    public void write(byte[] payload) {
+      throw new TransportException("simulated write failure");
+    }
+
+    @Override
+    public PrinterStatus status() {
+      return PrinterStatus.READY;
+    }
+
+    @Override
+    public void close() {
+    }
   }
 
   private Response get(String path) throws IOException {
