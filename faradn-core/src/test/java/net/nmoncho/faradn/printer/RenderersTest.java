@@ -45,9 +45,11 @@ class RenderersTest {
   }
 
   @Test
-  void starRendererStubThrowsUntilImplemented() {
+  void starRendererProducesAFramedJob() {
+    // The Star renderer is implemented (Phase 3): an empty job still frames with
+    // ESC @ init + code-page select and an end-of-job feed + cut.
     final Renderer star = Renderers.forProfile(profile(PrinterLanguage.STAR_PRNT));
-    assertThrows(UnsupportedOperationException.class, () -> star.render(List.of()));
+    assertTrue(star.render(List.of()).length > 0);
   }
 
   @Test
