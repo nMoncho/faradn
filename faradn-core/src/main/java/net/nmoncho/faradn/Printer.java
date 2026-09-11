@@ -117,7 +117,11 @@ public class Printer {
    */
   public static void print(Transport transport, Document doc, PrinterProfile profile) {
     final byte[] payload = Renderers.forProfile(profile).render(doc.blocks(profile.dpi()));
-    ensureReady(transport);
+    // The pre-flight check is an ESC/POS DLE EOT poll; a language without a
+    // synchronous status reply (StarPRNT) would just stall on it, so skip it.
+    if (profile.language().supportsRealtimeStatus()) {
+      ensureReady(transport);
+    }
     transport.write(payload);
   }
 

@@ -131,7 +131,9 @@ public final class PrintServer {
     final byte[] payload = Renderers.forProfile(profile).render(document.blocks(profile.dpi()));
 
     try (Transport transport = transports.get()) {
-      final PrinterStatus status = statusOrNull(transport);
+      // The status poll is an ESC/POS DLE EOT query; a language without a
+      // synchronous status reply (StarPRNT) would stall on it, so skip it.
+      final PrinterStatus status = profile.language().supportsRealtimeStatus() ? statusOrNull(transport) : null;
       if (status != null && !status.ready()) {
         return new Response(409, json("status", "not-ready", "message", status.toString()));
       }

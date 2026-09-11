@@ -15,6 +15,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import net.nmoncho.faradn.Image;
 import net.nmoncho.faradn.ImagePolicy;
 import net.nmoncho.faradn.printer.PrinterProfile;
+import net.nmoncho.faradn.printer.StarProfiles;
 import net.nmoncho.faradn.transport.DumpTransport;
 import net.nmoncho.faradn.transport.PrinterStatus;
 import net.nmoncho.faradn.transport.Transport;
@@ -123,11 +125,47 @@ public class PrintServerTest {
     assertFalse(response.body().contains("simulated"), "the response must not leak the internal error detail");
   }
 
+  @Test
+  void skipsTheStatusPollForAStarProfile() throws IOException {
+    // Even a transport that reports not-ready is never polled for a Star profile
+    // (StarPRNT has no DLE EOT), so the job prints instead of a 409.
+    CountingStatusTransport star = new CountingStatusTransport();
+    server.stop();
+    server = new PrintServer(0, StarProfiles.tsp143iv(), () -> star);
+    server.start();
+
+    Response response = post("/print", "<h1>Hi</h1>");
+
+    assertEquals(200, response.status());
+    assertTrue(response.body().contains("\"status\":\"printed\""), response.body());
+    assertEquals(0, star.statusPolls.get(), "Star jobs must not poll status");
+  }
+
   /** Replaces the default server with one backed by {@code transport}. */
   private void restartWith(Transport transport) throws IOException {
     server.stop();
     server = new PrintServer(0, PrinterProfile.load("TM-T88V").orElseThrow(), () -> transport);
     server.start();
+  }
+
+  /** Reports not-ready and counts status polls, but accepts writes. */
+  private static final class CountingStatusTransport implements Transport {
+    final AtomicInteger statusPolls = new AtomicInteger();
+
+    @Override
+    public void write(byte[] payload) {
+      // accepted
+    }
+
+    @Override
+    public PrinterStatus status() {
+      statusPolls.incrementAndGet();
+      return new PrinterStatus(true, false, true, false, false); // paper end (not ready)
+    }
+
+    @Override
+    public void close() {
+    }
   }
 
   /** A printer that is reachable but reports out-of-paper, so it is not ready. */
