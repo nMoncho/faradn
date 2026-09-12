@@ -72,10 +72,9 @@ class RenderersTest {
   }
 
   @Test
-  void eplRendererIsAStubUntilPhase5() {
-    // EPL's render() body lands in Phase 5 (see PLAN_ZEBRA_ZD421.md).
-    assertThrows(UnsupportedOperationException.class,
-        () -> Renderers.forProfile(profile(PrinterLanguage.EPL)).render(List.of()));
+  void eplRendererRendersAnEmptyJobToNoLabels() {
+    // The EPL renderer is implemented (Phase 5): no Canvas blocks -> empty output.
+    assertEquals(0, Renderers.forProfile(profile(PrinterLanguage.EPL)).render(List.of()).length);
   }
 
   @Test
