@@ -52,8 +52,8 @@ import net.nmoncho.faradn.printer.label.LabelLayout.TextSegment;
  * letter.
  * <p>
  * <strong>Scope (v1):</strong> media tracking/type ({@code ^MN}/{@code ^MT})
- * are profile-driven and land with the ZD421 profiles; darkness/speed are not
- * emitted here. Text is placed with the resident scalable font ({@code ^A0}),
+ * come from the profile; darkness/speed are not emitted here. Text is placed
+ * with the resident scalable font ({@code ^A0}),
  * sized in dots from the profile's font metrics; ZPL has no bold/italic
  * attribute, so those style bits do not change the glyphs (a documented
  * fidelity gap). The 90/270 rotation anchor is confirmed on hardware (see
@@ -121,6 +121,8 @@ public final class ZplRenderer implements Renderer {
     job.append(ZplCommands.START);
     job.append(ZplCommands.UNITS_DOTS);
     job.append(ZplCommands.encodingUtf8());
+    job.append(ZplCommands.mediaType(profile.mediaType()));
+    job.append(ZplCommands.mediaTracking(profile.mediaTracking()));
     job.append(ZplCommands.labelHome(0, 0));
     job.append(ZplCommands.printWidth(width));
     job.append(ZplCommands.labelLength(canvas.heightDots()));

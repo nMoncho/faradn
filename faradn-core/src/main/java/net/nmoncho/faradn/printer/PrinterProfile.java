@@ -7,6 +7,8 @@ package net.nmoncho.faradn.printer;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * The realizable capabilities of a target printer that the renderer must
@@ -130,27 +132,53 @@ public interface PrinterProfile {
   }
 
   /**
-   * Loads a printer profile from the bundled escpos-printer-db capability
-   * database, matched case-insensitively by device name (the database key or
-   * its {@code name} field, e.g. {@code "TM-T88V"}).
+   * The print method of the media, direct thermal or thermal transfer. Consulted
+   * only by the label backends (ZPL {@code ^MT}, EPL options); the receipt
+   * backends ignore it. Defaults to {@link MediaType#DIRECT_THERMAL} (the ZD421d
+   * out of the box), so every existing and every {@link #of} profile is
+   * unchanged.
+   */
+  default MediaType mediaType() {
+    return MediaType.DIRECT_THERMAL;
+  }
+
+  /**
+   * How the printer finds the top of each label. Consulted only by the label
+   * backends (ZPL {@code ^MN}, EPL {@code Q} gap); the receipt backends ignore
+   * it. Defaults to {@link MediaTracking#GAP} (die-cut labels, the common case).
+   */
+  default MediaTracking mediaTracking() {
+    return MediaTracking.GAP;
+  }
+
+  /**
+   * Loads a printer profile by name, matched case-insensitively. Resolves first
+   * against the bundled escpos-printer-db capability database (by device name or
+   * {@code name} field, e.g. {@code "TM-T88V"}), then against the built-in
+   * hand-authored profiles for models the database does not cover (e.g.
+   * {@code "star-tsp143iv"}, {@code "zd421-zpl-203"}).
    *
    * @param name
    *        the device name to look up
    * @return the profile, or empty when no usable profile matches the name
    */
   static Optional<PrinterProfile> load(String name) {
-    return CapabilityProfiles.find(name);
+    return CapabilityProfiles.find(name).or(() -> BuiltinProfiles.find(name));
   }
 
   /**
-   * The names of every profile in the bundled capability database that loads to a
-   * usable profile (a plausible printable width and Font&nbsp;A column budget),
-   * sorted. Any name here resolves with {@link #load(String)}.
+   * The names of every profile that resolves with {@link #load(String)}: the
+   * capability-database entries that load to a usable profile (a plausible
+   * printable width and Font&nbsp;A column budget) plus the built-in
+   * hand-authored profiles, sorted and case-insensitively de-duplicated.
    *
    * @return the loadable profile names
    */
   static List<String> available() {
-    return CapabilityProfiles.available();
+    final Set<String> names = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+    names.addAll(CapabilityProfiles.available());
+    names.addAll(BuiltinProfiles.names());
+    return List.copyOf(names);
   }
 
   /**
