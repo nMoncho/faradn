@@ -10,14 +10,15 @@ import net.nmoncho.faradn.printer.PrinterLanguage;
 /**
  * Picks the {@link StatusReader} for a printer's {@link PrinterLanguage}, the
  * status-channel counterpart to {@code Renderers.forProfile}. A {@code switch}
- * is enough for the two languages today; it upgrades to a registry later
- * without
+ * is enough for the languages today; it upgrades to a registry later without
  * touching callers.
  */
 public final class StatusReaders {
 
   private static final StatusReader ESC_POS = new EscPosStatusReader();
   private static final StatusReader STAR_PRNT = new StarStatusReader();
+  private static final StatusReader ZPL = new ZplStatusReader();
+  private static final StatusReader EPL = new EplStatusReader();
 
   private StatusReaders() {
   }
@@ -36,6 +37,8 @@ public final class StatusReaders {
     return switch (language) {
       case ESC_POS -> ESC_POS;
       case STAR_PRNT -> STAR_PRNT;
+      case ZPL -> ZPL;
+      case EPL -> EPL;
     };
   }
 }

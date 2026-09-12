@@ -5,7 +5,9 @@
 
 package net.nmoncho.faradn.printer;
 
+import net.nmoncho.faradn.printer.epl.EplRenderer;
 import net.nmoncho.faradn.printer.starprnt.StarPrntRenderer;
+import net.nmoncho.faradn.printer.zpl.ZplRenderer;
 
 /**
  * Picks the {@link Renderer} for a profile's {@link PrinterLanguage}. This is
@@ -15,7 +17,7 @@ import net.nmoncho.faradn.printer.starprnt.StarPrntRenderer;
  * <p>
  * ESC/POS is the default (see {@link PrinterProfile#language()}), so profiles
  * that don't opt into another language keep using {@link EscPosRenderer}
- * unchanged. A {@code switch} is enough for the two backends today; it upgrades
+ * unchanged. A {@code switch} is enough for the backends today; it upgrades
  * to a registry later without touching the call sites.
  */
 public final class Renderers {
@@ -37,6 +39,8 @@ public final class Renderers {
     return switch (profile.language()) {
       case ESC_POS -> new EscPosRenderer(profile);
       case STAR_PRNT -> new StarPrntRenderer(profile);
+      case ZPL -> new ZplRenderer(profile);
+      case EPL -> new EplRenderer(profile);
     };
   }
 }

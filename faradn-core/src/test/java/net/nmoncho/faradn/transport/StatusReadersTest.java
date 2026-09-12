@@ -21,7 +21,17 @@ class StatusReadersTest {
   void forLanguageSelectsTheReader() {
     assertInstanceOf(EscPosStatusReader.class, StatusReaders.forLanguage(PrinterLanguage.ESC_POS));
     assertInstanceOf(StarStatusReader.class, StatusReaders.forLanguage(PrinterLanguage.STAR_PRNT));
+    assertInstanceOf(ZplStatusReader.class, StatusReaders.forLanguage(PrinterLanguage.ZPL));
+    assertInstanceOf(EplStatusReader.class, StatusReaders.forLanguage(PrinterLanguage.EPL));
     assertThrows(IllegalArgumentException.class, () -> StatusReaders.forLanguage(null));
+  }
+
+  @Test
+  void labelReadersAreOptimisticStubsInV1() {
+    // ZPL/EPL status is deferred (supportsRealtimeStatus == false), so the v1
+    // readers never run in a pre-flight probe; they report READY if ever called.
+    assertTrue(StatusReaders.forLanguage(PrinterLanguage.ZPL).read(new FakeTransport()).ready());
+    assertTrue(StatusReaders.forLanguage(PrinterLanguage.EPL).read(new FakeTransport()).ready());
   }
 
   @Test

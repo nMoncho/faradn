@@ -16,7 +16,9 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import net.nmoncho.faradn.printer.epl.EplRenderer;
 import net.nmoncho.faradn.printer.starprnt.StarPrntRenderer;
+import net.nmoncho.faradn.printer.zpl.ZplRenderer;
 
 class RenderersTest {
 
@@ -53,6 +55,26 @@ class RenderersTest {
   }
 
   @Test
+  void forProfileSelectsZplForAZebraZplProfile() {
+    assertInstanceOf(ZplRenderer.class, Renderers.forProfile(profile(PrinterLanguage.ZPL)));
+  }
+
+  @Test
+  void forProfileSelectsEplForAZebraEplProfile() {
+    assertInstanceOf(EplRenderer.class, Renderers.forProfile(profile(PrinterLanguage.EPL)));
+  }
+
+  @Test
+  void labelRenderersAreStubsUntilTheirRenderPhase() {
+    // Phase 0 wires renderer selection only; the ZPL/EPL render() bodies land in
+    // Phases 3 and 5 (see PLAN_ZEBRA_ZD421.md).
+    assertThrows(UnsupportedOperationException.class,
+        () -> Renderers.forProfile(profile(PrinterLanguage.ZPL)).render(List.of()));
+    assertThrows(UnsupportedOperationException.class,
+        () -> Renderers.forProfile(profile(PrinterLanguage.EPL)).render(List.of()));
+  }
+
+  @Test
   void forProfileRejectsNull() {
     assertThrows(IllegalArgumentException.class, () -> Renderers.forProfile(null));
   }
@@ -61,5 +83,7 @@ class RenderersTest {
   void onlyEscPosSupportsRealtimeStatus() {
     assertTrue(PrinterLanguage.ESC_POS.supportsRealtimeStatus());
     assertFalse(PrinterLanguage.STAR_PRNT.supportsRealtimeStatus());
+    assertFalse(PrinterLanguage.ZPL.supportsRealtimeStatus());
+    assertFalse(PrinterLanguage.EPL.supportsRealtimeStatus());
   }
 }

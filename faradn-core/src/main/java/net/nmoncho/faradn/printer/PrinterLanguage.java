@@ -21,13 +21,27 @@ public enum PrinterLanguage {
   ESC_POS,
 
   /** Star Micronics StarPRNT, e.g. the TSP143IV. */
-  STAR_PRNT;
+  STAR_PRNT,
+
+  /**
+   * Zebra Programming Language II, a positioned-label language (the Zebra
+   * ZD421). Consumes the {@code Canvas}/{@code Placement} IR, not the receipt
+   * flow, so its {@link Renderer} is the mirror of the receipt backends.
+   */
+  ZPL,
+
+  /**
+   * Eltron Programming Language 2, the ZD421's second native label language.
+   * Also positioned-label, and single-byte code pages only.
+   */
+  EPL;
 
   /**
    * Whether this language answers a synchronous, ESC/POS-style status poll
-   * ({@code DLE EOT}). StarPRNT has no such command (it uses push-model ASB), so
-   * a Star job must skip the pre-flight probe rather than block on it; the status
-   * gate keys off this.
+   * ({@code DLE EOT}). StarPRNT (push-model ASB) and the label languages (ZPL,
+   * EPL, whose status is request/response and deferred in v1) have no such
+   * synchronous poll wired up, so those jobs skip the pre-flight probe rather
+   * than block on it; the status gate keys off this.
    *
    * @return {@code true} for ESC/POS, {@code false} otherwise
    */
