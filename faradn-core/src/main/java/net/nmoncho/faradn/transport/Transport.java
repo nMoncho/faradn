@@ -41,6 +41,29 @@ public interface Transport extends AutoCloseable {
    */
   PrinterStatus status();
 
+  /**
+   * Sends a raw request and reads up to {@code maxReplyBytes} of reply, within
+   * the transport's status timeout. Returns the bytes actually read (possibly
+   * fewer, or empty). This is the low-level primitive a
+   * {@link StatusReader} drives for a language whose status poll is not the
+   * ESC/POS {@code DLE EOT} of {@link #status()} (e.g. a StarPRNT
+   * {@code ESC ACK SOH} ASB poll).
+   * <p>
+   * The default implementation reports no raw channel; a transport with a real
+   * bidirectional link (USB, TCP) overrides it.
+   *
+   * @param request
+   *        the request bytes to write
+   * @param maxReplyBytes
+   *        the most reply bytes to read
+   * @return the reply bytes actually read
+   * @throws TransportException
+   *         if the exchange fails or the transport has no raw status channel
+   */
+  default byte[] exchange(byte[] request, int maxReplyBytes) {
+    throw new TransportException("This transport has no raw status channel");
+  }
+
   @Override
   void close();
 }

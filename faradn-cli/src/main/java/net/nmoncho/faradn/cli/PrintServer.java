@@ -22,9 +22,11 @@ import org.slf4j.LoggerFactory;
 import net.nmoncho.faradn.Document;
 import net.nmoncho.faradn.printer.Devices;
 import net.nmoncho.faradn.printer.UsbPrinter;
+import net.nmoncho.faradn.printer.PrinterLanguage;
 import net.nmoncho.faradn.printer.PrinterProfile;
 import net.nmoncho.faradn.printer.Renderers;
 import net.nmoncho.faradn.transport.PrinterStatus;
+import net.nmoncho.faradn.transport.StatusReaders;
 import net.nmoncho.faradn.transport.Transport;
 import net.nmoncho.faradn.transport.TransportException;
 
@@ -133,7 +135,9 @@ public final class PrintServer {
     try (Transport transport = transports.get()) {
       // The status poll is an ESC/POS DLE EOT query; a language without a
       // synchronous status reply (StarPRNT) would stall on it, so skip it.
-      final PrinterStatus status = profile.language().supportsRealtimeStatus() ? statusOrNull(transport) : null;
+      final PrinterStatus status = profile.language().supportsRealtimeStatus()
+          ? statusOrNull(transport, profile.language())
+          : null;
       if (status != null && !status.ready()) {
         return new Response(409, json("status", "not-ready", "message", status.toString()));
       }
@@ -160,9 +164,9 @@ public final class PrintServer {
     return new Response(200, json("status", "ok"));
   }
 
-  private static PrinterStatus statusOrNull(Transport transport) {
+  private static PrinterStatus statusOrNull(Transport transport, PrinterLanguage language) {
     try {
-      return transport.status();
+      return StatusReaders.forLanguage(language).read(transport);
     } catch (TransportException e) {
       return null;
     }

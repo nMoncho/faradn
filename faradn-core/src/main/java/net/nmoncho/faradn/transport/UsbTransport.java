@@ -162,6 +162,36 @@ public final class UsbTransport implements Transport {
     return readStatusByte(outPipe, inPipe, command, statusTimeoutMillis);
   }
 
+  @Override
+  public byte[] exchange(byte[] request, int maxReplyBytes) {
+    if (inPipe == null) {
+      throw new TransportException("Printer has no status (IN) endpoint");
+    }
+    try {
+      outPipe.syncSubmit(request);
+
+      final byte[] buffer = new byte[Math.max(1, maxReplyBytes)];
+      final UsbIrp irp = inPipe.createUsbIrp();
+      irp.setData(buffer);
+      irp.setAcceptShortPacket(true);
+      inPipe.asyncSubmit(irp);
+      irp.waitUntilComplete(statusTimeoutMillis);
+
+      if (!irp.isComplete()) {
+        inPipe.abortAllSubmissions();
+        throw new TransportException(
+            "Timed out after " + statusTimeoutMillis + " ms waiting for a status reply from the printer");
+      }
+      if (irp.isUsbException()) {
+        throw irp.getUsbException();
+      }
+      final int length = irp.getActualLength();
+      return length <= 0 ? new byte[0] : java.util.Arrays.copyOf(buffer, length);
+    } catch (UsbException e) {
+      throw new TransportException("USB status exchange failed", e);
+    }
+  }
+
   /**
    * Sends a status command and reads one response byte, waiting at most
    * {@code timeoutMillis} for it. The read uses the asynchronous IRP API so a

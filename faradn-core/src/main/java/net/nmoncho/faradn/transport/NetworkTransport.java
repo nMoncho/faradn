@@ -5,6 +5,7 @@
 
 package net.nmoncho.faradn.transport;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -89,6 +90,32 @@ public final class NetworkTransport implements Transport {
       throw new IOException("printer closed the connection during status read");
     }
     return (byte) value;
+  }
+
+  @Override
+  public byte[] exchange(byte[] request, int maxReplyBytes) {
+    try {
+      socket.setSoTimeout(statusTimeoutMillis);
+      out.write(request);
+      out.flush();
+      final ByteArrayOutputStream reply = new ByteArrayOutputStream();
+      final int first = in.read(); // blocks up to the read timeout for the first byte
+      if (first < 0) {
+        return new byte[0];
+      }
+      reply.write(first);
+      // Then drain whatever else arrived in the same burst, up to the cap.
+      while (reply.size() < maxReplyBytes && in.available() > 0) {
+        final int b = in.read();
+        if (b < 0) {
+          break;
+        }
+        reply.write(b);
+      }
+      return reply.toByteArray();
+    } catch (IOException e) {
+      throw new TransportException("Failed to exchange status with network printer", e);
+    }
   }
 
   @Override

@@ -76,4 +76,87 @@ public class PrinterStatusTest {
     assertFalse(status.paperEnd());
     assertTrue(status.ready());
   }
+
+  // ----- StarPRNT ASB decode (block bytes 3/4/6/7 = indices 2/3/5/6) -----
+
+  /** A 15-byte ASB v6 block with the two header bytes and everything OK. */
+  private static byte[] asb() {
+    byte[] block = new byte[15];
+    block[0] = 0x2F; // Header-1
+    block[1] = 0x0C; // Header-2
+    return block;
+  }
+
+  @Test
+  void starAsbReadyWhenNothingIsWrong() {
+    PrinterStatus status = PrinterStatus.ofStarAsb(asb());
+
+    assertTrue(status.online());
+    assertFalse(status.coverOpen());
+    assertFalse(status.paperEnd());
+    assertFalse(status.error());
+    assertTrue(status.ready());
+  }
+
+  @Test
+  void starAsbCoverOpenFromThirdByteBit5() {
+    byte[] block = asb();
+    block[2] |= (1 << 5);
+
+    PrinterStatus status = PrinterStatus.ofStarAsb(block);
+
+    assertTrue(status.coverOpen());
+    assertFalse(status.ready());
+  }
+
+  @Test
+  void starAsbOfflineFromThirdByteBit3() {
+    byte[] block = asb();
+    block[2] |= (1 << 3);
+
+    PrinterStatus status = PrinterStatus.ofStarAsb(block);
+
+    assertFalse(status.online());
+    assertFalse(status.ready());
+  }
+
+  @Test
+  void starAsbCutterErrorFromFourthByteBit3() {
+    byte[] block = asb();
+    block[3] |= (1 << 3);
+
+    PrinterStatus status = PrinterStatus.ofStarAsb(block);
+
+    assertTrue(status.error());
+    assertFalse(status.ready());
+  }
+
+  @Test
+  void starAsbPaperEndFromSixthByteBit3() {
+    byte[] block = asb();
+    block[5] |= (1 << 3);
+
+    PrinterStatus status = PrinterStatus.ofStarAsb(block);
+
+    assertTrue(status.paperEnd());
+    assertFalse(status.ready());
+  }
+
+  @Test
+  void starAsbNearEndFromSeventhByteBit1DoesNotBlock() {
+    byte[] block = asb();
+    block[6] |= (1 << 1);
+
+    PrinterStatus status = PrinterStatus.ofStarAsb(block);
+
+    assertTrue(status.paperNearEnd());
+    assertFalse(status.paperEnd());
+    assertTrue(status.ready());
+  }
+
+  @Test
+  void starAsbTooShortIsRejected() {
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+        () -> PrinterStatus.ofStarAsb(new byte[] { 0x2F, 0x0C }));
+  }
 }

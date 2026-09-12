@@ -13,7 +13,10 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 import net.nmoncho.faradn.printer.StarProfiles;
 import net.nmoncho.faradn.transport.NetworkTransport;
+import net.nmoncho.faradn.transport.PrinterStatus;
+import net.nmoncho.faradn.transport.StatusReaders;
 import net.nmoncho.faradn.transport.UsbTransport;
+import net.nmoncho.faradn.printer.PrinterLanguage;
 
 /**
  * Manual hardware checks for a Star Micronics TSP143IV, rendered natively in
@@ -92,5 +95,39 @@ public class StarHardwarePrintTest {
     try (UsbTransport transport = UsbTransport.open(STAR_VENDOR_ID)) {
       Printer.print(transport, doc, StarProfiles.tsp143iv());
     }
+  }
+
+  /**
+   * Reads the Star ASB status over USB and prints both the raw reply and the
+   * decoded readiness, so the ASB bit map and any transport framing can be
+   * confirmed on real hardware. Run it in a few states - normal, cover open,
+   * paper out - and check the decode matches:
+   *
+   * <pre>{@code
+   * mvn test -Dfaradn.star.hardware=true -Dtest=StarHardwarePrintTest#readsStarStatusOverUsb
+   * }</pre>
+   *
+   * This does not print anything and never refuses; it only reads. Once the
+   * decode is confirmed, {@code PrinterLanguage.supportsRealtimeStatus()} can be
+   * flipped on for StarPRNT to make the pre-flight check live.
+   */
+  @Test
+  @EnabledIfSystemProperty(named = "faradn.star.hardware", matches = "true")
+  void readsStarStatusOverUsb() {
+    try (UsbTransport transport = UsbTransport.open(STAR_VENDOR_ID)) {
+      byte[] raw = transport.exchange(new byte[] { 0x1B, 0x06, 0x01 }, 64); // ESC ACK SOH
+      System.out.println("Star ASB raw reply (" + raw.length + " bytes): " + hex(raw));
+
+      PrinterStatus status = StatusReaders.forLanguage(PrinterLanguage.STAR_PRNT).read(transport);
+      System.out.println("Decoded status: " + status + " (ready=" + status.ready() + ")");
+    }
+  }
+
+  private static String hex(byte[] bytes) {
+    StringBuilder sb = new StringBuilder();
+    for (byte b : bytes) {
+      sb.append(String.format("%02X ", b));
+    }
+    return sb.toString().trim();
   }
 }

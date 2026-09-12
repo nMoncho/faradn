@@ -11,10 +11,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.nmoncho.faradn.internal.usb.UsbDevices;
+import net.nmoncho.faradn.printer.PrinterLanguage;
 import net.nmoncho.faradn.printer.PrinterProfile;
 import net.nmoncho.faradn.printer.Renderers;
 import net.nmoncho.faradn.transport.PrinterNotReadyException;
 import net.nmoncho.faradn.transport.PrinterStatus;
+import net.nmoncho.faradn.transport.StatusReaders;
 import net.nmoncho.faradn.transport.Transport;
 import net.nmoncho.faradn.transport.TransportException;
 import net.nmoncho.faradn.transport.UsbTransport;
@@ -117,10 +119,12 @@ public class Printer {
    */
   public static void print(Transport transport, Document doc, PrinterProfile profile) {
     final byte[] payload = Renderers.forProfile(profile).render(doc.blocks(profile.dpi()));
-    // The pre-flight check is an ESC/POS DLE EOT poll; a language without a
-    // synchronous status reply (StarPRNT) would just stall on it, so skip it.
+    // The pre-flight check polls the printer's status in its own language (see
+    // StatusReaders). A language whose live status is not yet enabled
+    // (StarPRNT, pending hardware verification of its ASB) skips it rather than
+    // risk a false not-ready.
     if (profile.language().supportsRealtimeStatus()) {
-      ensureReady(transport);
+      ensureReady(transport, profile.language());
     }
     transport.write(payload);
   }
@@ -134,10 +138,10 @@ public class Printer {
    * Best-effort pre-flight check: if the status channel works and reports a
    * problem, refuse the job; if status cannot be read, print anyway.
    */
-  private static void ensureReady(Transport transport) {
+  private static void ensureReady(Transport transport, PrinterLanguage language) {
     final PrinterStatus status;
     try {
-      status = transport.status();
+      status = StatusReaders.forLanguage(language).read(transport);
     } catch (TransportException e) {
       log.debug("Skipping pre-flight status check: {}", e.getMessage());
       return;
