@@ -39,6 +39,7 @@ import net.nmoncho.faradn.document.TextRun;
 import net.nmoncho.faradn.printer.text.BoxDrawing;
 import net.nmoncho.faradn.printer.command.Code;
 import net.nmoncho.faradn.printer.escpos.ImageRasterizer;
+import net.nmoncho.faradn.printer.label.LabelLayout;
 import net.nmoncho.faradn.printer.text.TextWrapper;
 import net.nmoncho.faradn.printer.escpos.commands.BarcodeCommands;
 import net.nmoncho.faradn.printer.escpos.commands.CharacterCommands;
@@ -738,12 +739,9 @@ public final class EscPosRenderer implements Renderer {
    * Returns {@code [escDollar, gsDollar]}.
    */
   private static int[] rotatedPosition(int x, int y, Canvas.Direction dir, int w, int h) {
-    return switch (dir) {
-      case NORMAL -> new int[] { x, y };
-      case ROTATE_90_CW -> new int[] { y, Math.max(0, w - x) };
-      case ROTATE_90_CCW -> new int[] { Math.max(0, h - y), x };
-      case ROTATE_180 -> new int[] { Math.max(0, w - x), Math.max(0, h - y) };
-    };
+    // The transform is shared with the label backends; see LabelLayout.rotate.
+    final LabelLayout.Point point = LabelLayout.rotate(x, y, w, h, dir);
+    return new int[] { point.xDots(), point.yDots() };
   }
 
   /** Maps a canvas direction to the {@code ESC T} print direction. */
