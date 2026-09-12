@@ -277,7 +277,7 @@ public final class StarPrntRenderer implements Renderer {
       current = emitHorizontalBorder(out, enc, current, border.style());
     }
 
-    final OptionalInt spacing = beginLineSpacing(out, paragraph);
+    final int extraFeed = extraLineFeedDots(paragraph);
     final List<List<TextRun>> lines = TextWrapper.wrap(paragraph.runs(), effectiveColumns(paragraph.runs()));
     for (int i = 0; i < lines.size(); i++) {
       for (TextRun segment : lines.get(i)) {
@@ -288,9 +288,8 @@ public final class StarPrntRenderer implements Renderer {
         // Reset trailing inline state at the end of the paragraph.
         current = clearInlineStyle(out, current);
       }
-      out.writeBytes(StarPrintCommands.LINE_FEED.getCode());
+      feedLine(out, extraFeed);
     }
-    endLineSpacing(out, spacing);
 
     if (border.bottom()) {
       current = emitHorizontalBorder(out, enc, current, border.style());
@@ -312,7 +311,7 @@ public final class StarPrntRenderer implements Renderer {
     final Alignment alignment = paragraph.alignment();
 
     current = applyAlignment(out, current, Alignment.LEFT); // full-width line; the label is placed by padding
-    final OptionalInt spacing = beginLineSpacing(out, paragraph);
+    final int extraFeed = extraLineFeedDots(paragraph);
     final List<List<TextRun>> lines = TextWrapper.wrap(paragraph.runs(), columns);
     for (int i = 0; i < lines.size(); i++) {
       final int pad = Math.max(0, columns - displayWidth(lines.get(i)));
@@ -338,9 +337,8 @@ public final class StarPrntRenderer implements Renderer {
       if (i == lines.size() - 1) {
         current = clearInlineStyle(out, current); // invert off at the end of the bar
       }
-      out.writeBytes(StarPrintCommands.LINE_FEED.getCode());
+      feedLine(out, extraFeed);
     }
-    endLineSpacing(out, spacing);
     return current;
   }
 
@@ -361,7 +359,7 @@ public final class StarPrntRenderer implements Renderer {
     final int restWidth = Math.max(1, columns - restPad - layout.rightIndent());
 
     current = applyAlignment(out, current, Alignment.LEFT); // the block is left on paper; indent is spaces
-    final OptionalInt spacing = beginLineSpacing(out, paragraph);
+    final int extraFeed = extraLineFeedDots(paragraph);
     final List<List<TextRun>> lines = TextWrapper.wrap(paragraph.runs(), firstWidth, restWidth);
     for (int i = 0; i < lines.size(); i++) {
       final int pad = (i == 0) ? firstPad : restPad;
@@ -377,9 +375,8 @@ public final class StarPrntRenderer implements Renderer {
       if (i == lines.size() - 1) {
         current = clearInlineStyle(out, current);
       }
-      out.writeBytes(StarPrintCommands.LINE_FEED.getCode());
+      feedLine(out, extraFeed);
     }
-    endLineSpacing(out, spacing);
     return current;
   }
 
@@ -477,7 +474,7 @@ public final class StarPrntRenderer implements Renderer {
    */
   private ComputedStyle emitFramedParagraph(ByteArrayOutputStream out, CodePageEncoder enc, ComputedStyle current,
       Paragraph paragraph, Border border, BoxDrawing box, int contentWidth) {
-    final OptionalInt spacing = beginLineSpacing(out, paragraph);
+    final int extraFeed = extraLineFeedDots(paragraph);
     for (List<TextRun> line : TextWrapper.wrap(paragraph.runs(), contentWidth)) {
       current = clearInlineStyle(out, current);
       if (border.left()) {
@@ -488,9 +485,8 @@ public final class StarPrntRenderer implements Renderer {
         current = clearInlineStyle(out, current);
         enc.emit(box.vertical());
       }
-      out.writeBytes(StarPrintCommands.LINE_FEED.getCode());
+      feedLine(out, extraFeed);
     }
-    endLineSpacing(out, spacing);
     return current;
   }
 
@@ -523,22 +519,38 @@ public final class StarPrntRenderer implements Renderer {
   }
 
   /**
-   * Pins the line spacing for a paragraph's {@code line-height} (via {@code ESC
-   * z n}) and returns the spacing so {@link #endLineSpacing} can restore the
-   * default; empty when the paragraph uses the default spacing.
+   * The extra per-line feed, in dots, that a paragraph's {@code line-height}
+   * needs on top of the printer's default line pitch - or {@code 0} for the
+   * default (or a line-height at/below the default).
+   * <p>
+   * StarPRNT has no "set line spacing to <em>n</em> dots" command: {@code ESC z}
+   * only selects 3&nbsp;mm or 4&nbsp;mm, and {@code ESC 3 n} does not exist. So
+   * an
+   * arbitrary line-height is emulated by leaving the default pitch alone and
+   * adding a one-time {@code ESC I} dot feed after each line to reach the target
+   * (see {@link #feedLine}). Feeds only add, so a line-height <em>tighter</em>
+   * than the default pitch cannot be honoured (it clamps to the default) - the
+   * dot feeds only loosen.
    */
-  private OptionalInt beginLineSpacing(ByteArrayOutputStream out, Paragraph paragraph) {
-    final OptionalInt spacing = paragraph.runs().get(0).style().lineHeight()
+  private int extraLineFeedDots(Paragraph paragraph) {
+    final OptionalInt target = paragraph.runs().get(0).style().lineHeight()
         .resolveDots(textCellHeightDots(paragraph), profile.dpi());
-    if (spacing.isPresent()) {
-      out.writeBytes(StarLineSpacingCommands.SET_LINE_SPACING.getCode(new Amount(Math.min(255, spacing.getAsInt())))); // ESC z n
+    if (target.isEmpty()) {
+      return 0;
     }
-    return spacing;
+    // The default line pitch left unchanged: ESC 0 / the Spec.1 default is 3 mm.
+    final int defaultPitch = Math.max(1, Math.round(3.0f / 25.4f * profile.dpi())); // ~24 dots at 203 dpi
+    return Math.max(0, Math.min(255, target.getAsInt() - defaultPitch));
   }
 
-  private void endLineSpacing(ByteArrayOutputStream out, OptionalInt spacing) {
-    if (spacing.isPresent()) {
-      out.writeBytes(StarLineSpacingCommands.DEFAULT_LINE_SPACING.getCode()); // ESC 0
+  /**
+   * Feeds one line: a line feed at the default pitch, then (for a looser
+   * line-height) an extra {@code ESC I n} dot feed to pad to the target.
+   */
+  private void feedLine(ByteArrayOutputStream out, int extraDots) {
+    out.writeBytes(StarPrintCommands.LINE_FEED.getCode());
+    if (extraDots > 0) {
+      out.writeBytes(StarLineSpacingCommands.MICRO_FEED.getCode(new Amount(extraDots))); // ESC I n
     }
   }
 

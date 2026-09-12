@@ -11,27 +11,36 @@ import net.nmoncho.faradn.printer.command.ParametricCode;
 import net.nmoncho.faradn.printer.command.SimpleCode;
 
 /**
- * StarPRNT line-spacing and dot-feed commands for the TSP143IV, replacing
- * ESC/POS {@code ESC 3}/{@code ESC 2} (+ {@code GS P}). The line pitch is set
- * with {@code ESC z n} and reset with {@code ESC 0}; sub-line paper feeds use
- * {@code ESC J n} (n × 2 dots at 203&nbsp;dpi) and {@code ESC I n} (n × 1 dot).
- * All Spec.&nbsp;1 on this model. Verified against the StarPRNT Command
- * Specifications (Rev 4.20), pp46-48.
+ * StarPRNT line-spacing and dot-feed commands for the TSP143IV. Unlike ESC/POS
+ * ({@code ESC 3 n}), StarPRNT has <strong>no command to set the line pitch to
+ * an
+ * arbitrary number of dots</strong>: {@code ESC z n} only <em>selects</em> a
+ * coarse pitch ({@code n=0/48} → 3&nbsp;mm/24 dots, {@code n=1/49} →
+ * 4&nbsp;mm/32
+ * dots) and {@code ESC 0} fixes it to 3&nbsp;mm. So an arbitrary
+ * {@code line-height} is emulated in the renderer by leaving the pitch alone
+ * and
+ * adding a one-time dot feed after each line: {@code ESC I n} (n × 1 dot) or
+ * {@code ESC J n} (n × 2 dots) at 203&nbsp;dpi. All Spec.&nbsp;1 on this model.
+ * Verified against the StarPRNT Command Specifications (Rev 4.20), pp46-48.
  */
 public final class StarLineSpacingCommands {
 
-  /** {@code ESC z n} - set the line pitch to {@code n} (0..255). */
-  public static final ParametricCode<Amount> SET_LINE_SPACING = new ParametricCode<>(
+  /**
+   * {@code ESC z n} - select the line pitch: {@code n=0} → 3&nbsp;mm, {@code n=1}
+   * → 4&nbsp;mm (only).
+   */
+  public static final ParametricCode<Amount> SELECT_LINE_PITCH = new ParametricCode<>(
       new byte[] { Code.ESC, 0x7A });
 
-  /** {@code ESC 0} - restore the default line pitch. */
-  public static final Code DEFAULT_LINE_SPACING = new SimpleCode("ESC 0", new byte[] { Code.ESC, 0x30 });
+  /** {@code ESC 0} - set the line pitch to 3&nbsp;mm (24 dots). */
+  public static final Code LINE_PITCH_3MM = new SimpleCode("ESC 0", new byte[] { Code.ESC, 0x30 });
 
-  /** {@code ESC J n} - print and feed the paper {@code n × 2} dots. */
+  /** {@code ESC J n} - print and feed the paper {@code n × 2} dots (one-time). */
   public static final ParametricCode<Amount> PRINT_AND_FEED_DOTS = new ParametricCode<>(
       new byte[] { Code.ESC, 0x4A });
 
-  /** {@code ESC I n} - micro-feed the paper {@code n × 1} dot. */
+  /** {@code ESC I n} - print and feed the paper {@code n × 1} dot (one-time). */
   public static final ParametricCode<Amount> MICRO_FEED = new ParametricCode<>(
       new byte[] { Code.ESC, 0x49 });
 

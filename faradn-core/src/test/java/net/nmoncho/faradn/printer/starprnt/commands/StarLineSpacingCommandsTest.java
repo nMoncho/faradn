@@ -16,12 +16,12 @@ class StarLineSpacingCommandsTest {
   @Test
   void setLineSpacingIsEscZ() {
     assertArrayEquals(new byte[] { 0x1B, 0x7A, 0x1E },
-        StarLineSpacingCommands.SET_LINE_SPACING.getCode(new Amount(30)));
+        StarLineSpacingCommands.SELECT_LINE_PITCH.getCode(new Amount(30)));
   }
 
   @Test
   void defaultLineSpacingIsEsc0() {
-    assertArrayEquals(new byte[] { 0x1B, 0x30 }, StarLineSpacingCommands.DEFAULT_LINE_SPACING.getCode());
+    assertArrayEquals(new byte[] { 0x1B, 0x30 }, StarLineSpacingCommands.LINE_PITCH_3MM.getCode());
   }
 
   @Test

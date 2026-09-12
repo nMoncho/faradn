@@ -5,10 +5,12 @@
 
 package net.nmoncho.faradn.printer.starprnt;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -16,6 +18,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import net.nmoncho.faradn.Document;
 import net.nmoncho.faradn.Image;
 import net.nmoncho.faradn.RasterImage;
 import net.nmoncho.faradn.UnsupportedBlockException;
@@ -28,6 +31,7 @@ import net.nmoncho.faradn.document.Cut;
 import net.nmoncho.faradn.document.Drawer;
 import net.nmoncho.faradn.document.Feed;
 import net.nmoncho.faradn.document.ImageBlock;
+import net.nmoncho.faradn.document.LineHeight;
 import net.nmoncho.faradn.document.Paragraph;
 import net.nmoncho.faradn.document.Rule;
 import net.nmoncho.faradn.document.Table;
@@ -36,6 +40,7 @@ import net.nmoncho.faradn.printer.CodePage;
 import net.nmoncho.faradn.printer.Font;
 import net.nmoncho.faradn.printer.PrinterLanguage;
 import net.nmoncho.faradn.printer.PrinterProfile;
+import net.nmoncho.faradn.printer.StarProfiles;
 import net.nmoncho.faradn.printer.starprnt.commands.StarBarcodeCommands;
 
 /**
@@ -228,6 +233,75 @@ class StarPrntRendererTest {
     byte[] out = star.render(List.of(barcode));
 
     assertBytes(cat(HEAD, StarBarcodeCommands.encode("code128", "12345678"), LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void qrDelegatesToStarBarcodeCommands() {
+    // 2D goes through the Star encoder (ESC GS y), not the ESC/POS one.
+    Barcode qr = new Barcode("HELLO", "qr", Alignment.LEFT);
+    byte[] out = star.render(List.of(qr));
+
+    assertBytes(cat(HEAD, StarBarcodeCommands.encode("qr", "HELLO"), LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void codePageSwitchesMidTextWithEscGsT() {
+    // '€' is not in CP437 but is in CP1252 (0x80), forcing an inline switch to
+    // page 32 via the Star selector (ESC GS t 32), not ESC/POS's ESC t.
+    CodePage cp1252 = new CodePage(32, Charset.forName("windows-1252"));
+    PrinterProfile p = PrinterProfile.of("star", 576, List.of(new Font(0, 48)), 203, true,
+        List.of(PC437, cp1252), PrinterLanguage.STAR_PRNT);
+
+    byte[] out = new StarPrntRenderer(p)
+        .render(List.of(new Paragraph(List.of(new TextRun("€", ComputedStyle.INITIAL)), Alignment.LEFT)));
+
+    // HEAD selects CP437 (id 0, the default); then the inline switch to page 32.
+    assertBytes(cat(HEAD, new byte[] { ESC, GS, 0x74, 32 }, new byte[] { (byte) 0x80 }, LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void receiptTextFixtureIsFramedWithStarInitAndCut() {
+    // Anchor test: the whole receipt fixture renders through the Star backend;
+    // assert only the ESC @ + ESC GS t head and the ESC d cut tail.
+    byte[] out = new StarPrntRenderer(StarProfiles.tsp143iv())
+        .render(Document.from(new File("src/test/resources/printjobs/receipt-text.html")).blocks());
+
+    assertArrayEquals(new byte[] { ESC, 0x40, ESC, GS, 0x74, 0x01 }, Arrays.copyOfRange(out, 0, 6)); // ESC @ + ESC GS t 1
+    assertArrayEquals(PARTIAL_CUT, Arrays.copyOfRange(out, out.length - PARTIAL_CUT.length, out.length)); // ESC d 1
+  }
+
+  @Test
+  void looseLineHeightPadsEachLineWithAnExtraDotFeed() {
+    // StarPRNT has no set-line-spacing command, so a looser line-height is
+    // emulated with a one-time ESC I feed after each line. Font A cell = 24 dots,
+    // default pitch = 24 dots; line-height 2.0 -> 48 dots -> ESC I 24 extra.
+    ComputedStyle loose = new ComputedStyle(false, false, 1, 1, Alignment.LEFT, false, 0, false, LineHeight.parse("2"));
+
+    byte[] out = star.render(List.of(new Paragraph(List.of(new TextRun("x", loose)), Alignment.LEFT)));
+
+    assertBytes(cat(HEAD, "x", LF, new byte[] { ESC, 0x49, 24 }, FEED_4, PARTIAL_CUT), out); // ESC I 24
+  }
+
+  @Test
+  void fixedLineHeightPadsToTheDotTarget() {
+    // line-height: 40px -> 40 dots; default pitch 24 -> ESC I 16 extra.
+    ComputedStyle fixed = new ComputedStyle(false, false, 1, 1, Alignment.LEFT, false, 0, false,
+        LineHeight.parse("40px"));
+
+    byte[] out = star.render(List.of(new Paragraph(List.of(new TextRun("x", fixed)), Alignment.LEFT)));
+
+    assertBytes(cat(HEAD, "x", LF, new byte[] { ESC, 0x49, 16 }, FEED_4, PARTIAL_CUT), out); // ESC I 16
+  }
+
+  @Test
+  void tightLineHeightEmitsNoExtraFeed() {
+    // line-height 1.0 = 24 dots = the default pitch; feeds only loosen, so a
+    // line-height at or below the default clamps to it (no ESC I).
+    ComputedStyle tight = new ComputedStyle(false, false, 1, 1, Alignment.LEFT, false, 0, false, LineHeight.parse("1"));
+
+    byte[] out = star.render(List.of(new Paragraph(List.of(new TextRun("x", tight)), Alignment.LEFT)));
+
+    assertBytes(cat(HEAD, "x", LF, FEED_4, PARTIAL_CUT), out);
   }
 
   @Test
