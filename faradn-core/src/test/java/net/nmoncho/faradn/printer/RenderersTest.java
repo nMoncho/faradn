@@ -65,11 +65,15 @@ class RenderersTest {
   }
 
   @Test
-  void labelRenderersAreStubsUntilTheirRenderPhase() {
-    // Phase 0 wires renderer selection only; the ZPL/EPL render() bodies land in
-    // Phases 3 and 5 (see PLAN_ZEBRA_ZD421.md).
-    assertThrows(UnsupportedOperationException.class,
-        () -> Renderers.forProfile(profile(PrinterLanguage.ZPL)).render(List.of()));
+  void zplRendererRendersAnEmptyJobToNoLabels() {
+    // The ZPL renderer is implemented (Phase 3): with no Canvas blocks there are
+    // no labels, so the output is empty rather than an exception.
+    assertEquals(0, Renderers.forProfile(profile(PrinterLanguage.ZPL)).render(List.of()).length);
+  }
+
+  @Test
+  void eplRendererIsAStubUntilPhase5() {
+    // EPL's render() body lands in Phase 5 (see PLAN_ZEBRA_ZD421.md).
     assertThrows(UnsupportedOperationException.class,
         () -> Renderers.forProfile(profile(PrinterLanguage.EPL)).render(List.of()));
   }
