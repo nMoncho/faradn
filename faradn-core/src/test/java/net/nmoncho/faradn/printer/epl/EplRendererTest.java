@@ -8,14 +8,17 @@ package net.nmoncho.faradn.printer.epl;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import net.nmoncho.faradn.Document;
 import net.nmoncho.faradn.Image;
 import net.nmoncho.faradn.RasterImage;
 import net.nmoncho.faradn.UnsupportedBlockException;
@@ -31,6 +34,7 @@ import net.nmoncho.faradn.printer.CodePage;
 import net.nmoncho.faradn.printer.Font;
 import net.nmoncho.faradn.printer.PrinterLanguage;
 import net.nmoncho.faradn.printer.PrinterProfile;
+import net.nmoncho.faradn.printer.ZebraProfiles;
 
 class EplRendererTest {
 
@@ -43,6 +47,8 @@ class EplRendererTest {
   // Setup for a 400 x 200 canvas: q clamps to min(400, 720) = 400; gap media -> gap 24.
   private static final String HEAD = "I8,0,001\r\nq400\r\nQ200,24\r\nN\r\n";
   private static final String TAIL = "P1\r\n";
+
+  private static final File FIXTURE = new File("src/test/resources/printjobs/zebra-label.html");
 
   private static final ComputedStyle PLAIN = ComputedStyle.INITIAL;
   private static final ComputedStyle BOLD = new ComputedStyle(true, false, 1, 1, Alignment.LEFT, false);
@@ -113,6 +119,45 @@ class EplRendererTest {
     final String out = new String(new EplRenderer(PROFILE).render(List.of(a, b)), IBM437);
     assertEquals(2, count(out, "I8,0,001"));
     assertEquals(2, count(out, "\r\nP1\r\n"));
+  }
+
+  @Test
+  void rendersTheZebraLabelFixtureAnchors() {
+    // The whole HTML -> IR -> EPL path via the real ZD421 profile: assert the label
+    // framing and that each element (logo, code128, QR, title) reaches the output.
+    final PrinterProfile profile = ZebraProfiles.zd421Epl203();
+    final String out = new String(new EplRenderer(profile).render(Document.from(FIXTURE).blocks(profile.dpi())),
+        IBM437);
+    assertTrue(out.startsWith("I8,0,001"), out.substring(0, Math.min(40, out.length())));
+    assertTrue(out.endsWith("P1\r\n"), "ends with print");
+    assertTrue(out.contains("GW0,0,"), "logo image (pinned to the GW header at the logo origin, not the binary body)");
+    assertTrue(out.contains("ZD421-0042"), "code128 data");
+    assertTrue(out.contains("https://nmoncho.io/faradn"), "qr data");
+    assertTrue(out.contains("FARAD'N SHIPPING"), "title text");
+  }
+
+  @Test
+  void qrPlacementEmitsNativeCommand() {
+    // EPL emits the native b,Q command (Japanese-models only; a ZPL profile is
+    // preferred for QR) with a warning, rather than dropping the QR.
+    final Canvas canvas = Canvas.of(400, 200).place(30, 40, new Barcode("HELLO", "qr", Alignment.LEFT)).build();
+    assertEquals(HEAD + "b30,40,Q,\"HELLO\"\r\n" + TAIL, epl(canvas));
+  }
+
+  @Test
+  void wholeCanvasRotate90CwTransformsPositionAndRotation() {
+    final Canvas canvas = Canvas.of(400, 200).direction(Canvas.Direction.ROTATE_90_CW).place(50, 30, paragraph("HI"))
+        .build();
+    // (50,30) -> (30, 400-50) = (30,350); EPL rotation 1.
+    assertEquals(HEAD + "A30,350,1,3,1,1,N,\"HI\"\r\n" + TAIL, epl(canvas));
+  }
+
+  @Test
+  void wholeCanvasRotate90CcwTransformsPositionAndRotation() {
+    final Canvas canvas = Canvas.of(400, 200).direction(Canvas.Direction.ROTATE_90_CCW).place(50, 30, paragraph("HI"))
+        .build();
+    // (50,30) -> (200-30, 50) = (170,50); EPL rotation 3.
+    assertEquals(HEAD + "A170,50,3,3,1,1,N,\"HI\"\r\n" + TAIL, epl(canvas));
   }
 
   private static Paragraph paragraph(String text) {

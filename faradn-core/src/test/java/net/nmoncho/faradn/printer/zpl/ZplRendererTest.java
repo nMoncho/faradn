@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.File;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -16,10 +17,14 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import net.nmoncho.faradn.Document;
 import net.nmoncho.faradn.Image;
 import net.nmoncho.faradn.RasterImage;
 import net.nmoncho.faradn.UnsupportedBlockException;
 import net.nmoncho.faradn.document.Barcode;
+import net.nmoncho.faradn.document.BarcodeOptions;
+import net.nmoncho.faradn.document.BarcodeOptions.Hri;
+import net.nmoncho.faradn.document.BarcodeOptions.QrEc;
 import net.nmoncho.faradn.document.Border;
 import net.nmoncho.faradn.document.Canvas;
 import net.nmoncho.faradn.document.ComputedStyle;
@@ -31,6 +36,7 @@ import net.nmoncho.faradn.printer.CodePage;
 import net.nmoncho.faradn.printer.Font;
 import net.nmoncho.faradn.printer.PrinterLanguage;
 import net.nmoncho.faradn.printer.PrinterProfile;
+import net.nmoncho.faradn.printer.ZebraProfiles;
 
 class ZplRendererTest {
 
@@ -42,6 +48,8 @@ class ZplRendererTest {
   // media defaults (direct thermal, gap) drive ^MTD and ^MNY.
   private static final String HEAD = "^XA^MUd^CI28^MTD^MNY^LH0,0^PW400^LL200";
   private static final String TAIL = "^XZ";
+
+  private static final File FIXTURE = new File("src/test/resources/printjobs/zebra-label.html");
 
   private static final ComputedStyle PLAIN = ComputedStyle.INITIAL;
   private static final ComputedStyle BOLD = new ComputedStyle(true, false, 1, 1, Alignment.LEFT, false);
@@ -134,6 +142,39 @@ class ZplRendererTest {
     final String out = new String(new ZplRenderer(PROFILE).render(List.of(a, b)), StandardCharsets.UTF_8);
     assertEquals(2, count(out, "^XA"));
     assertEquals(2, count(out, "^XZ"));
+  }
+
+  @Test
+  void qrPlacementUsesTheCorrectedFieldDataForm() {
+    // Pins the corrected ^BQ form: ec char (Q from QrEc.Q) then input mode A, and
+    // magnification from the module size - the command flagged "corrected during
+    // verification" in the plan.
+    final Barcode qr = new Barcode("HELLO", "qr", Alignment.LEFT, new BarcodeOptions(100, 6, Hri.BELOW, QrEc.Q));
+    final Canvas canvas = Canvas.of(400, 200).place(30, 40, qr).build();
+    assertEquals(HEAD + "^FO30,40^BQN,2,6^FDQA,HELLO^FS" + TAIL, zpl(canvas));
+  }
+
+  @Test
+  void wholeCanvasRotate90CcwTransformsPositionAndOrientation() {
+    final Canvas canvas = Canvas.of(400, 200).direction(Canvas.Direction.ROTATE_90_CCW).place(50, 30, paragraph("HI"))
+        .build();
+    // (50,30) -> (200-30, 50) = (170,50); orientation B (270 degrees).
+    assertEquals(HEAD + "^FO170,50^A0B,40,20^FDHI^FS" + TAIL, zpl(canvas));
+  }
+
+  @Test
+  void rendersTheZebraLabelFixtureAnchors() {
+    // The whole HTML -> IR -> ZPL path via the real ZD421 profile: assert the label
+    // framing and that each element (logo, code128, QR, title) reaches the output.
+    final PrinterProfile profile = ZebraProfiles.zd421Zpl203();
+    final String out = new String(new ZplRenderer(profile).render(Document.from(FIXTURE).blocks(profile.dpi())),
+        StandardCharsets.UTF_8);
+    assertTrue(out.startsWith("^XA"), out.substring(0, Math.min(40, out.length())));
+    assertTrue(out.endsWith("^XZ"), "ends with ^XZ");
+    assertTrue(out.contains("^GFA"), "logo image");
+    assertTrue(out.contains("^BC") && out.contains("ZD421-0042"), "code128");
+    assertTrue(out.contains("^BQ") && out.contains("https://nmoncho.io/faradn"), "qr");
+    assertTrue(out.contains("FARAD'N SHIPPING"), "title text");
   }
 
   private static Paragraph paragraph(String text) {

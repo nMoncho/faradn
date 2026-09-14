@@ -34,6 +34,8 @@ final class BuiltinProfiles {
     profiles.put("star-tsp143iv", StarProfiles::tsp143iv);
     profiles.put("zd421-zpl-203", ZebraProfiles::zd421Zpl203);
     profiles.put("zd421-zpl-300", ZebraProfiles::zd421Zpl300);
+    profiles.put("zd421-epl-203", ZebraProfiles::zd421Epl203);
+    profiles.put("zd421-epl-300", ZebraProfiles::zd421Epl300);
     PROFILES = Collections.unmodifiableMap(profiles);
   }
 

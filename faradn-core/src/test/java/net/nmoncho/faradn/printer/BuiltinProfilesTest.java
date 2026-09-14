@@ -21,6 +21,13 @@ class BuiltinProfilesTest {
   }
 
   @Test
+  void loadsTheZebraEplProfilesByName() {
+    assertEquals("Zebra ZD421 (EPL, 203dpi)", PrinterProfile.load("zd421-epl-203").orElseThrow().name());
+    assertEquals(PrinterLanguage.EPL, PrinterProfile.load("zd421-epl-203").orElseThrow().language());
+    assertEquals("Zebra ZD421 (EPL, 300dpi)", PrinterProfile.load("zd421-epl-300").orElseThrow().name());
+  }
+
+  @Test
   void loadsTheStarProfileByNameToo() {
     // Previously code-only; the registry makes it reachable via load()/--profile.
     assertEquals(PrinterLanguage.STAR_PRNT, PrinterProfile.load("star-tsp143iv").orElseThrow().language());
@@ -38,6 +45,8 @@ class BuiltinProfilesTest {
 
     assertTrue(available.contains("zd421-zpl-203"), "built-in listed");
     assertTrue(available.contains("zd421-zpl-300"), "built-in listed");
+    assertTrue(available.contains("zd421-epl-203"), "built-in listed");
+    assertTrue(available.contains("zd421-epl-300"), "built-in listed");
     assertTrue(available.contains("star-tsp143iv"), "built-in listed");
     assertTrue(available.contains("TM-T88V"), "database entry still listed");
     for (String name : available) {

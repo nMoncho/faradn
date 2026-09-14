@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Zebra Label</title>
+</head>
+<!-- A sized <body> is one whole-job label: every child is placed at exact dot
+     positions and the whole area prints as one label, rendered natively as ZPL
+     or EPL depending on the profile (zd421-zpl-* / zd421-epl-*). A logo image, a
+     Code 128 barcode, a QR code and text exercise the label backends end to end;
+     the native box border is covered by the renderer unit tests and the
+     programmatic printsBorderedBoxOverUsb hardware check. The barcodes sit a few
+     dots in from the left for a quiet zone, and the 600-dot height leaves room
+     below the QR so it is not clipped. -->
+<body style="width: 780px; height: 600px">
+    <img style="position: absolute; left: 0; top: 0" width="120" height="40" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAAoCAIAAAC6iKlyAAAEqklEQVR4Xu2YWSi1WxjHX/M2FiUpQxJHmZILU0hJh3LKDWW4cCGRCxkyXSEZUsQFpYMbSeGCXKDIdCElZc5QhhtTKGTe3/Pt5+znrL3edzudvb+ztzrrd7X3ev7Pf6/3b73rXS9JEggEAoFAIBAIBAKBQGBmrKysfvsSS0tLvkeSvLy8sOrv78/XNCja+vj4qFQqXirDMHPAzc2Nl2phW+AzX5YkX19fKAUGBvKFXwVcjPpLvL29uRZbW9urqyusfn5++vn5cQJJv+3Hx8fCwkJSUhLfoMUYc+D6+nplZaWurs7Ozk5fS3V1NVtCDg8Pserk5MTXfglfTBqRB52ZmckKGhsbOYH0T7bv7++JiYl8jwbjzZH9/X32J9iWl5eXkJAQxu8nJg26t7f3dxmwxLiW6elpagHOz8/lNyNrW1FRkZGRUVZWtrW1RYNTU1NcC/JvzXHO6enpubm5bW1tFxcXVLq/v/f09JS3AOvr6zY2NqynSYMuKSnhyzJgL4PbX61ZldSYlpbGyVjb2NhYHIRrODs7w8Hj42Pdjp8YYM7NGRw2NzepOjIyIm9B6uvr2cZvFzTMD8VZWVmvr6/4eXx8nJMpBg3Mzc3h4N7eHiP/CwPM5XN2d3d/enoiAe7y8qDf3t4iIyOp63sFDSeQ09NTUMK0LCwsxsbGaNIeHh6sUjFoV1fXm5sbHBwaGmL1kqHminOG/YQEeENQy6cG/Ly9vU3PTJMGDU8efwY4jXFi2A1RWVNTA19TU1Opt7KyklVyQcP1xMTELC0t4Qg8jiIiIli9ZKi5YtA5OTkkKC0tlZiW5eXlrq4uqsK2ji0mDZoDjkqceHR0VK3ZQPEhQ2tQLdsKWFu4kWkRAfC8iouLY8WIYeaKQSckJJCgs7NT0g3awcHh4OAAv8IjAW+4bxQ07H24b05MTNAg7apAfHw8jX9hGxYWRjLCYHPFoGG7IEFVVZWkGzR8hb80PnUBCB2iN2nQfX19fzCkpKSwyvLycpTB2ehPLbOzs9Q+ODhIYtZ2YGCgpaWFLmx4ePhvUy0GmysGXVRURAI4WUqyoIH29nbSdHd3mzRoxUkTOzs7pFTk8fHRxcUFxdweDSM9PT00kp2drWNthLninOFUR4Lg4GBJKWiVSrW7u4uD7M5m5qAhLNTAG9eCLrAGyaGwsBD18qDhyHF5eYkjt7e37AunMebyOYeHh1NwsE7xxUQeNBAVFcUe2BEzB93f34+agIAArgQnCjq0ra2t4aA8aCA/P58G5+fn6d9Vxphzc05OTj45OaEqvewoBg00NzeTGDFn0M7Ozg8PDyCAJcbXNMCTnUxgQUl6gobTMVwnjcOruWS0+czMTENDQ1NTExzMYfmzmwD7pqMvaPhDsv8YUJs36IKCAhTk5eXxNQ2hoaFkAqdUSU/QABw56G6F0zR8NdJckefn59raWmtrazLRFzQA74fwTkS9/1XQ8IZKv1FcXMyXNcBag+rd3Z29vT1f07K6uoomcKfDymVto6OjWWVHRweVNjY2jDQn4FRzdHQ0OTnZ2toaFBTEOVDL4uIiVwLgniAfR0dHviwQCAQCgUAgEAgEAoFA8L/kB42ObCZgBecaAAAAAElFTkSuQmCC">
+    <span style="position: absolute; left: 0; top: 64px"><b>FARAD'N SHIPPING</b></span>
+    <span style="position: absolute; left: 0; top: 120px">Ada Lovelace</span>
+    <span style="position: absolute; left: 0; top: 160px">Rotterdam, NL</span>
+    <bar-code style="position: absolute; left: 24px; top: 210px" symbology="code128" height="80">ZD421-0042</bar-code>
+    <bar-code style="position: absolute; left: 24px; top: 330px" symbology="qr" module="6" ec="q">https://nmoncho.io/faradn</bar-code>
+</body>
+</html>
