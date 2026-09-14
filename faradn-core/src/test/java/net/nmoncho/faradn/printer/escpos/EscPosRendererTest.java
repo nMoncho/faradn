@@ -67,6 +67,12 @@ public class EscPosRendererTest {
   private static final byte[] ITALIC_OFF = { ESC, 0x35 };
   private static final byte[] INVERT_ON = { GS, 0x42, 0x01 };
   private static final byte[] INVERT_OFF = { GS, 0x42, 0x00 };
+  private static final byte[] DOUBLE_STRIKE_ON = { ESC, 0x47, 0x01 };
+  private static final byte[] DOUBLE_STRIKE_OFF = { ESC, 0x47, 0x00 };
+  private static final byte[] UPSIDE_ON = { ESC, 0x7B, 0x01 };
+  private static final byte[] UPSIDE_OFF = { ESC, 0x7B, 0x00 };
+  private static final byte[] SMOOTH_ON = { GS, 0x62, 0x01 };
+  private static final byte[] SMOOTH_OFF = { GS, 0x62, 0x00 };
   private static final byte[] ALIGN_CENTER = { ESC, 0x61, 0x01 };
   private static final byte[] ALIGN_RIGHT = { ESC, 0x61, 0x02 };
   private static final byte[] FEED_4 = { ESC, 0x64, 0x04 };
@@ -166,6 +172,57 @@ public class EscPosRendererTest {
     byte[] out = renderer.render(Document.from("<p>a<em>b</em>c</p>").blocks());
 
     assertBytes(cat(HEAD, "a", ITALIC_ON, "b", ITALIC_OFF, "c", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void doubleStrikeTogglesAroundTheRun() {
+    ComputedStyle ds = new ComputedStyle(false, false, 1, 1, Alignment.LEFT, false, 0, false, true, false, false);
+
+    byte[] out = renderer.render(List.of(new Paragraph(List.of(new TextRun("x", ds)), Alignment.LEFT)));
+
+    assertBytes(cat(HEAD, DOUBLE_STRIKE_ON, "x", DOUBLE_STRIKE_OFF, LF, FEED_4, PARTIAL_CUT), out); // ESC G
+  }
+
+  @Test
+  void upsideDownTogglesAroundTheRun() {
+    ComputedStyle ud = new ComputedStyle(false, false, 1, 1, Alignment.LEFT, false, 0, false, false, true, false);
+
+    byte[] out = renderer.render(List.of(new Paragraph(List.of(new TextRun("x", ud)), Alignment.LEFT)));
+
+    assertBytes(cat(HEAD, UPSIDE_ON, "x", UPSIDE_OFF, LF, FEED_4, PARTIAL_CUT), out); // ESC {
+  }
+
+  @Test
+  void smoothingTogglesAroundTheRun() {
+    ComputedStyle sm = new ComputedStyle(false, false, 1, 1, Alignment.LEFT, false, 0, false, false, false, true);
+
+    byte[] out = renderer.render(List.of(new Paragraph(List.of(new TextRun("x", sm)), Alignment.LEFT)));
+
+    assertBytes(cat(HEAD, SMOOTH_ON, "x", SMOOTH_OFF, LF, FEED_4, PARTIAL_CUT), out); // GS b
+  }
+
+  @Test
+  void heaviestFontWeightAddsDoubleStrikeOnTopOfBold() {
+    // font-weight: 900 -> bold (ESC E) + double-strike (ESC G); 700 stays plain bold.
+    byte[] out = renderer.render(Document.from("<p style=\"font-weight: 900\">HEAVY</p>").blocks());
+
+    assertBytes(cat(HEAD, BOLD_ON, DOUBLE_STRIKE_ON, "HEAVY", BOLD_OFF, DOUBLE_STRIKE_OFF,
+        LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void halfTurnTransformPrintsUpsideDown() {
+    byte[] out = renderer.render(Document.from("<p style=\"transform: rotate(180deg)\">FLIP</p>").blocks());
+
+    assertBytes(cat(HEAD, UPSIDE_ON, "FLIP", UPSIDE_OFF, LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void webkitFontSmoothingMapsToSmoothing() {
+    byte[] out = renderer.render(
+        Document.from("<p style=\"-webkit-font-smoothing: antialiased\">SMOOTH</p>").blocks());
+
+    assertBytes(cat(HEAD, SMOOTH_ON, "SMOOTH", SMOOTH_OFF, LF, FEED_4, PARTIAL_CUT), out);
   }
 
   @Test

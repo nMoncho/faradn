@@ -9,6 +9,8 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.jsoup.nodes.Element;
 
@@ -41,6 +43,8 @@ public final class StyleResolver {
   private static final Set<String> BOLD_TAGS = Set.of("b", "strong");
   private static final Set<String> ITALIC_TAGS = Set.of("em", "i");
   private static final Set<String> BOLD_CSS_WEIGHTS = Set.of("bold", "bolder", "600", "700", "800", "900");
+  /** The heaviest weights also double-strike (ESC G) for a darker overprint. */
+  private static final Set<String> DOUBLE_STRIKE_CSS_WEIGHTS = Set.of("bolder", "800", "900");
 
   private static final Set<String> FONT_SIZE_KEYWORDS = Set.of(
       "xx-small", "x-small", "small", "medium", "large", "x-large", "xx-large", "smaller", "larger");
@@ -73,6 +77,9 @@ public final class StyleResolver {
     boolean newItalic = base.italic();
     boolean newInvert = base.invert();
     LineHeight newLineHeight = base.lineHeight();
+    boolean newDoubleStrike = base.doubleStrike();
+    boolean newUpsideDown = base.upsideDown();
+    boolean newSmoothing = base.smoothing();
 
     // Tag defaults.
     final String tag = el.normalName();
@@ -114,7 +121,11 @@ public final class StyleResolver {
     // Inline CSS overrides tag defaults
     final Optional<String> fontWeight = HtmlUtil.findStyleValue(el, "font-weight");
     if (fontWeight.isPresent()) {
-      newBold = BOLD_CSS_WEIGHTS.contains(fontWeight.get().toLowerCase());
+      final String weight = fontWeight.get().toLowerCase();
+      newBold = BOLD_CSS_WEIGHTS.contains(weight);
+      // The heaviest weights add double-strike (ESC G) on top of bold for a darker
+      // overprint; bold/600/700 stay plain bold.
+      newDoubleStrike = DOUBLE_STRIKE_CSS_WEIGHTS.contains(weight);
     }
 
     final Optional<String> textDecoration = HtmlUtil
@@ -163,6 +174,22 @@ public final class StyleResolver {
       newLineHeight = LineHeight.parse(lineHeightCss.get());
     }
 
+    // -webkit-font-smoothing: antialiased smooths the jagged edges of enlarged
+    // glyphs (ESC/POS GS b); none turns it off. It is the closest standard CSS to
+    // the printer's smoothing mode.
+    final Optional<String> smoothing = HtmlUtil.findStyleValue(el, "-webkit-font-smoothing");
+    if (smoothing.isPresent()) {
+      newSmoothing = smoothing.get().toLowerCase().contains("antialias"); // antialiased / subpixel-antialiased
+    }
+
+    // transform: rotate(180deg) on a flow block flips it upside-down (ESC/POS
+    // ESC {). Only a half turn maps - 90/270 need page mode (ESC T). In page mode
+    // transform is the region rotation, so BlockBuilder clears this on placements.
+    final Optional<String> transform = HtmlUtil.findStyleValue(el, "transform");
+    if (transform.isPresent()) {
+      newUpsideDown = isHalfTurn(transform.get());
+    }
+
     // A dark background inks the whole line: white-on-black, the reverse-video
     // section header. On a monochrome printer any non-white colour is "black",
     // so any background but white/transparent turns invert on (an explicit
@@ -175,7 +202,7 @@ public final class StyleResolver {
     }
 
     final ComputedStyle computed = new ComputedStyle(newBold, newUnderline, newWidth, newHeight, newAlignment,
-        newInvert, newFont, newItalic, newLineHeight);
+        newInvert, newFont, newItalic, newLineHeight, newDoubleStrike, newUpsideDown, newSmoothing);
 
     return base.equals(computed) ? base : computed;
   }
@@ -209,6 +236,23 @@ public final class StyleResolver {
         || color.equals("#ffffff")
         || color.equals("transparent")
         || color.equals("none"));
+  }
+
+  private static final Pattern ROTATE = Pattern.compile(
+      "rotate\\(\\s*(-?\\d+(?:\\.\\d+)?)\\s*(?:deg)?\\s*\\)", Pattern.CASE_INSENSITIVE);
+
+  /**
+   * Whether a CSS {@code transform} is a half-turn ({@code rotate(180deg)}),
+   * snapped to the nearest right angle and normalized to {@code [0, 360)}. Only a
+   * 180° rotation maps to upside-down; other angles are for page mode.
+   */
+  private static boolean isHalfTurn(String transform) {
+    final Matcher matcher = ROTATE.matcher(transform);
+    if (!matcher.find()) {
+      return false;
+    }
+    final int degrees = ((int) Math.round(Double.parseDouble(matcher.group(1)) / 90.0) * 90 % 360 + 360) % 360;
+    return degrees == 180;
   }
 
   /**

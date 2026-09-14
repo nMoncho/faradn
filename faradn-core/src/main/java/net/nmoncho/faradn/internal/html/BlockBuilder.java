@@ -780,7 +780,11 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
         Utils.log.debug("Ignoring non-absolutely-positioned <{}> in page-mode container", child.normalName());
         continue;
       }
-      final ComputedStyle childStyle = StyleResolver.resolve(base, child);
+      // In page mode `transform: rotate(…)` is the region/placement rotation
+      // (ESC T below), not the flow-text upside-down effect (ESC {) that
+      // StyleResolver also reads it as - so clear that here (including any inherited
+      // from a rotated container) to avoid double-flipping a 180° placement.
+      final ComputedStyle childStyle = StyleResolver.resolve(base, child).withUpsideDown(false);
       final int x = Math.max(0, styleLength(child, "left", widthDots).orElse(0));
       final int y = Math.max(0, styleLength(child, "top", heightDots).orElse(0));
       // A `transform: rotate(…)` on the child rotates just that placement (a

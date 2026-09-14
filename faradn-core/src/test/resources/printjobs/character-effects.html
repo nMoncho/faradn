@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Character effects</title>
+</head>
+<!-- Three ESC/POS character effects wired to CSS:
+       double-strike  <- font-weight: 800/900/bolder   (ESC G) - darker overprint
+       upside-down    <- transform: rotate(180deg)      (ESC {) - flips the line
+       smoothing      <- -webkit-font-smoothing: antialiased (GS b) - smooth big glyphs
+     Each is shown next to its plain counterpart so the difference is visible. -->
+<body>
+    <center><b>CHARACTER EFFECTS</b></center>
+    <hr>
+
+    <p><b>1) Double-strike (font-weight)</b></p>
+    <p style="font-weight: 700">Bold 700: the quick brown fox.</p>
+    <p style="font-weight: 900">Heavy 900: the quick brown fox.</p>
+    <p>The 900 line should print noticeably darker/heavier than the 700 line.</p>
+    <hr>
+
+    <p><b>2) Upside-down (transform: rotate(180deg))</b></p>
+    <p>Upright: VOID IF DETACHED</p>
+    <p style="transform: rotate(180deg)">Flipped: VOID IF DETACHED</p>
+    <p>The second line should print upside-down.</p>
+    <hr>
+
+    <p><b>3) Smoothing (-webkit-font-smoothing)</b></p>
+    <p style="font-size: 3em">Big AO (jagged)</p>
+    <p style="font-size: 3em; -webkit-font-smoothing: antialiased">Big AO (smooth)</p>
+    <p>Smoothing rounds the stair-stepped edges of the enlarged glyphs.</p>
+    <hr>
+
+    <p style="font-weight: 900; -webkit-font-smoothing: antialiased">Heavy + smooth combined.</p>
+    <p>End of demo.</p>
+</body>
+</html>

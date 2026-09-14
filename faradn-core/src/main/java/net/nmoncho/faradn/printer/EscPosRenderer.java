@@ -1158,8 +1158,24 @@ public final class EscPosRenderer implements Renderer {
           ? CharacterCommands.SELECT_ITALIC.getCode()
           : CharacterCommands.CANCEL_ITALIC.getCode());
     }
+    if (current.doubleStrike() != target.doubleStrike()) {
+      out.writeBytes(target.doubleStrike()
+          ? CharacterCommands.DOUBLE_STRIKE.turnOn()
+          : CharacterCommands.DOUBLE_STRIKE.turnOff()); // ESC G
+    }
+    if (current.upsideDown() != target.upsideDown()) {
+      out.writeBytes(target.upsideDown()
+          ? CharacterCommands.TURN_UPSIDE.turnOn()
+          : CharacterCommands.TURN_UPSIDE.turnOff()); // ESC {
+    }
+    if (current.smoothing() != target.smoothing()) {
+      out.writeBytes(target.smoothing()
+          ? CharacterCommands.SMOOTHING.turnOn()
+          : CharacterCommands.SMOOTHING.turnOff()); // GS b
+    }
     return new ComputedStyle(target.bold(), target.underline(), target.widthMultiple(), target.heightMultiple(),
-        current.alignment(), target.invert(), target.font(), target.italic());
+        current.alignment(), target.invert(), target.font(), target.italic(),
+        target.doubleStrike(), target.upsideDown(), target.smoothing());
   }
 
   /** Turns off every per-run attribute, emitting only what is currently on. */
@@ -1190,7 +1206,8 @@ public final class EscPosRenderer implements Renderer {
 
   private static ComputedStyle withAlignment(ComputedStyle style, Alignment alignment) {
     return new ComputedStyle(style.bold(), style.underline(), style.widthMultiple(), style.heightMultiple(),
-        alignment, style.invert(), style.font(), style.italic());
+        alignment, style.invert(), style.font(), style.italic(),
+        style.doubleStrike(), style.upsideDown(), style.smoothing());
   }
 
   private static Justification justification(Alignment alignment) {

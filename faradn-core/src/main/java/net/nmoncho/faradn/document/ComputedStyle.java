@@ -18,7 +18,8 @@ package net.nmoncho.faradn.document;
  * done by the internal style resolver, so this stays a pure value type.
  */
 public record ComputedStyle(boolean bold, boolean underline, int widthMultiple, int heightMultiple,
-    Alignment alignment, boolean invert, int font, boolean italic, LineHeight lineHeight) {
+    Alignment alignment, boolean invert, int font, boolean italic, LineHeight lineHeight,
+    boolean doubleStrike, boolean upsideDown, boolean smoothing) {
 
   public static final int MIN_SIZE_MULTIPLE = 1;
   public static final int MAX_SIZE_MULTIPLE = 8;
@@ -74,9 +75,36 @@ public record ComputedStyle(boolean bold, boolean underline, int widthMultiple, 
     this(bold, underline, widthMultiple, heightMultiple, alignment, invert, font, false);
   }
 
-  /** A style at the given font and italic, default line height. */
+  /**
+   * A style at the given font and italic, default line height, no extra effects.
+   */
   public ComputedStyle(boolean bold, boolean underline, int widthMultiple, int heightMultiple,
       Alignment alignment, boolean invert, int font, boolean italic) {
     this(bold, underline, widthMultiple, heightMultiple, alignment, invert, font, italic, LineHeight.NORMAL);
+  }
+
+  /** A style with a line height but no extra character effects. */
+  public ComputedStyle(boolean bold, boolean underline, int widthMultiple, int heightMultiple,
+      Alignment alignment, boolean invert, int font, boolean italic, LineHeight lineHeight) {
+    this(bold, underline, widthMultiple, heightMultiple, alignment, invert, font, italic, lineHeight,
+        false, false, false);
+  }
+
+  /**
+   * A style with the extra character effects (double-strike, upside-down,
+   * smoothing) at the default line height. Used by the renderers, which track
+   * effects per run but not line height.
+   */
+  public ComputedStyle(boolean bold, boolean underline, int widthMultiple, int heightMultiple,
+      Alignment alignment, boolean invert, int font, boolean italic,
+      boolean doubleStrike, boolean upsideDown, boolean smoothing) {
+    this(bold, underline, widthMultiple, heightMultiple, alignment, invert, font, italic, LineHeight.NORMAL,
+        doubleStrike, upsideDown, smoothing);
+  }
+
+  /** This style with {@code upsideDown} overridden (the rest unchanged). */
+  public ComputedStyle withUpsideDown(boolean upsideDown) {
+    return new ComputedStyle(bold, underline, widthMultiple, heightMultiple, alignment, invert, font, italic,
+        lineHeight, doubleStrike, upsideDown, smoothing);
   }
 }

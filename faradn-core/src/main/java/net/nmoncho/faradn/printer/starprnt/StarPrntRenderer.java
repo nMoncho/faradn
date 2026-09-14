@@ -1021,9 +1021,16 @@ public final class StarPrntRenderer implements Renderer {
     if (current.font() != target.font()) {
       out.writeBytes(StarCharacterCommands.SELECT_FONT.getCode(new FontSlot(target.font()))); // ESC RS F n
     }
-    // italic: StarPRNT has no italic command, so nothing is emitted for it.
+    if (current.upsideDown() != target.upsideDown()) {
+      out.writeBytes(target.upsideDown()
+          ? StarCharacterCommands.UPSIDE_DOWN_ON.getCode() // SI
+          : StarCharacterCommands.UPSIDE_DOWN_OFF.getCode()); // DC2
+    }
+    // italic, double-strike and smoothing have no StarPRNT command, so nothing is
+    // emitted for them (still tracked, so they never re-emit).
     return new ComputedStyle(target.bold(), target.underline(), target.widthMultiple(), target.heightMultiple(),
-        current.alignment(), target.invert(), target.font(), target.italic());
+        current.alignment(), target.invert(), target.font(), target.italic(),
+        target.doubleStrike(), target.upsideDown(), target.smoothing());
   }
 
   /** Turns off every per-run attribute, emitting only what is currently on. */
@@ -1053,7 +1060,8 @@ public final class StarPrntRenderer implements Renderer {
 
   private static ComputedStyle withAlignment(ComputedStyle style, Alignment alignment) {
     return new ComputedStyle(style.bold(), style.underline(), style.widthMultiple(), style.heightMultiple(),
-        alignment, style.invert(), style.font(), style.italic());
+        alignment, style.invert(), style.font(), style.italic(),
+        style.doubleStrike(), style.upsideDown(), style.smoothing());
   }
 
   private static Justification justification(Alignment alignment) {

@@ -225,6 +225,13 @@ the tag defaults:
   just that word. A monochrome printer has only black ink, so *any* non-white colour inks the line
   (`black`, `#000`, `navy`, `#c00`, …); an explicit `white`/`transparent` turns it back off.
   `color: white` is redundant (invert already whitens the glyphs) and is ignored.
+- `font-weight` heaviest tier (`800`, `900`, `bolder`): adds **double-strike** (`ESC G`) on top of
+  bold, an extra-dark overprint; `bold`/`600`/`700` stay plain bold.
+- `transform: rotate(180deg)` on a flow block: prints it **upside-down** (`ESC {`). Only a half turn
+  maps here; 90°/270° are page-mode rotation (a sized `position: relative` region, see below), where
+  `transform` is the region's own rotation, not a text flip.
+- `-webkit-font-smoothing` (`antialiased` / `subpixel-antialiased` on, `none` off): turns on the
+  printer's **smoothing** mode (`GS b`), which rounds the stair-stepped edges of enlarged glyphs.
 
 **Borders.** ESC/POS standard mode has no line-drawing command, so borders are drawn with
 **box-drawing characters** on the same monospace grid the text already sits on (PC437/PC850 carry

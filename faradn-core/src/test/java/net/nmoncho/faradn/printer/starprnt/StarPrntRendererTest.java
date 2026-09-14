@@ -129,6 +129,26 @@ class StarPrntRendererTest {
   }
 
   @Test
+  void upsideDownTogglesWithSiAndDc2() {
+    // upsideDown = ComputedStyle field 10; StarPRNT uses SI (0x0F) / DC2 (0x12).
+    ComputedStyle ud = new ComputedStyle(false, false, 1, 1, Alignment.LEFT, false, 0, false, false, true, false);
+
+    byte[] out = star.render(List.of(new Paragraph(List.of(new TextRun("x", ud)), Alignment.LEFT)));
+
+    assertBytes(cat(HEAD, new byte[] { 0x0F }, "x", new byte[] { 0x12 }, LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void doubleStrikeAndSmoothingAreNoOps() {
+    // StarPRNT has no double-strike/smoothing command, so both emit only the text.
+    ComputedStyle fx = new ComputedStyle(false, false, 1, 1, Alignment.LEFT, false, 0, false, true, false, true);
+
+    byte[] out = star.render(List.of(new Paragraph(List.of(new TextRun("x", fx)), Alignment.LEFT)));
+
+    assertBytes(cat(HEAD, "x", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
   void invertTogglesAroundTheRunWithEsc4And5() {
     ComputedStyle invert = new ComputedStyle(false, false, 1, 1, Alignment.LEFT, true);
 

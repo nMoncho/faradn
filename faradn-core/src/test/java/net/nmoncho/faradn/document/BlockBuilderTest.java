@@ -490,6 +490,26 @@ public class BlockBuilderTest {
     assertEquals(Canvas.Direction.ROTATE_90_CW, canvas.placements().get(1).rotation());
   }
 
+  @Test
+  void pageModeTransformIsRotationNotTextUpsideDown() {
+    // transform: rotate(180deg) on a page-mode region is the region rotation
+    // (ESC T); the placement runs must NOT also carry the flow upside-down effect
+    // (ESC {), or a 180 region would double-flip back upright.
+    final List<Block> blocks = Document.from(
+        "<div style=\"position: relative; width: 512px; height: 120px; transform: rotate(180deg)\">"
+            + "<span style=\"position: absolute; left: 0; top: 0\">flip</span>"
+            + "<span style=\"position: absolute; left: 0; top: 40px; transform: rotate(180deg)\">also</span>"
+            + "</div>")
+        .blocks();
+
+    final Canvas canvas = assertInstanceOf(Canvas.class, blocks.get(0));
+    assertEquals(Canvas.Direction.ROTATE_180, canvas.direction());
+    for (int i = 0; i < 2; i++) {
+      final Paragraph p = assertInstanceOf(Paragraph.class, canvas.placements().get(i).content());
+      assertFalse(p.runs().get(0).style().upsideDown(), "page-mode text must not carry the ESC { effect");
+    }
+  }
+
   // ----- whole-job labels: a sized <body> becomes one Canvas -----
 
   @Test

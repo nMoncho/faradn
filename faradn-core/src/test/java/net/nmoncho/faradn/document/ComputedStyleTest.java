@@ -156,6 +156,42 @@ public class ComputedStyleTest {
   }
 
   @Test
+  void heaviestFontWeightAddsDoubleStrike() {
+    // 800/900/bolder -> double-strike (ESC G) on top of bold; 700/bold stay plain bold.
+    assertTrue(
+        StyleResolver.resolve(ComputedStyle.INITIAL, element("<span style=\"font-weight: 900\">x</span>"))
+            .doubleStrike());
+    assertTrue(
+        StyleResolver.resolve(ComputedStyle.INITIAL, element("<span style=\"font-weight: bolder\">x</span>"))
+            .doubleStrike());
+    assertFalse(
+        StyleResolver.resolve(ComputedStyle.INITIAL, element("<span style=\"font-weight: 700\">x</span>"))
+            .doubleStrike());
+    assertFalse(
+        StyleResolver.resolve(ComputedStyle.INITIAL, element("<span style=\"font-weight: bold\">x</span>"))
+            .doubleStrike());
+  }
+
+  @Test
+  void halfTurnTransformIsUpsideDown() {
+    assertTrue(StyleResolver.resolve(ComputedStyle.INITIAL,
+        element("<div style=\"transform: rotate(180deg)\">x</div>")).upsideDown());
+    // Other rotations are page-mode (ESC T), not text upside-down.
+    assertFalse(StyleResolver.resolve(ComputedStyle.INITIAL,
+        element("<div style=\"transform: rotate(90deg)\">x</div>")).upsideDown());
+    assertFalse(StyleResolver.resolve(ComputedStyle.INITIAL,
+        element("<div style=\"transform: translate(4px)\">x</div>")).upsideDown());
+  }
+
+  @Test
+  void webkitFontSmoothingMapsToSmoothing() {
+    assertTrue(StyleResolver.resolve(ComputedStyle.INITIAL,
+        element("<span style=\"-webkit-font-smoothing: antialiased\">x</span>")).smoothing());
+    assertFalse(StyleResolver.resolve(ComputedStyle.INITIAL,
+        element("<span style=\"-webkit-font-smoothing: none\">x</span>")).smoothing());
+  }
+
+  @Test
   void cssTextDecoration() {
     assertTrue(
         StyleResolver.resolve(ComputedStyle.INITIAL, element("<span style=\"text-decoration: underline;\">x</span>"))

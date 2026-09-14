@@ -126,6 +126,7 @@ public class HardwarePrintTest {
   private static final File SECTION_HEADERS = new File("src/test/resources/printjobs/section-headers.html");
   private static final File ROTATED_CAPTIONS = new File("src/test/resources/printjobs/rotated-captions.html");
   private static final File HEADINGS = new File("src/test/resources/printjobs/headings.html");
+  private static final File CHARACTER_EFFECTS = new File("src/test/resources/printjobs/character-effects.html");
 
   @Test
   @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
@@ -363,6 +364,22 @@ public class HardwarePrintTest {
     // bars). Verify the whole line is inked (no white gaps at the ends), the label
     // sits where its text-align says, and an inline inverted word is NOT a full bar.
     Document doc = Document.from(SECTION_HEADERS);
+
+    Optional<Printer> printer = Printer.from(0x04b8);
+    printer.ifPresentOrElse(
+        p -> p.print(doc, "TM-T88V"),
+        () -> fail("No Epson printer (USB vendor 0x04b8) found"));
+  }
+
+  @Test
+  @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
+  void printsCharacterEffectsOverUsb() {
+    // The three newly-wired character effects: double-strike (font-weight 900 ->
+    // ESC G, darker than 700), upside-down (transform: rotate(180deg) -> ESC {,
+    // the line prints flipped), and smoothing (-webkit-font-smoothing: antialiased
+    // -> GS b, smoother edges on the enlarged glyphs). Verify each against its
+    // plain counterpart in the print.
+    Document doc = Document.from(CHARACTER_EFFECTS);
 
     Optional<Printer> printer = Printer.from(0x04b8);
     printer.ifPresentOrElse(
