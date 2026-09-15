@@ -234,6 +234,14 @@ class StarPrntRendererTest {
   }
 
   @Test
+  void threePointPartialFallsBackToTheSingleStarPartialCut() {
+    // StarPRNT has no one-vs-three-point distinction: a three-point partial cut
+    // renders as the same ESC d 1 as a one-point partial.
+    assertBytes(cat(HEAD, PARTIAL_CUT), star.render(List.of(new Cut(true, 3))));
+    assertBytes(cat(HEAD, PARTIAL_CUT), star.render(List.of(new Cut(true, 1))));
+  }
+
+  @Test
   void cashDrawerPins() {
     assertBytes(cat(HEAD, DRAWER_1, FEED_4, PARTIAL_CUT), star.render(List.of(new Drawer(2))));
     assertBytes(cat(HEAD, DRAWER_2, FEED_4, PARTIAL_CUT), star.render(List.of(new Drawer(5))));

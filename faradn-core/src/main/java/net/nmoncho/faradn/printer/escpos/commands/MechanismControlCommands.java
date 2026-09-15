@@ -17,10 +17,17 @@ public class MechanismControlCommands {
   public static final Code FULL_CUT = new SimpleCode("GS V", new byte[] { Code.GS, 0x56, 0x00 });
 
   /**
-   * {@code GS V 1} - partial cut, leaving a small bridge so the receipt stays
-   * attached.
+   * {@code GS V 1} - partial cut leaving one point (bridge) uncut, so the receipt
+   * stays attached. Equivalent to the legacy {@code ESC i}.
    */
   public static final Code PARTIAL_CUT = new SimpleCode("GS V", new byte[] { Code.GS, 0x56, 0x01 });
+
+  /**
+   * {@code ESC m} - partial cut leaving three points (bridges) uncut. There is no
+   * {@code GS V} equivalent for a three-point cut, so this legacy command is the
+   * only way to select it.
+   */
+  public static final Code PARTIAL_CUT_THREE_POINT = new SimpleCode("ESC m", new byte[] { Code.ESC, 0x6D });
 
   // ESC p m t1 t2 - pulse the drawer-kick connector: m selects the pin (0 -> pin
   // 2, 1 -> pin 5), t1/t2 are the ON/OFF pulse widths in units of 2 ms. 50 ms on

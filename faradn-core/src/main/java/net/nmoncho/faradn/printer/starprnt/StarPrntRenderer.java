@@ -162,6 +162,9 @@ public final class StarPrntRenderer implements Renderer {
       out.writeBytes(StarPrintCommands.PRINT_AND_FEED_LINES.getCode(Lines.of(feed.lines()))); // ESC a n
       return current;
     } else if (block instanceof Cut cut) {
+      // StarPRNT has a single partial cut (ESC d 1); the ESC/POS one-vs-three
+      // point distinction (Cut.points()) has no StarPRNT equivalent, so both
+      // point counts render the same partial cut.
       out.writeBytes(cutCommand(cut.partial()));
       return current;
     } else if (block instanceof Drawer drawer) {

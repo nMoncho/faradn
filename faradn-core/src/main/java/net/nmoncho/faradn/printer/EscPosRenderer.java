@@ -159,7 +159,7 @@ public final class EscPosRenderer implements Renderer {
       out.writeBytes(PrintCommands.PRINT_AND_FEED_LINES.getCode(Lines.of(feed.lines())));
       return current;
     } else if (block instanceof Cut cut) {
-      out.writeBytes(cutCommand(cut.partial()));
+      out.writeBytes(cutCommand(cut.partial(), cut.points()));
       return current;
     } else if (block instanceof Drawer drawer) {
       out.writeBytes(drawerCommand(drawer.pin()));
@@ -1236,12 +1236,23 @@ public final class EscPosRenderer implements Renderer {
     }
     out.writeBytes(PrintCommands.PRINT_AND_FEED_LINES.getCode(Lines.of(END_OF_JOB_FEED_LINES)));
     if (profile.supportsCut()) {
-      out.writeBytes(cutCommand(true));
+      out.writeBytes(cutCommand(true, 1)); // default end-of-job cut: one-point partial (GS V 1)
     }
   }
 
-  private static byte[] cutCommand(boolean partial) {
-    return (partial ? MechanismControlCommands.PARTIAL_CUT : MechanismControlCommands.FULL_CUT).getCode();
+  /**
+   * The cut bytes for a {@link Cut}: {@code GS V 0} for a full cut,
+   * {@code GS V 1}
+   * for a one-point partial cut, {@code ESC m} for a three-point partial cut.
+   * {@code points} is consulted only for a partial cut.
+   */
+  private static byte[] cutCommand(boolean partial, int points) {
+    if (!partial) {
+      return MechanismControlCommands.FULL_CUT.getCode();
+    }
+    return (points == 3
+        ? MechanismControlCommands.PARTIAL_CUT_THREE_POINT // ESC m
+        : MechanismControlCommands.PARTIAL_CUT).getCode(); // GS V 1
   }
 
   private static byte[] drawerCommand(int pin) {

@@ -174,7 +174,7 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
       consumedSubtree = el;
     } else if (tag.equals(CUT_TAG)) {
       flushParagraph();
-      blocks.add(new Cut(cutIsPartial(el)));
+      blocks.add(new Cut(cutIsPartial(el), cutPoints(el)));
       consumedSubtree = el;
     } else if (tag.equals(FEED_TAG)) {
       flushParagraph();
@@ -645,6 +645,15 @@ public final class BlockBuilder implements org.jsoup.select.NodeVisitor {
    */
   private static boolean cutIsPartial(Element el) {
     return !el.attr("mode").strip().equalsIgnoreCase("full");
+  }
+
+  /**
+   * Connecting points a partial cut leaves: {@code points="3"} leaves three
+   * bridges (ESC/POS {@code ESC m}), anything else one ({@code GS V 1}). Applies
+   * only to a partial cut; a full cut ignores it.
+   */
+  private static int cutPoints(Element el) {
+    return el.attr("points").strip().equals("3") ? 3 : 1;
   }
 
   /**

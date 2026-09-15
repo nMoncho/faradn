@@ -77,6 +77,7 @@ public class EscPosRendererTest {
   private static final byte[] ALIGN_RIGHT = { ESC, 0x61, 0x02 };
   private static final byte[] FEED_4 = { ESC, 0x64, 0x04 };
   private static final byte[] PARTIAL_CUT = { GS, 0x56, 0x01 };
+  private static final byte[] PARTIAL_CUT_THREE_POINT = { ESC, 0x6D }; // ESC m
   private static final byte[] GS_P_180 = { GS, 0x50, (byte) 180, (byte) 180 };
   private static final byte[] SELECT_PAGE_MODE = { ESC, 0x4C };
   private static final byte[] ESC_T_0 = { ESC, 0x54, 0x00 };
@@ -335,7 +336,30 @@ public class EscPosRendererTest {
   void partialCutBlock() {
     byte[] out = renderer.render(List.of(new Cut(true)));
 
+    // Default partial cut is one point: GS V 1.
     assertBytes(cat(HEAD, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void onePointPartialCutBlock() {
+    byte[] out = renderer.render(List.of(new Cut(true, 1)));
+
+    assertBytes(cat(HEAD, PARTIAL_CUT), out); // GS V 1
+  }
+
+  @Test
+  void threePointPartialCutBlockUsesEscM() {
+    byte[] out = renderer.render(List.of(new Cut(true, 3)));
+
+    // Three-point partial has no GS V form; it is the legacy ESC m (1B 6D).
+    assertBytes(cat(HEAD, PARTIAL_CUT_THREE_POINT), out);
+  }
+
+  @Test
+  void threePointPartialCutFromHtml() {
+    byte[] out = renderer.render(Document.from("<cut points=\"3\"></cut>").blocks());
+
+    assertBytes(cat(HEAD, PARTIAL_CUT_THREE_POINT), out);
   }
 
   @Test

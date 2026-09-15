@@ -950,6 +950,30 @@ public class BlockBuilderTest {
   }
 
   @Test
+  void cutDefaultsToOneConnectingPoint() {
+    final List<Block> blocks = Document.from("<cut></cut>").blocks();
+
+    assertEquals(1, assertInstanceOf(Cut.class, blocks.get(0)).points());
+  }
+
+  @Test
+  void cutPointsThreeSelectsThreePointPartial() {
+    final List<Block> blocks = Document.from("<cut points=\"3\"></cut>").blocks();
+
+    final Cut cut = assertInstanceOf(Cut.class, blocks.get(0));
+    assertTrue(cut.partial());
+    assertEquals(3, cut.points());
+  }
+
+  @Test
+  void cutPointsOtherThanThreeIsOnePoint() {
+    // Only "3" selects the three-point cut; "1", an unknown value, and no attribute all mean one point.
+    assertEquals(1, assertInstanceOf(Cut.class, Document.from("<cut points=\"1\"></cut>").blocks().get(0)).points());
+    assertEquals(1, assertInstanceOf(Cut.class, Document.from("<cut points=\"2\"></cut>").blocks().get(0)).points());
+    assertEquals(1, assertInstanceOf(Cut.class, Document.from("<cut points=\"x\"></cut>").blocks().get(0)).points());
+  }
+
+  @Test
   void feedElementDefaultsToOneLine() {
     final List<Block> blocks = Document.from("<feed></feed>").blocks();
 

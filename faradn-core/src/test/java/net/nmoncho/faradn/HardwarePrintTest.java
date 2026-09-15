@@ -168,6 +168,23 @@ public class HardwarePrintTest {
 
   @Test
   @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
+  void printsPartialCutPointsOverUsb() {
+    // Three receipts split by cuts of each kind, so the bridges can be compared
+    // on paper: a one-point partial (GS V 1), a three-point partial (ESC m), and
+    // a full cut (GS V 0) at the end. Tear each join and check it holds/severs.
+    Document doc = Document.from(
+        "<p>Receipt 1 - one point</p><cut points=\"1\"></cut>"
+            + "<p>Receipt 2 - three points</p><cut points=\"3\"></cut>"
+            + "<p>Receipt 3 - full</p><cut mode=\"full\"></cut>");
+
+    Optional<Printer> printer = Printer.from(0x04b8);
+    printer.ifPresentOrElse(
+        p -> p.print(doc, "TM-T88V"),
+        () -> fail("No Epson printer (USB vendor 0x04b8) found"));
+  }
+
+  @Test
+  @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
   void printsPageModeCanvasOverUsb() {
     PrinterProfile profile = PrinterProfile.load("TM-T88V").orElseThrow();
     ComputedStyle plain = ComputedStyle.INITIAL;

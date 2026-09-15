@@ -131,6 +131,20 @@ public class BlockValidationTest {
   }
 
   @Test
+  void cutDefaultsToOnePointAndAcceptsThree() {
+    assertEquals(1, new Cut(true).points()); // convenience constructor defaults to one point
+    assertEquals(1, new Cut(true, 1).points());
+    assertEquals(3, new Cut(true, 3).points());
+  }
+
+  @Test
+  void cutRejectsPointCountsOtherThanOneOrThree() {
+    assertThrows(IllegalArgumentException.class, () -> new Cut(true, 0));
+    assertThrows(IllegalArgumentException.class, () -> new Cut(true, 2));
+    assertThrows(IllegalArgumentException.class, () -> new Cut(true, 4));
+  }
+
+  @Test
   void drawerRejectsPinsOtherThanTwoOrFive() {
     assertThrows(IllegalArgumentException.class, () -> new Drawer(0));
     assertThrows(IllegalArgumentException.class, () -> new Drawer(3));

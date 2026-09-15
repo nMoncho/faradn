@@ -187,7 +187,7 @@ golden-byte tests.
 | `<img>`                           | image (URL or Base64 `data:` URI; PNG, JPEG, BMP, WBMP)                                                                                   |
 | `<em>`, `<i>`                     | italic (`ESC 4`/`ESC 5`); printers without italic ignore the command                                                                      |
 | `<cash-drawer>`                   | pulses the cash-drawer kick connector (`ESC p`); `pin="2"` (default) or `pin="5"` (below)                                                 |
-| `<cut>`                           | cuts the paper (`GS V`); `mode="partial"` (default) or `mode="full"` (below)                                                              |
+| `<cut>`                           | cuts the paper (`GS V`); `mode="partial"` (default) or `mode="full"`, and `points="1"` (default) or `points="3"` for a partial cut (below) |
 | `<feed>`                          | feeds blank lines (`ESC d`); `lines="n"` (default `1`, below)                                                                             |
 
 **Inline CSS**
@@ -381,8 +381,11 @@ control actions that render nothing and ignore any content inside them:
 ```
 
 - `<cut>` makes a partial cut (a small bridge keeps the receipt attached); `<cut mode="full">`
-  cuts all the way through. A `<cut>` at the very end of the document replaces the automatic
-  end-of-job cut rather than adding a second one.
+  cuts all the way through. A partial cut leaves one bridge by default; `<cut points="3">`
+  leaves three (ESC/POS `ESC m` instead of `GS V 1`) for receipts that tear more cleanly with
+  the extra hold. The point count is an Epson feature - StarPRNT has a single partial cut, so
+  it renders `points="1"` and `points="3"` the same. A `<cut>` at the very end of the document
+  replaces the automatic end-of-job cut rather than adding a second one.
 - `<feed>` feeds one blank line; `<feed lines="n">` feeds `n` (clamped to `1`-`255`).
 
 **Positioned layout (page mode).** Most receipts flow top to bottom, but a bounded region -
