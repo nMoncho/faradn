@@ -87,23 +87,28 @@ class StarPrntRendererTest {
   }
 
   // --- Kanji (multi-byte) text -------------------------------------------------
-  // StarPRNT toggles Shift-JIS Kanji mode with ESC $ 1 / ESC $ 0 (no separate
-  // code-system select), and encodes CJK glyphs as Shift-JIS.
-  private static final byte[] KANJI_ON = { ESC, 0x24, 0x01 }; // ESC $ 1
-  private static final byte[] KANJI_OFF = { ESC, 0x24, 0x00 }; // ESC $ 0
-  private static final byte[] SJIS_KANJI = { (byte) 0x8A, (byte) 0xBF }; // 漢 in Shift-JIS
-  private static final byte[] SJIS_JI = { (byte) 0x8E, (byte) 0x9A }; // 字 in Shift-JIS
+  // The TSP100IV renders CJK through UTF-8 mode (ESC GS ) U), not the legacy
+  // Shift-JIS toggle (ESC $, ignored unless the printer is set to Japanese MBCS).
+  // Function 65 selects the CJK font language once (Japanese here), Function 48
+  // enables/disables UTF-8 around each CJK run, and the glyph is emitted as UTF-8.
+  private static final byte[] UTF8_JP_FONT = { ESC, GS, 0x29, 0x55, 0x05, 0x00, 0x41, 0x01, 0x00, 0x00, 0x00 };
+  private static final byte[] UTF8_ON = { ESC, GS, 0x29, 0x55, 0x02, 0x00, 0x30, 0x01 }; // fn48 m=1
+  private static final byte[] UTF8_OFF = { ESC, GS, 0x29, 0x55, 0x02, 0x00, 0x30, 0x00 }; // fn48 m=0
+  private static final byte[] UTF8_KANJI = { (byte) 0xE6, (byte) 0xBC, (byte) 0xA2 }; // 漢 (U+6F22)
+  private static final byte[] UTF8_JI = { (byte) 0xE5, (byte) 0xAD, (byte) 0x97 }; // 字 (U+5B57)
 
   private final StarPrntRenderer starKanji = new StarPrntRenderer(
       PrinterProfile.of("star-jp", 576, List.of(new Font(0, 48)), 203, true, List.of(PC437),
           PrinterLanguage.STAR_PRNT, Charset.forName("windows-31j")));
 
   @Test
-  void kanjiParagraphBracketsCjkWithShiftJisMode() {
+  void kanjiParagraphBracketsCjkWithUtf8Mode() {
     byte[] out = starKanji.render(List.of(
         new Paragraph(List.of(new TextRun("A漢B", ComputedStyle.INITIAL)), Alignment.LEFT)));
 
-    assertBytes(cat(HEAD, "A", KANJI_ON, SJIS_KANJI, KANJI_OFF, "B", LF, FEED_4, PARTIAL_CUT), out);
+    // A stays on the code page; the Kanji is bracketed by UTF-8 enable/disable,
+    // with the Japanese font preference selected once before the first run.
+    assertBytes(cat(HEAD, "A", UTF8_JP_FONT, UTF8_ON, UTF8_KANJI, UTF8_OFF, "B", LF, FEED_4, PARTIAL_CUT), out);
   }
 
   @Test
@@ -111,8 +116,9 @@ class StarPrntRendererTest {
     byte[] out = starKanji.render(List.of(
         new Paragraph(List.of(new TextRun("漢字", ComputedStyle.INITIAL)), Alignment.LEFT)));
 
-    // ESC $ 1, both glyphs, the paragraph LF, then finish() emits ESC $ 0.
-    assertBytes(cat(HEAD, KANJI_ON, SJIS_KANJI, SJIS_JI, LF, KANJI_OFF, FEED_4, PARTIAL_CUT), out);
+    // Font preference + enable once, both glyphs as UTF-8, the paragraph LF, then
+    // finish() disables UTF-8.
+    assertBytes(cat(HEAD, UTF8_JP_FONT, UTF8_ON, UTF8_KANJI, UTF8_JI, LF, UTF8_OFF, FEED_4, PARTIAL_CUT), out);
   }
 
   @Test

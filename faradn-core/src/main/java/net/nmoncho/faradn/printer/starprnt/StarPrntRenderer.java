@@ -6,6 +6,8 @@
 package net.nmoncho.faradn.printer.starprnt;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -122,8 +124,8 @@ public final class StarPrntRenderer implements Renderer {
 
     // Text is encoded through this: it starts on the profile's default page and
     // switches inline (ESC GS t) among the profile's pages for glyphs outside it,
-    // and drops into Shift-JIS Kanji mode (ESC $ 1 / ESC $ 0) for CJK characters
-    // when the profile has a Kanji ROM.
+    // and drops into UTF-8 mode (ESC GS ) U) for CJK characters when the profile
+    // has a Kanji ROM.
     final CodePageEncoder enc = StarCodePageEncoder.of(out, profile.codePage(), profile.codePages(), multibyteMode());
 
     // ESC @ resets the printer to exactly INITIAL, so that is where the tracked
@@ -1045,18 +1047,68 @@ public final class StarPrntRenderer implements Renderer {
     return applyInlineStyle(out, current, cleared);
   }
 
+  // UTF-8 multi-byte mode for the TSP100IV family (ESC GS ) U). The legacy
+  // Shift-JIS toggle (ESC $) is ignored unless the printer is configured for
+  // Japanese Shift-JIS MBCS - a TSP143IV out of the box is SBCS or UTF-8 MBCS, so
+  // Shift-JIS bytes print as gibberish. UTF-8 mode is the TSP100IV-native path:
+  // enable it (Function 48, m=1), send raw UTF-8, and the printer renders CJK from
+  // its installed UTF-8 font. Verified against the StarPRNT Command Specifications
+  // (Rev 4.20), pp23-24 (ESC GS t / UTF-8) and pp127-129 (ESC GS ) U).
+  private static final byte[] UTF8_ENABLE = { Code.ESC, Code.GS, 0x29, 0x55, 0x02, 0x00, 0x30, 0x01 };
+  private static final byte[] UTF8_DISABLE = { Code.ESC, Code.GS, 0x29, 0x55, 0x02, 0x00, 0x30, 0x00 };
+
   /**
    * The printer's Kanji mode for {@link CodePageEncoder}, or {@code null} when
-   * the profile has no Kanji ROM. StarPRNT toggles Shift-JIS Kanji mode with
-   * {@code ESC $ 1} / {@code ESC $ 0} and needs no separate code-system select.
+   * the profile has no Kanji ROM. StarPRNT renders CJK through UTF-8 mode: the
+   * encoder brackets each CJK run with {@code ESC GS ) U} Function 48 (enable /
+   * disable UTF-8) and emits the character as UTF-8, so single-byte code-page
+   * text
+   * (Latin, box-drawing) still flows through {@code ESC GS t}. The profile's
+   * {@link PrinterProfile#kanjiCharset()} is a language hint here, not the
+   * transport charset: it selects the CJK font preference (Function 65) so, for
+   * example, a shared Han ideograph prints with Japanese rather than Chinese
+   * glyph shapes.
    */
   private CodePageEncoder.MultibyteMode multibyteMode() {
     return profile.kanjiCharset()
-        .map(charset -> new CodePageEncoder.MultibyteMode(charset,
-            new byte[] { Code.ESC, 0x24, 0x01 }, // ESC $ 1: specify Shift-JIS Kanji mode
-            new byte[] { Code.ESC, 0x24, 0x00 }, // ESC $ 0: cancel Shift-JIS Kanji mode
-            new byte[0]))
+        .map(charset -> new CodePageEncoder.MultibyteMode(
+            StandardCharsets.UTF_8, // TSP100IV renders CJK from its UTF-8 font
+            UTF8_ENABLE, // ESC GS ) U <fn 48> m=1: enable UTF-8
+            UTF8_DISABLE, // ESC GS ) U <fn 48> m=0: disable UTF-8
+            cjkFontPreference(charset))) // ESC GS ) U <fn 65>: font language, once
         .orElse(null);
+  }
+
+  /**
+   * The {@code ESC GS ) U} Function 65 bytes selecting the CJK font language for
+   * a
+   * Kanji charset, so a Han ideograph shared across scripts prints with the right
+   * glyph shape: Shift-JIS maps to Japanese, GB to Simplified Chinese, Big5 to
+   * Traditional Chinese, EUC-KR to Hangul. An unrecognized charset selects
+   * nothing
+   * (empty), leaving the printer's configured default preference in place.
+   */
+  private static byte[] cjkFontPreference(Charset charset) {
+    final int language = cjkFontLanguage(charset.name());
+    if (language == 0) {
+      return new byte[0];
+    }
+    // ESC GS ) U pL pH fn n1 n2 n3 n4: fn=65, n1=primary language, rest disabled.
+    return new byte[] { Code.ESC, Code.GS, 0x29, 0x55, 0x05, 0x00, 0x41, (byte) language, 0x00, 0x00, 0x00 };
+  }
+
+  /**
+   * Function 65 language code: 1 Japanese, 2 Simplified, 3 Traditional, 4 Hangul,
+   * 0 none.
+   */
+  private static int cjkFontLanguage(String charsetName) {
+    return switch (charsetName.toUpperCase(java.util.Locale.ROOT)) {
+      case "SHIFT_JIS", "WINDOWS-31J", "X-JIS0208", "JIS0208", "X-IBM942C", "MS932", "CP932" -> 1;
+      case "GBK", "GB18030", "GB2312", "X-MSWIN-936" -> 2;
+      case "BIG5", "X-WINDOWS-950", "BIG5-HKSCS" -> 3;
+      case "EUC-KR", "X-WINDOWS-949", "X-IBM949" -> 4;
+      default -> 0;
+    };
   }
 
   private void endOfJob(ByteArrayOutputStream out, boolean alreadyCut) {

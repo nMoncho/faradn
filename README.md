@@ -453,17 +453,22 @@ code page - they live in the printer's Kanji ROM, reached by a separate stateful
 mode. When a profile has one (`PrinterProfile.kanjiCharset()`), a character no
 code page can encode is emitted through it: on ESC/POS the renderer selects the
 JIS code system (`FS C`), brackets each CJK run with `FS &` / `FS .`, and writes
-JIS&nbsp;X&nbsp;0208 codes; on StarPRNT it toggles Shift-JIS mode with `ESC $ 1`
-/ `ESC $ 0`. ASCII and Latin always stay on the code-page path with the mode off,
-so mixed receipts (`合計 ¥1,400`) encode correctly - wide characters even count
-as two columns so word-wrap and table alignment hold. The Kanji charset is
-derived automatically for capability-database models that list a multi-byte page
-(CP932 → the collision-safe `x-JIS0208`); Star's Japanese profile
-(`StarProfiles.tsp143ivJapanese()`) carries Shift-JIS. Whether the glyphs
-actually print still depends on the physical unit having the Kanji font
-installed - an overseas (single-byte) unit has no `kanjiCharset` and renders CJK
-as `?`. ZPL already emits UTF-8 (`^CI28`), so CJK bytes are correct there when a
-CJK font is loaded on the Zebra; EPL2 has no multi-byte text mode.
+JIS&nbsp;X&nbsp;0208 codes; on StarPRNT (the TSP100IV family) it brackets each run
+with UTF-8 mode (`ESC GS ) U`) and writes UTF-8, selecting the CJK font language
+(Japanese / Chinese / Hangul) once so shared Han ideographs take the right glyph
+shape. ASCII and Latin always stay on the code-page path with the mode off, so
+mixed receipts (`合計 ¥1,400`) encode correctly - wide characters even count as
+two columns so word-wrap and table alignment hold. The Kanji charset is derived
+automatically for capability-database models that list a multi-byte page (CP932 →
+the collision-safe `x-JIS0208`); Star's Japanese profile
+(`StarProfiles.tsp143ivJapanese()`) carries Shift-JIS as its language hint.
+Whether the glyphs actually print still depends on the physical unit having the
+CJK font installed - an overseas (single-byte) unit has no `kanjiCharset` and
+renders CJK as `?`. Note StarPRNT's legacy Shift-JIS mode (`ESC $`) is ignored
+unless the printer is set to Japanese Shift-JIS MBCS, which a TSP143IV is not out
+of the box - hence the UTF-8 path. ZPL already emits UTF-8 (`^CI28`), so CJK
+bytes are correct there when a CJK font is loaded on the Zebra; EPL2 has no
+multi-byte text mode.
 
 **Images.** PNG is decoded in pure Java, so it works everywhere, including the
 GraalVM native binary. The JVM library (and `java -jar`) additionally reads JPEG,
@@ -566,7 +571,7 @@ The `macos-aarch64` Maven profile then wires it in automatically.
 - [ ] Publish `faradn-core` to Maven Central and native binaries to GitHub Releases
 - [x] List markers, preformatted text, per-barcode options, aligned table cells
 - [x] Per-run code page switching for mixed-script text
-- [x] Kanji / CJK text (ESC/POS `FS &`, StarPRNT `ESC $`) with wide-character layout
+- [x] Kanji / CJK text (ESC/POS `FS &`, StarPRNT UTF-8 `ESC GS ) U`) with wide-character layout
 - [x] Table colspan and column widths
 - [x] Printer capability database: load profiles by device name from [escpos-printer-db](https://github.com/receipt-print-hq/escpos-printer-db)
 
