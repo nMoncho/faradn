@@ -6,6 +6,7 @@
 package net.nmoncho.faradn.printer;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -37,6 +38,7 @@ import net.nmoncho.faradn.document.Space;
 import net.nmoncho.faradn.document.Table;
 import net.nmoncho.faradn.document.TextRun;
 import net.nmoncho.faradn.printer.text.BoxDrawing;
+import net.nmoncho.faradn.printer.text.DisplayWidth;
 import net.nmoncho.faradn.printer.command.Code;
 import net.nmoncho.faradn.printer.escpos.ImageRasterizer;
 import net.nmoncho.faradn.printer.label.LabelLayout;
@@ -117,9 +119,11 @@ public final class EscPosRenderer implements Renderer {
     out.writeBytes(new byte[] { Code.ESC, 0x74, (byte) profile.codePage().id() }); // ESC t: select code page
 
     // Text is encoded through this: it starts on the profile's default page and
-    // switches inline (ESC t) among the profile's pages for glyphs outside it.
+    // switches inline (ESC t) among the profile's pages for glyphs outside it,
+    // and drops into Kanji mode (FS &/FS .) for CJK characters when the profile
+    // has a Kanji ROM.
     final CodePageEncoder enc = new CodePageEncoder(out, profile.codePage(), profile.codePages(),
-        id -> new byte[] { Code.ESC, 0x74, (byte) id }); // ESC t n
+        id -> new byte[] { Code.ESC, 0x74, (byte) id }, multibyteMode()); // ESC t n
 
     // ESC @ resets the printer to exactly INITIAL, so that is where the tracked
     // "already applied" style starts.
@@ -128,6 +132,9 @@ public final class EscPosRenderer implements Renderer {
     for (Block block : blocks) {
       current = renderBlock(out, enc, current, block);
     }
+
+    // Leave Kanji mode if a trailing CJK run left it on, before feeding and cutting.
+    enc.finish();
 
     // Avoid double cutting if job already has a cut
     final boolean endsWithCut = !blocks.isEmpty() && blocks.get(blocks.size() - 1) instanceof Cut;
@@ -241,7 +248,7 @@ public final class EscPosRenderer implements Renderer {
   private static int displayWidth(List<TextRun> runs) {
     int width = 0;
     for (TextRun run : runs) {
-      width += run.text().length() * run.style().widthMultiple();
+      width += DisplayWidth.of(run.text()) * run.style().widthMultiple();
     }
     return width;
   }
@@ -1084,7 +1091,7 @@ public final class EscPosRenderer implements Renderer {
   private static int contentWidth(Cell cell) {
     int width = 0;
     for (TextRun run : cell.content()) {
-      width += run.text().length() * run.style().widthMultiple();
+      width += DisplayWidth.of(run.text()) * run.style().widthMultiple();
     }
     return width;
   }
@@ -1093,7 +1100,7 @@ public final class EscPosRenderer implements Renderer {
       List<TextRun> segments, int columnWidth, Alignment alignment) {
     int textWidth = 0;
     for (TextRun segment : segments) {
-      textWidth += segment.text().length() * segment.style().widthMultiple();
+      textWidth += DisplayWidth.of(segment.text()) * segment.style().widthMultiple();
     }
     final int pad = Math.max(0, columnWidth - textWidth);
     final int leftPad = switch (alignment) {
@@ -1182,6 +1189,44 @@ public final class EscPosRenderer implements Renderer {
   private ComputedStyle clearInlineStyle(ByteArrayOutputStream out, ComputedStyle current) {
     final ComputedStyle cleared = new ComputedStyle(false, false, 1, 1, current.alignment(), false);
     return applyInlineStyle(out, current, cleared);
+  }
+
+  /**
+   * The printer's Kanji mode for {@link CodePageEncoder}, or {@code null} when
+   * the profile has no Kanji ROM. ESC/POS enters with {@code FS &} and leaves
+   * with {@code FS .}, selecting the code system once up front with {@code FS C}.
+   */
+  private CodePageEncoder.MultibyteMode multibyteMode() {
+    return profile.kanjiCharset()
+        .map(charset -> new CodePageEncoder.MultibyteMode(charset,
+            new byte[] { Code.FS, 0x26 }, // FS &: select Kanji character mode
+            new byte[] { Code.FS, 0x2E }, // FS .: cancel Kanji character mode
+            kanjiCodeSystem(charset)))
+        .orElse(null);
+  }
+
+  /**
+   * The {@code FS C n} bytes selecting the Kanji code system for a charset:
+   * {@code FS C 0} (JIS) for {@code x-JIS0208}, {@code FS C 1} (Shift-JIS) for a
+   * Shift-JIS charset. {@code FS C} is a Japanese-model command, so a Chinese or
+   * Korean GB/Big5/EUC charset selects nothing (empty).
+   */
+  private static byte[] kanjiCodeSystem(Charset charset) {
+    final String name = charset.name();
+    if (name.equalsIgnoreCase("x-JIS0208") || name.equalsIgnoreCase("JIS0208")) {
+      return new byte[] { Code.FS, 0x43, 0x00 }; // FS C 0: JIS code system
+    }
+    if (isShiftJis(name)) {
+      return new byte[] { Code.FS, 0x43, 0x01 }; // FS C 1: Shift-JIS code system
+    }
+    return new byte[0];
+  }
+
+  private static boolean isShiftJis(String charsetName) {
+    return switch (charsetName.toUpperCase(java.util.Locale.ROOT)) {
+      case "SHIFT_JIS", "WINDOWS-31J", "X-IBM942C", "X-IBM942", "X-IBM943", "X-SJIS", "MS932", "CP932" -> true;
+      default -> false;
+    };
   }
 
   private void endOfJob(ByteArrayOutputStream out, boolean alreadyCut) {

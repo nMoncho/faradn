@@ -72,6 +72,27 @@ public class TextWrapperTest {
     assertEquals(bold, line.get(1).style());
   }
 
+  @Test
+  void wideCjkCharactersCostTwoColumns() {
+    // Each ideograph is two columns, so three fit in a 6-column budget and the
+    // fourth wraps - even though all four are a single "word" (no spaces).
+    List<List<TextRun>> lines = TextWrapper.wrap(List.of(run("東京都庁")), 6);
+
+    assertEquals(2, lines.size());
+    assertEquals("東京都", text(lines.get(0)));
+    assertEquals("庁", text(lines.get(1)));
+  }
+
+  @Test
+  void mixedAsciiAndKanjiWrapByDisplayWidth() {
+    // "No: " is 4 columns, then 番号(4) = 8; budget 6 breaks after the space.
+    List<List<TextRun>> lines = TextWrapper.wrap(List.of(run("No: 番号")), 6);
+
+    assertEquals(2, lines.size());
+    assertEquals("No:", text(lines.get(0)));
+    assertEquals("番号", text(lines.get(1)));
+  }
+
   private static TextRun run(String text) {
     return new TextRun(text, PLAIN);
   }

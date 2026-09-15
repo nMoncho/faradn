@@ -125,6 +125,44 @@ public class EscPosRendererTest {
     assertBytes(cat(HEAD, "Hello", LF, FEED_4, PARTIAL_CUT), out);
   }
 
+  // --- Kanji (multi-byte) text -------------------------------------------------
+  // TM-T88V lists CP932, so its profile derives the collision-safe x-JIS0208 Kanji
+  // ROM. FS C 0 selects the JIS code system; FS & / FS . bracket each Kanji run.
+  private static final byte FS = 0x1C;
+  private static final byte[] FS_C_JIS = { FS, 0x43, 0x00 }; // FS C 0
+  private static final byte[] FS_KANJI_ON = { FS, 0x26 }; // FS &
+  private static final byte[] FS_KANJI_OFF = { FS, 0x2E }; // FS .
+  private static final byte[] KAN_KANJI = { 0x34, 0x41 }; // 漢 in JIS X 0208
+  private static final byte[] KAN_JI = { 0x3B, 0x7A }; // 字 in JIS X 0208
+
+  @Test
+  void kanjiParagraphBracketsCjkAndKeepsAsciiOutsideKanjiMode() {
+    byte[] out = renderer.render(List.of(
+        new Paragraph(List.of(new TextRun("A漢B", ComputedStyle.INITIAL)), Alignment.LEFT)));
+
+    assertBytes(cat(HEAD, "A", FS_C_JIS, FS_KANJI_ON, KAN_KANJI, FS_KANJI_OFF, "B", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void kanjiOnlyRunSelectsCodeSystemOnceAndClosesModeAtEnd() {
+    byte[] out = renderer.render(List.of(
+        new Paragraph(List.of(new TextRun("漢字", ComputedStyle.INITIAL)), Alignment.LEFT)));
+
+    // One FS C 0, one FS &, both glyphs, the paragraph LF, then finish() emits FS .
+    assertBytes(cat(HEAD, FS_C_JIS, FS_KANJI_ON, KAN_KANJI, KAN_JI, LF, FS_KANJI_OFF, FEED_4, PARTIAL_CUT), out);
+  }
+
+  @Test
+  void cjkWithoutAKanjiRomFallsBackToReplacement() {
+    // A profile with no kanjiCharset: 漢 has no encoding and maps to '?'.
+    EscPosRenderer noRom = new EscPosRenderer(
+        PrinterProfile.of("No-ROM", 512, List.of(new Font(0, 42)), 180, true, List.of(PC437)));
+    byte[] out = noRom.render(List.of(
+        new Paragraph(List.of(new TextRun("漢", ComputedStyle.INITIAL)), Alignment.LEFT)));
+
+    assertBytes(cat(HEAD, "?", LF, FEED_4, PARTIAL_CUT), out);
+  }
+
   @Test
   void boldRunOnlyTogglesAroundTheBoldRun() {
     ComputedStyle bold = new ComputedStyle(true, false, 1, 1, Alignment.LEFT, false);

@@ -56,6 +56,34 @@ public final class StarProfiles {
   }
 
   /**
+   * The Star TSP143IV as sold into a Japanese (multi-byte) market: the
+   * {@link #tsp143iv()} profile plus a Shift-JIS Kanji ROM, so CJK characters
+   * print through StarPRNT's {@code ESC $} Kanji mode instead of falling back to
+   * {@code '?'}. Overseas (single-byte) units have no Kanji font, so the default
+   * {@link #tsp143iv()} leaves {@link PrinterProfile#kanjiCharset()} empty.
+   *
+   * @return the TSP143IV profile with a Shift-JIS Kanji ROM
+   */
+  public static PrinterProfile tsp143ivJapanese() {
+    return PrinterProfile.of(
+        "Star TSP143IV (Japanese)",
+        576,
+        List.of(new Font(0, 48), new Font(1, 64)),
+        203,
+        true,
+        List.of(
+            page(1, "IBM437"), // CP437
+            page(4, "IBM00858"), // CP858
+            page(5, "IBM852"), // CP852
+            page(6, "IBM860"), // CP860
+            page(9, "IBM865"), // CP865
+            page(10, "IBM866"), // CP866
+            page(32, "windows-1252")), // CP1252
+        PrinterLanguage.STAR_PRNT,
+        Charset.forName("windows-31j")); // Shift-JIS Kanji ROM
+  }
+
+  /**
    * A {@link CodePage} keyed by its Star native {@code ESC GS t} selector number.
    */
   private static CodePage page(int starSelector, String charset) {

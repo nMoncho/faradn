@@ -60,6 +60,24 @@ class PrinterProfileLoadTest {
   }
 
   @Test
+  void derivesTheKanjiCharsetFromTheMultibytePage() {
+    // TM-T88V lists CP932 (Shift-JIS): the Kanji ROM is derived as the
+    // collision-safe x-JIS0208, kept separate from the selectable code pages.
+    PrinterProfile profile = PrinterProfile.load("TM-T88V").orElseThrow();
+
+    assertTrue(profile.kanjiCharset().isPresent(), "a CP932 model has a Kanji ROM");
+    assertEquals(Charset.forName("x-JIS0208"), profile.kanjiCharset().orElseThrow());
+  }
+
+  @Test
+  void aModelWithoutAMultibytePageHasNoKanjiCharset() {
+    // The TM-U220 is an impact receipt printer with no Kanji font (no CP932).
+    PrinterProfile profile = PrinterProfile.load("TM-U220").orElseThrow();
+
+    assertTrue(profile.kanjiCharset().isEmpty());
+  }
+
+  @Test
   void matchesDeviceNameCaseInsensitively() {
     assertTrue(PrinterProfile.load("tm-t88v").isPresent());
     assertTrue(PrinterProfile.load("Tm-T88v").isPresent());

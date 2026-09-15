@@ -10,6 +10,7 @@ public interface Code {
   byte[] NOOP = new byte[] {};
 
   char ESC = 0x1B;
+  char FS = 0x1C;
   char GS = 0x1D;
 
   byte[] getCode();

@@ -127,11 +127,27 @@ public class HardwarePrintTest {
   private static final File ROTATED_CAPTIONS = new File("src/test/resources/printjobs/rotated-captions.html");
   private static final File HEADINGS = new File("src/test/resources/printjobs/headings.html");
   private static final File CHARACTER_EFFECTS = new File("src/test/resources/printjobs/character-effects.html");
+  private static final File KANJI = new File("src/test/resources/printjobs/kanji.html");
 
   @Test
   @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
   void printsTextReceiptOverUsb() {
     Document doc = Document.from(RECEIPT);
+
+    Optional<Printer> printer = Printer.from(0x04b8);
+    printer.ifPresentOrElse(
+        p -> p.print(doc, "TM-T88V"),
+        () -> fail("No Epson printer (USB vendor 0x04b8) found"));
+  }
+
+  @Test
+  @EnabledIfSystemProperty(named = "faradn.hardware", matches = "true")
+  void printsKanjiReceiptOverUsb() {
+    // Mixed Japanese/ASCII receipt: the renderer drops into Kanji mode
+    // (FS C 0 / FS & / FS .) for the CJK characters, emitting JIS X 0208 codes,
+    // and stays on the code page for ASCII. Requires a TM-T88V with the Japanese
+    // Kanji font installed; on a non-Kanji unit the ideographs print blank.
+    Document doc = Document.from(KANJI);
 
     Optional<Printer> printer = Printer.from(0x04b8);
     printer.ifPresentOrElse(

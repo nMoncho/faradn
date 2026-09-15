@@ -50,6 +50,7 @@ import net.nmoncho.faradn.printer.starprnt.commands.StarPrintCommands.Lines;
 import net.nmoncho.faradn.printer.starprnt.commands.StarPrintPositionCommands;
 import net.nmoncho.faradn.printer.starprnt.commands.StarPrintPositionCommands.Justification;
 import net.nmoncho.faradn.printer.text.BoxDrawing;
+import net.nmoncho.faradn.printer.text.DisplayWidth;
 import net.nmoncho.faradn.printer.text.TextWrapper;
 
 /**
@@ -120,8 +121,10 @@ public final class StarPrntRenderer implements Renderer {
     out.writeBytes(StarCodePageEncoder.selectPage(profile.codePage().id()));
 
     // Text is encoded through this: it starts on the profile's default page and
-    // switches inline (ESC GS t) among the profile's pages for glyphs outside it.
-    final CodePageEncoder enc = StarCodePageEncoder.of(out, profile.codePage(), profile.codePages());
+    // switches inline (ESC GS t) among the profile's pages for glyphs outside it,
+    // and drops into Shift-JIS Kanji mode (ESC $ 1 / ESC $ 0) for CJK characters
+    // when the profile has a Kanji ROM.
+    final CodePageEncoder enc = StarCodePageEncoder.of(out, profile.codePage(), profile.codePages(), multibyteMode());
 
     // ESC @ resets the printer to exactly INITIAL, so that is where the tracked
     // "already applied" style starts.
@@ -130,6 +133,9 @@ public final class StarPrntRenderer implements Renderer {
     for (Block block : blocks) {
       current = renderBlock(out, enc, current, block);
     }
+
+    // Leave Kanji mode if a trailing CJK run left it on, before feeding and cutting.
+    enc.finish();
 
     // Avoid double cutting if the job already ends with a cut.
     final boolean endsWithCut = !blocks.isEmpty() && blocks.get(blocks.size() - 1) instanceof Cut;
@@ -240,7 +246,7 @@ public final class StarPrntRenderer implements Renderer {
   private static int displayWidth(List<TextRun> runs) {
     int width = 0;
     for (TextRun run : runs) {
-      width += run.text().length() * run.style().widthMultiple();
+      width += DisplayWidth.of(run.text()) * run.style().widthMultiple();
     }
     return width;
   }
@@ -946,7 +952,7 @@ public final class StarPrntRenderer implements Renderer {
   private static int contentWidth(Cell cell) {
     int width = 0;
     for (TextRun run : cell.content()) {
-      width += run.text().length() * run.style().widthMultiple();
+      width += DisplayWidth.of(run.text()) * run.style().widthMultiple();
     }
     return width;
   }
@@ -955,7 +961,7 @@ public final class StarPrntRenderer implements Renderer {
       List<TextRun> segments, int columnWidth, Alignment alignment) {
     int textWidth = 0;
     for (TextRun segment : segments) {
-      textWidth += segment.text().length() * segment.style().widthMultiple();
+      textWidth += DisplayWidth.of(segment.text()) * segment.style().widthMultiple();
     }
     final int pad = Math.max(0, columnWidth - textWidth);
     final int leftPad = switch (alignment) {
@@ -1037,6 +1043,20 @@ public final class StarPrntRenderer implements Renderer {
   private ComputedStyle clearInlineStyle(ByteArrayOutputStream out, ComputedStyle current) {
     final ComputedStyle cleared = new ComputedStyle(false, false, 1, 1, current.alignment(), false);
     return applyInlineStyle(out, current, cleared);
+  }
+
+  /**
+   * The printer's Kanji mode for {@link CodePageEncoder}, or {@code null} when
+   * the profile has no Kanji ROM. StarPRNT toggles Shift-JIS Kanji mode with
+   * {@code ESC $ 1} / {@code ESC $ 0} and needs no separate code-system select.
+   */
+  private CodePageEncoder.MultibyteMode multibyteMode() {
+    return profile.kanjiCharset()
+        .map(charset -> new CodePageEncoder.MultibyteMode(charset,
+            new byte[] { Code.ESC, 0x24, 0x01 }, // ESC $ 1: specify Shift-JIS Kanji mode
+            new byte[] { Code.ESC, 0x24, 0x00 }, // ESC $ 0: cancel Shift-JIS Kanji mode
+            new byte[0]))
+        .orElse(null);
   }
 
   private void endOfJob(ByteArrayOutputStream out, boolean alreadyCut) {

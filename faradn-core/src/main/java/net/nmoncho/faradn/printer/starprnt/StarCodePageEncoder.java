@@ -45,6 +45,26 @@ public final class StarCodePageEncoder {
    * @return the encoder
    */
   public static CodePageEncoder of(ByteArrayOutputStream out, CodePage initial, List<CodePage> candidates) {
-    return new CodePageEncoder(out, initial, candidates, StarCodePageEncoder::selectPage);
+    return of(out, initial, candidates, null);
+  }
+
+  /**
+   * A {@link CodePageEncoder} that switches pages with {@code ESC GS t n} and,
+   * when {@code multibyte} is non-null, drops into StarPRNT Shift-JIS Kanji mode
+   * ({@code ESC $ 1} / {@code ESC $ 0}) for CJK characters.
+   *
+   * @param out
+   *        the stream to append encoded bytes and page switches to
+   * @param initial
+   *        the page already selected on the printer
+   * @param candidates
+   *        the pages that may be switched to, in preference order
+   * @param multibyte
+   *        the printer's Kanji mode, or {@code null} for none
+   * @return the encoder
+   */
+  public static CodePageEncoder of(ByteArrayOutputStream out, CodePage initial, List<CodePage> candidates,
+      CodePageEncoder.MultibyteMode multibyte) {
+    return new CodePageEncoder(out, initial, candidates, StarCodePageEncoder::selectPage, multibyte);
   }
 }

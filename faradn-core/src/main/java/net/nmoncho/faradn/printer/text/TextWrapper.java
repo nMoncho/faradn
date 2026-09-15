@@ -15,7 +15,10 @@ import net.nmoncho.faradn.document.TextRun;
  * Greedy word-wrapping over styled text runs. Breaks a paragraph's runs into
  * visual lines that fit a column budget, preferring to break at spaces and only
  * hard-splitting a word longer than a whole line. A character's width is its
- * style's {@code widthMultiple}, so a double-width glyph costs two columns.
+ * {@link DisplayWidth} (one column, or two for an East&nbsp;Asian ideograph)
+ * times its style's {@code widthMultiple}, so a double-width or wide glyph
+ * costs
+ * two columns.
  * <p>
  * Each returned line is itself a list of runs (segments), with adjacent
  * same-style characters merged, ready for the renderer to diff and emit.
@@ -52,7 +55,7 @@ public final class TextWrapper {
     while (i < chars.size()) {
       final int maxColumns = lines.isEmpty() ? firstColumns : restColumns;
       final StyledChar sc = chars.get(i);
-      final int w = sc.style().widthMultiple();
+      final int w = DisplayWidth.of(sc.ch()) * sc.style().widthMultiple();
       if (sc.ch() == ' ') {
         lastSpace = i;
       }

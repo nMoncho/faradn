@@ -47,6 +47,21 @@ class StarProfilesTest {
   }
 
   @Test
+  void overseasProfileHasNoKanjiRom() {
+    // The default TSP143IV is a single-byte (overseas) unit: no Kanji font.
+    assertTrue(StarProfiles.tsp143iv().kanjiCharset().isEmpty());
+  }
+
+  @Test
+  void japaneseProfileCarriesAShiftJisKanjiRom() {
+    final PrinterProfile p = StarProfiles.tsp143ivJapanese();
+
+    assertEquals("Star TSP143IV (Japanese)", p.name());
+    assertEquals(PrinterLanguage.STAR_PRNT, p.language());
+    assertEquals(java.nio.charset.Charset.forName("windows-31j"), p.kanjiCharset().orElseThrow());
+  }
+
+  @Test
   void profileSelectsTheStarBackend() {
     assertInstanceOf(StarPrntRenderer.class, Renderers.forProfile(StarProfiles.tsp143iv()));
   }

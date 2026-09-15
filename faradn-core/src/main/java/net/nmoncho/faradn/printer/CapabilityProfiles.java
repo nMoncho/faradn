@@ -103,7 +103,7 @@ final class CapabilityProfiles {
     final int dpi = intAt(profile, "media.dpi").orElse(0);
     final boolean supportsCut = flag(profile, "features.paperPartCut") || flag(profile, "features.paperFullCut");
     final PrinterProfile base = PrinterProfile.of(displayName(key, profile), width, fonts, dpi, supportsCut,
-        codePages(profile));
+        codePages(profile), PrinterLanguage.ESC_POS, kanjiCharset(profile).orElse(null));
 
     return Optional.of(new CapabilityAwareProfile(base,
         flag(profile, "features.barcodeA") || flag(profile, "features.barcodeB"),
@@ -161,6 +161,11 @@ final class CapabilityProfiles {
     @Override
     public String name() {
       return base.name();
+    }
+
+    @Override
+    public java.util.Optional<Charset> kanjiCharset() {
+      return base.kanjiCharset();
     }
 
     @Override
@@ -273,6 +278,71 @@ final class CapabilityProfiles {
     }
     pages.sort(Comparator.comparingInt(CodePage::id));
     return List.copyOf(pages);
+  }
+
+  /**
+   * The charset of the printer's Kanji ROM, derived from the first multi-byte
+   * {@code codePages} entry (the ones {@link #codePages(Config)} drops because
+   * {@code ESC t} cannot select them). A Japanese model lists CP932, mapped to
+   * the collision-safe {@code x-JIS0208} used with {@code FS C 0}; a Chinese
+   * model's GB/Big5 page maps to its own charset. Empty when the printer lists no
+   * multi-byte page.
+   */
+  private static Optional<Charset> kanjiCharset(Config profile) {
+    if (!profile.hasPath("codePages")) {
+      return Optional.empty();
+    }
+    // Slots are keyed by ESC t number; iterate in slot order so the choice is
+    // deterministic when a profile lists more than one multi-byte page.
+    final List<Map.Entry<Integer, String>> multibyte = new ArrayList<>();
+    for (Map.Entry<String, ConfigValue> slot : profile.getObject("codePages").entrySet()) {
+      final OptionalInt id = parseId(slot.getKey());
+      if (id.isEmpty() || slot.getValue().valueType() != ConfigValueType.STRING) {
+        continue;
+      }
+      final String dbName = (String) slot.getValue().unwrapped();
+      escPosKanjiCharset(dbName).ifPresent(charset -> multibyte.add(Map.entry(id.getAsInt(), charset.name())));
+    }
+    if (multibyte.isEmpty()) {
+      return Optional.empty();
+    }
+    multibyte.sort(Comparator.comparingInt(Map.Entry::getKey));
+    return Optional.of(Charset.forName(multibyte.get(0).getValue()));
+  }
+
+  /**
+   * The ESC/POS transport charset for a database multi-byte encoding name, or
+   * empty when the name is single-byte or unknown. Shift-JIS/CP932 (every
+   * Japanese Kanji model) maps to {@code x-JIS0208}: its bytes stay in
+   * {@code 0x21-0x7E}, so - unlike Shift-JIS - they never collide with the high
+   * bytes of a Latin code page in mixed text, and it is emitted with the JIS code
+   * system ({@code FS C 0}). Other multi-byte encodings (GB, Big5, EUC) are used
+   * as-is.
+   */
+  private static Optional<Charset> escPosKanjiCharset(String dbName) {
+    if (isShiftJisName(dbName)) {
+      try {
+        return Optional.of(Charset.forName("x-JIS0208"));
+      } catch (IllegalArgumentException noJis0208) {
+        // Fall through to the Shift-JIS charset itself if this JVM lacks JIS0208.
+      }
+    }
+    try {
+      final Charset charset = Charset.forName(dbName);
+      if (charset.newEncoder().maxBytesPerChar() > 1.0f) {
+        return Optional.of(charset);
+      }
+    } catch (IllegalArgumentException unknownCharset) {
+      // Unknown encoding name: no Kanji ROM to derive.
+    }
+    return Optional.empty();
+  }
+
+  private static boolean isShiftJisName(String dbName) {
+    return switch (dbName.toUpperCase(java.util.Locale.ROOT)) {
+      case "CP932", "SHIFT_JIS", "SHIFT-JIS", "SHIFTJIS", "SJIS", "X-SJIS", "MS932", "WINDOWS-31J" -> true;
+      default -> false;
+    };
   }
 
   /**

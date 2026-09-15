@@ -5,6 +5,7 @@
 
 package net.nmoncho.faradn.printer;
 
+import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -152,6 +153,25 @@ public interface PrinterProfile {
   }
 
   /**
+   * The charset of the printer's multi-byte (Kanji) ROM, when it has one: the
+   * encoding whose bytes the printer decodes into CJK ideographs, kana or Hangul
+   * in Kanji mode (ESC/POS {@code FS &}, StarPRNT {@code ESC $}). The renderer
+   * emits any character no single-byte {@link #codePages() code page} can encode
+   * through this charset, bracketed by the language's Kanji-mode commands.
+   * <p>
+   * Defaults to empty (no Kanji ROM), so CJK characters fall back to {@code '?'}
+   * - every existing profile is unchanged. A capability-database profile that
+   * lists a multi-byte page (e.g. CP932) derives it automatically; the value is
+   * the transport charset for the profile's {@link #language()} (the
+   * collision-safe {@code x-JIS0208} for an ESC/POS Japanese model, Shift-JIS for
+   * a Star one). Whether glyphs actually appear still depends on the physical
+   * printer having the Kanji font installed.
+   */
+  default Optional<Charset> kanjiCharset() {
+    return Optional.empty();
+  }
+
+  /**
    * Loads a printer profile by name, matched case-insensitively. Resolves first
    * against the bundled escpos-printer-db capability database (by device name or
    * {@code name} field, e.g. {@code "TM-T88V"}), then against the built-in
@@ -231,6 +251,39 @@ public interface PrinterProfile {
    */
   static PrinterProfile of(String name, int dotsPerLine, List<Font> fonts, int dpi,
       boolean supportsCut, List<CodePage> codePages, PrinterLanguage language) {
+    return of(name, dotsPerLine, fonts, dpi, supportsCut, codePages, language, null);
+  }
+
+  /**
+   * Helper method to create a {@link PrinterProfile} on the fly for a specific
+   * command language and Kanji ROM (see {@link #language()} and
+   * {@link #kanjiCharset()}). Equivalent to
+   * {@link #of(String, int, List, int, boolean, List, PrinterLanguage)} but with
+   * an explicit multi-byte charset, so a CJK-capable profile can be minted
+   * without the capability database.
+   *
+   * @param name
+   *        Human-readable profile name, e.g. {@code "Star TSP143IV"}
+   * @param dotsPerLine
+   *        Printable width in dots
+   * @param fonts
+   *        the printer's fonts, ascending by slot (must be non-empty and
+   *        include slot&nbsp;0, Font&nbsp;A)
+   * @param dpi
+   *        Print resolution in dots per inch
+   * @param supportsCut
+   *        Whether the printer has an autocutter
+   * @param codePages
+   *        the single-byte code pages the printer can select, preference order
+   *        (must be non-empty)
+   * @param language
+   *        the command language the profile renders with
+   * @param kanjiCharset
+   *        the charset of the printer's Kanji ROM, or {@code null} for none
+   * @return a profile backed by the given values
+   */
+  static PrinterProfile of(String name, int dotsPerLine, List<Font> fonts, int dpi,
+      boolean supportsCut, List<CodePage> codePages, PrinterLanguage language, Charset kanjiCharset) {
     if (codePages == null || codePages.isEmpty()) {
       throw new IllegalArgumentException("codePages must not be empty");
     }
@@ -241,6 +294,7 @@ public interface PrinterProfile {
       throw new IllegalArgumentException("language must not be null");
     }
 
+    final Optional<Charset> kanji = Optional.ofNullable(kanjiCharset);
     final List<CodePage> pages = List.copyOf(codePages);
     final List<Font> fontList = List.copyOf(fonts);
     final CodePage defaultPage = pages.stream().filter(page -> page.id() == 0).findFirst().orElse(pages.get(0));
@@ -285,6 +339,11 @@ public interface PrinterProfile {
       @Override
       public PrinterLanguage language() {
         return language;
+      }
+
+      @Override
+      public Optional<Charset> kanjiCharset() {
+        return kanji;
       }
     };
   }

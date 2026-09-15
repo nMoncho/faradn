@@ -59,6 +59,7 @@ public class StarHardwarePrintTest {
   private static final File RECEIPT = new File("src/test/resources/printjobs/receipt-full.html");
   private static final File TABLES = new File("src/test/resources/printjobs/tables.html");
   private static final File LINE_HEIGHT = new File("src/test/resources/printjobs/line-height.html");
+  private static final File KANJI = new File("src/test/resources/printjobs/kanji.html");
 
   @Test
   @EnabledIfSystemProperty(named = "faradn.star.hardware", matches = "true")
@@ -75,6 +76,18 @@ public class StarHardwarePrintTest {
     Document doc = Document.from(TABLES);
     try (UsbTransport transport = UsbTransport.open(STAR_VENDOR_ID)) {
       Printer.print(transport, doc, StarProfiles.tsp143iv());
+    }
+  }
+
+  @Test
+  @EnabledIfSystemProperty(named = "faradn.star.hardware", matches = "true")
+  void printsKanjiReceiptOverUsb() {
+    // Mixed Japanese/ASCII receipt through StarPRNT Shift-JIS Kanji mode
+    // (ESC $ 1 / ESC $ 0). Requires a TSP143IV with a Japanese Kanji font
+    // (the Japanese profile); an overseas unit prints the ideographs blank.
+    Document doc = Document.from(KANJI);
+    try (UsbTransport transport = UsbTransport.open(STAR_VENDOR_ID)) {
+      Printer.print(transport, doc, StarProfiles.tsp143ivJapanese());
     }
   }
 
