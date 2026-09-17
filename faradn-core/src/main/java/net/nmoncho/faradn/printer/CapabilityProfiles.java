@@ -103,7 +103,7 @@ final class CapabilityProfiles {
     final int dpi = intAt(profile, "media.dpi").orElse(0);
     final boolean supportsCut = flag(profile, "features.paperPartCut") || flag(profile, "features.paperFullCut");
     final PrinterProfile base = PrinterProfile.of(displayName(key, profile), width, fonts, dpi, supportsCut,
-        codePages(profile), PrinterLanguage.ESC_POS, kanjiCharset(profile).orElse(null));
+        codePages(profile), language(profile), kanjiCharset(profile).orElse(null));
 
     return Optional.of(new CapabilityAwareProfile(base,
         flag(profile, "features.barcodeA") || flag(profile, "features.barcodeB"),
@@ -199,6 +199,11 @@ final class CapabilityProfiles {
     }
 
     @Override
+    public PrinterLanguage language() {
+      return base.language();
+    }
+
+    @Override
     public boolean supportsBarcodes() {
       return barcodes;
     }
@@ -252,6 +257,25 @@ final class CapabilityProfiles {
     fonts.sort(Comparator.comparingInt(Font::id));
 
     return List.copyOf(fonts);
+  }
+
+  /**
+   * The command language a profile declares via its optional {@code language}
+   * field: {@code "star-prnt"} selects {@link PrinterLanguage#STAR_PRNT}, and
+   * anything else (including its absence) is {@link PrinterLanguage#ESC_POS}.
+   * escpos-printer-db entries carry no such field, so they stay ESC/POS; the
+   * Star native profiles merged in from ReceiptPrinterEncoder set it, which is
+   * what routes a name lookup to the StarPRNT renderer. See
+   * {@code scripts/fetch_capabilities.py}.
+   */
+  private static PrinterLanguage language(Config profile) {
+    if (!profile.hasPath("language")) {
+      return PrinterLanguage.ESC_POS;
+    }
+    return switch (profile.getString("language").toLowerCase(java.util.Locale.ROOT)) {
+      case "star-prnt", "starprnt" -> PrinterLanguage.STAR_PRNT;
+      default -> PrinterLanguage.ESC_POS;
+    };
   }
 
   /**
