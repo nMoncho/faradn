@@ -30,7 +30,7 @@ public class BitImageCommands {
 
     @Override
     public byte[] getBytes() {
-      return code;
+      return code.clone();
     }
 
     public int verticalBits() {

@@ -187,7 +187,7 @@ public interface PrinterProfile {
 
       @Override
       public List<Font> fonts() {
-        return fontList;
+        return List.copyOf(fontList);
       }
 
       @Override
@@ -207,7 +207,7 @@ public interface PrinterProfile {
 
       @Override
       public List<CodePage> codePages() {
-        return pages;
+        return List.copyOf(pages);
       }
     };
   }
