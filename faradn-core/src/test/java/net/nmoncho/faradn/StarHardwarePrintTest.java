@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
+import net.nmoncho.faradn.printer.PrinterProfile;
 import net.nmoncho.faradn.printer.StarProfiles;
 import net.nmoncho.faradn.transport.NetworkTransport;
 import net.nmoncho.faradn.transport.PrinterStatus;
@@ -35,9 +36,11 @@ import net.nmoncho.faradn.printer.PrinterLanguage;
  * (the TSP143IV's out-of-the-box default), not Star Line, raster-only, or
  * ESC/POS emulation. Each test renders through the production path
  * ({@link Printer#print(net.nmoncho.faradn.transport.Transport, Document,
- * net.nmoncho.faradn.printer.PrinterProfile)} with
- * {@link StarProfiles#tsp143iv()}),
- * which also exercises the Phase&nbsp;5 status gate: a Star job must print
+ * net.nmoncho.faradn.printer.PrinterProfile)} with the database
+ * {@code "star-tsp143iv"} profile, or {@link StarProfiles#tsp143ivJapanese()}
+ * for the Kanji test), which also exercises the Phase&nbsp;5 status gate: a
+ * Star
+ * job must print
  * immediately, without the ~2-3&nbsp;s stall an ESC/POS {@code DLE EOT} probe
  * would cause.
  * <p>
@@ -66,7 +69,7 @@ public class StarHardwarePrintTest {
   void printsReceiptOverUsb() {
     Document doc = Document.from(RECEIPT);
     try (UsbTransport transport = UsbTransport.open(STAR_VENDOR_ID)) {
-      Printer.print(transport, doc, StarProfiles.tsp143iv());
+      Printer.print(transport, doc, PrinterProfile.load("star-tsp143iv").orElseThrow());
     }
   }
 
@@ -75,15 +78,15 @@ public class StarHardwarePrintTest {
   void printsTablesOverUsb() {
     Document doc = Document.from(TABLES);
     try (UsbTransport transport = UsbTransport.open(STAR_VENDOR_ID)) {
-      Printer.print(transport, doc, StarProfiles.tsp143iv());
+      Printer.print(transport, doc, PrinterProfile.load("star-tsp143iv").orElseThrow());
     }
   }
 
   @Test
   @EnabledIfSystemProperty(named = "faradn.star.hardware", matches = "true")
   void printsKanjiReceiptOverUsb() {
-    // Mixed Japanese/ASCII receipt through StarPRNT Shift-JIS Kanji mode
-    // (ESC $ 1 / ESC $ 0). Requires a TSP143IV with a Japanese Kanji font
+    // Mixed Japanese/ASCII receipt through StarPRNT's UTF-8 Kanji path
+    // (ESC GS ) U). Requires a TSP143IV with a Japanese Kanji font
     // (the Japanese profile); an overseas unit prints the ideographs blank.
     Document doc = Document.from(KANJI);
     try (UsbTransport transport = UsbTransport.open(STAR_VENDOR_ID)) {
@@ -97,7 +100,7 @@ public class StarHardwarePrintTest {
     Document doc = Document.from(RECEIPT);
     String host = System.getProperty("faradn.star.host");
     try (NetworkTransport transport = new NetworkTransport(host)) {
-      Printer.print(transport, doc, StarProfiles.tsp143iv());
+      Printer.print(transport, doc, PrinterProfile.load("star-tsp143iv").orElseThrow());
     }
   }
 
@@ -106,7 +109,7 @@ public class StarHardwarePrintTest {
   void printsLineHeightOverUsb() {
     Document doc = Document.from(LINE_HEIGHT);
     try (UsbTransport transport = UsbTransport.open(STAR_VENDOR_ID)) {
-      Printer.print(transport, doc, StarProfiles.tsp143iv());
+      Printer.print(transport, doc, PrinterProfile.load("star-tsp143iv").orElseThrow());
     }
   }
 

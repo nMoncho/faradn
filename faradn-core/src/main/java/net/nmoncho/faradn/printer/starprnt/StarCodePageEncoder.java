@@ -16,7 +16,8 @@ import net.nmoncho.faradn.printer.command.Code;
  * Wires the shared {@link CodePageEncoder} to StarPRNT's code-page selector,
  * {@code ESC GS t n} (an extra leading {@code GS} versus ESC/POS {@code ESC t
  * n}). The {@link CodePage#id()} of a Star profile carries the Star native page
- * number (see {@code StarProfiles}), so {@link #selectPage(int)} maps it to the
+ * number (the {@code star-prnt} code-page slots in the capability database), so
+ * {@link #selectPage(int)} maps it to the
  * select bytes. Verified against the StarPRNT Command Specifications (Rev
  * 4.20),
  * pp23-24.

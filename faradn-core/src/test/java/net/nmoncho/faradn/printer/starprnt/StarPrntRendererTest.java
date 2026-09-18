@@ -40,7 +40,6 @@ import net.nmoncho.faradn.printer.CodePage;
 import net.nmoncho.faradn.printer.Font;
 import net.nmoncho.faradn.printer.PrinterLanguage;
 import net.nmoncho.faradn.printer.PrinterProfile;
-import net.nmoncho.faradn.printer.StarProfiles;
 import net.nmoncho.faradn.printer.starprnt.commands.StarBarcodeCommands;
 
 /**
@@ -335,7 +334,7 @@ class StarPrntRendererTest {
   void receiptTextFixtureIsFramedWithStarInitAndCut() {
     // Anchor test: the whole receipt fixture renders through the Star backend;
     // assert only the ESC @ + ESC GS t head and the ESC d cut tail.
-    byte[] out = new StarPrntRenderer(StarProfiles.tsp143iv())
+    byte[] out = new StarPrntRenderer(PrinterProfile.load("star-tsp143iv").orElseThrow())
         .render(Document.from(new File("src/test/resources/printjobs/receipt-text.html")).blocks());
 
     assertArrayEquals(new byte[] { ESC, 0x40, ESC, GS, 0x74, 0x01 }, Arrays.copyOfRange(out, 0, 6)); // ESC @ + ESC GS t 1

@@ -24,7 +24,6 @@ import org.junit.jupiter.api.Test;
 import net.nmoncho.faradn.Image;
 import net.nmoncho.faradn.ImagePolicy;
 import net.nmoncho.faradn.printer.PrinterProfile;
-import net.nmoncho.faradn.printer.StarProfiles;
 import net.nmoncho.faradn.transport.DumpTransport;
 import net.nmoncho.faradn.transport.PrinterStatus;
 import net.nmoncho.faradn.transport.Transport;
@@ -131,7 +130,7 @@ public class PrintServerTest {
     // (StarPRNT has no DLE EOT), so the job prints instead of a 409.
     CountingStatusTransport star = new CountingStatusTransport();
     server.stop();
-    server = new PrintServer(0, StarProfiles.tsp143iv(), () -> star);
+    server = new PrintServer(0, PrinterProfile.load("star-tsp143iv").orElseThrow(), () -> star);
     server.start();
 
     Response response = post("/print", "<h1>Hi</h1>");

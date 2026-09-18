@@ -18,7 +18,6 @@ import org.junit.jupiter.api.Test;
 
 import net.nmoncho.faradn.printer.PrinterProfile;
 import net.nmoncho.faradn.printer.EscPosRenderer;
-import net.nmoncho.faradn.printer.StarProfiles;
 import net.nmoncho.faradn.transport.DumpTransport;
 import net.nmoncho.faradn.transport.PrinterNotReadyException;
 import net.nmoncho.faradn.transport.PrinterStatus;
@@ -91,7 +90,7 @@ public class PrinterTest {
     // StarPRNT has no DLE EOT reply, so the pre-flight poll must be skipped.
     CountingTransport transport = new CountingTransport();
 
-    Printer.print(transport, Document.from("<p>x</p>"), StarProfiles.tsp143iv());
+    Printer.print(transport, Document.from("<p>x</p>"), PrinterProfile.load("star-tsp143iv").orElseThrow());
 
     assertEquals(0, transport.statusPolls.get(), "Star jobs must not poll status");
     assertTrue(transport.written != null && transport.written.length > 0, "the job must still be written");

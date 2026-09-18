@@ -14,8 +14,9 @@ import java.util.function.Supplier;
 
 /**
  * A small registry of hand-authored profiles for models the escpos-printer-db
- * capability database does not cover (label printers, and Star's native
- * StarPRNT). {@link PrinterProfile#load(String)} and
+ * capability database does not cover (the Zebra label printers), plus a stable
+ * short alias for a database-backed model ({@code "star-tsp143iv"} → the merged
+ * {@code TSP100IV} Star profile). {@link PrinterProfile#load(String)} and
  * {@link PrinterProfile#available()} consult it after the database, so these
  * profiles are reachable by name (for example the CLI {@code --profile}) and
  * not
@@ -31,7 +32,10 @@ final class BuiltinProfiles {
 
   static {
     final Map<String, Supplier<PrinterProfile>> profiles = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-    profiles.put("star-tsp143iv", StarProfiles::tsp143iv);
+    // A friendly alias for the database's TSP100IV family (the TSP143IV is a
+    // member); the Star native profile is merged into the database, not authored here.
+    profiles.put("star-tsp143iv", () -> PrinterProfile.load("TSP100IV")
+        .orElseThrow(() -> new IllegalStateException("TSP100IV profile missing from the capability database")));
     profiles.put("zd421-zpl-203", ZebraProfiles::zd421Zpl203);
     profiles.put("zd421-zpl-300", ZebraProfiles::zd421Zpl300);
     profiles.put("zd421-epl-203", ZebraProfiles::zd421Epl203);
