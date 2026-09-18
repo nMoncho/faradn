@@ -1,20 +1,15 @@
 # Farad'n
 
-Farad'n is an HTML-to-ESC/POS printing library written in Java (but **not**
-limited to Java). The goal of this project is to be a one-stop shop for
-your printing needs when dealing with  ESC/POS (thermal receipt) printers:
-write your receipt as HTML, print it on paper.
+Farad'n is an HTML-to-ESC/POS printing library. The goal of this project is
+to be a one-stop shop for your printing needs when dealing with  ESC/POS
+(thermal receipt) printers: write your receipt as HTML, print it on paper.
 
 HTML is a widely used and understood format, and can easily be templated
 with tools such as [Mustache](https://mustache.github.io/).
 
-We also provide native binaries and FFI libraries so if you don't work with
-Java you can still use the project.
-
-**Status.** The full pipeline works - HTML parsing, style resolution, the
-renderer (text with word-wrap, images, barcodes, QR, tables), and transports
-(USB and network) - plus a command line and HTTP server shipped as a GraalVM
-native binary. Pre-1.0: the public API is not yet stable.
+Farad'n written in Java (but **not** limited to Java), we provide native
+binaries and FFI libraries so if you don't work with Java you can still
+use the project.
 
 ## Requirements
 
@@ -23,8 +18,8 @@ native binary. Pre-1.0: the public API is not yet stable.
 
 ## Installation
 
-`faradn-core` is published to Maven Central from the 1.0.0 release onward. Add it
-to your build, using the latest release for `VERSION`:
+`faradn-core` is published to Maven Central. Add it  to your build, using
+the latest release for `VERSION`:
 
 Maven:
 
@@ -60,7 +55,7 @@ PrinterProfile profile = PrinterProfile.load("TM-T88V").orElseThrow();
 // Over USB, by the printer's USB vendor id (Epson is 0x04b8):
 Printer.from(0x04b8).ifPresent(printer -> printer.print(doc, "TM-T88V"));
 
-// Over Ethernet (raw TCP, port 9100), or any other Transport:
+// Or, over Ethernet (raw TCP, port 9100), or any other Transport:
 try (Transport transport = new NetworkTransport("192.168.1.50")) {
   Printer.print(transport, doc, profile);
 }
@@ -161,9 +156,9 @@ golden-byte tests.
 
 ### Modules
 
-- **`faradn-core`**: the library, published to Maven Central from the 1.0.0
-  release onward (see [Installation](#installation)). It carries the stable JPMS
-  module name `net.nmoncho.faradn` (via `Automatic-Module-Name`), so a modular
+- **`faradn-core`**: the library, published to Maven Central
+  (see [Installation](#installation)). It carries the stable JPMS module name 
+  `net.nmoncho.faradn` (via `Automatic-Module-Name`), so a modular
   consumer can add `requires net.nmoncho.faradn;` to its own `module-info`.
 - **`faradn-cli`**: the command line and HTTP server, shipped as a GraalVM
   native binary and attached to GitHub Releases.
@@ -174,26 +169,26 @@ golden-byte tests.
 
 **Tags**
 
-| Markup                            | Effect                                                                                                                                    |
-|-----------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
-| `<b>`, `<strong>`                 | bold                                                                                                                                      |
-| `<u>`                             | underline                                                                                                                                 |
-| `<small>`                         | narrower Font B (`ESC M`) - more columns per line                                                                                         |
-| `<span>`                          | inline styling span - applies its inline CSS (below) to the enclosed text                                                                 |
-| `<h1>`                            | bold, double width and height                                                                                                             |
-| `<h2>`                            | bold, double height                                                                                                                       |
-| `<h3>`                            | bold                                                                                                                                      |
-| `<center>`                        | centered                                                                                                                                  |
-| `<p>`, `<div>`, headings          | paragraph (block) boundaries                                                                                                              |
-| `<ul>`, `<ol>`, `<li>`            | list items with `- ` / `1. ` markers (nested indents)                                                                                     |
-| `<pre>`                           | preformatted: whitespace and line breaks preserved                                                                                        |
-| `<br>`, `<hr>`                    | line break, horizontal rule                                                                                                               |
-| `<table>`, `<tr>`, `<td>`, `<th>` | character-grid table: content-sized columns, `colspan`, per-cell `text-align`, inline styling, bold `<th>`, optional grid borders (below) |
-| `<img>`                           | image (URL or Base64 `data:` URI; PNG, JPEG, BMP, WBMP)                                                                                   |
-| `<em>`, `<i>`                     | italic (`ESC 4`/`ESC 5`); printers without italic ignore the command                                                                      |
-| `<cash-drawer>`                   | pulses the cash-drawer kick connector (`ESC p`); `pin="2"` (default) or `pin="5"` (below)                                                 |
+| Markup                            | Effect                                                                                                                                     |
+|-----------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------|
+| `<b>`, `<strong>`                 | bold                                                                                                                                       |
+| `<u>`                             | underline                                                                                                                                  |
+| `<small>`                         | narrower Font B (`ESC M`) - more columns per line                                                                                          |
+| `<span>`                          | inline styling span - applies its inline CSS (below) to the enclosed text                                                                  |
+| `<h1>`                            | bold, double width and height                                                                                                              |
+| `<h2>`                            | bold, double height                                                                                                                        |
+| `<h3>`                            | bold                                                                                                                                       |
+| `<center>`                        | centered                                                                                                                                   |
+| `<p>`, `<div>`, headings          | paragraph (block) boundaries                                                                                                               |
+| `<ul>`, `<ol>`, `<li>`            | list items with `- ` / `1. ` markers (nested indents)                                                                                      |
+| `<pre>`                           | preformatted: whitespace and line breaks preserved                                                                                         |
+| `<br>`, `<hr>`                    | line break, horizontal rule                                                                                                                |
+| `<table>`, `<tr>`, `<td>`, `<th>` | character-grid table: content-sized columns, `colspan`, per-cell `text-align`, inline styling, bold `<th>`, optional grid borders (below)  |
+| `<img>`                           | image (URL or Base64 `data:` URI; PNG, JPEG, BMP, WBMP)                                                                                    |
+| `<em>`, `<i>`                     | italic (`ESC 4`/`ESC 5`); printers without italic ignore the command                                                                       |
+| `<cash-drawer>`                   | pulses the cash-drawer kick connector (`ESC p`); `pin="2"` (default) or `pin="5"` (below)                                                  |
 | `<cut>`                           | cuts the paper (`GS V`); `mode="partial"` (default) or `mode="full"`, and `points="1"` (default) or `points="3"` for a partial cut (below) |
-| `<feed>`                          | feeds blank lines (`ESC d`); `lines="n"` (default `1`, below)                                                                             |
+| `<feed>`                          | feeds blank lines (`ESC d`); `lines="n"` (default `1`, below)                                                                              |
 
 **Inline CSS**
 
@@ -393,8 +388,8 @@ control actions that render nothing and ignore any content inside them:
   replaces the automatic end-of-job cut rather than adding a second one.
 - `<feed>` feeds one blank line; `<feed lines="n">` feeds `n` (clamped to `1`-`255`).
 
-**Positioned layout (page mode).** Most receipts flow top to bottom, but a bounded region -
-a header, a coupon, a label - can place its pieces at exact coordinates using ESC/POS *page
+**Positioned layout (page mode).** Most receipts flow top to bottom, but a bounded region,
+a header, a coupon, a label, can place its pieces at exact coordinates using ESC/POS *page
 mode*. A sized, `position: relative` container with `position: absolute` children maps to such
 a region: each child is drawn at its `left`/`top`, and the whole area prints at once.
 
@@ -453,7 +448,7 @@ current one, so mixed-script receipts encode faithfully instead of collapsing to
 capability-database profile (`PrinterProfile.codePages()`, single-byte pages
 only) rather than a fixed list, so each model switches only among the pages it
 actually has. The current page is preferred, so a run of one script costs a
-single switch and ASCII never forces one; a glyph in none of the printer's pages
+single switch and ASCII never forces one. A glyph in none of the printer's pages
 still falls back to `?`.
 
 **Kanji / CJK text.** Ideographs, kana and Hangul are not in any single-byte
@@ -461,20 +456,22 @@ code page - they live in the printer's Kanji ROM, reached by a separate stateful
 mode. When a profile has one (`PrinterProfile.kanjiCharset()`), a character no
 code page can encode is emitted through it: on ESC/POS the renderer selects the
 JIS code system (`FS C`), brackets each CJK run with `FS &` / `FS .`, and writes
-JIS&nbsp;X&nbsp;0208 codes; on StarPRNT (the TSP100IV family) it brackets each run
-with UTF-8 mode (`ESC GS ) U`) and writes UTF-8, selecting the CJK font language
-(Japanese / Chinese / Hangul) once so shared Han ideographs take the right glyph
-shape. ASCII and Latin always stay on the code-page path with the mode off, so
-mixed receipts (`合計 ¥1,400`) encode correctly - wide characters even count as
-two columns so word-wrap and table alignment hold. The Kanji charset is derived
-automatically for capability-database models that list a multi-byte page (CP932 →
-the collision-safe `x-JIS0208`); Star's Japanese profile
+JIS&nbsp;X&nbsp;0208 codes.
+
+On StarPRNT (the TSP100IV family) it brackets each run with UTF-8 mode (`ESC GS ) U`)
+and writes UTF-8, selecting the CJK font language (Japanese / Chinese / Hangul)
+once so shared Han ideographs take the right glyph shape. ASCII and Latin always stay
+on the code-page path with the mode off, so mixed receipts (`合計 ¥1,400`) encode correctly,
+wide characters even count as two columns so word-wrap and table alignment hold.
+The Kanji charset is derived automatically for capability-database models that list a
+multi-byte page (CP932 → the collision-safe `x-JIS0208`). Star's Japanese profile
 (`StarProfiles.tsp143ivJapanese()`) carries Shift-JIS as its language hint.
+
 Whether the glyphs actually print still depends on the physical unit having the
-CJK font installed - an overseas (single-byte) unit has no `kanjiCharset` and
+CJK font installed, an overseas (single-byte) unit has no `kanjiCharset` and
 renders CJK as `?`. Note StarPRNT's legacy Shift-JIS mode (`ESC $`) is ignored
 unless the printer is set to Japanese Shift-JIS MBCS, which a TSP143IV is not out
-of the box - hence the UTF-8 path. ZPL already emits UTF-8 (`^CI28`), so CJK
+of the box, thus the UTF-8 path. ZPL already emits UTF-8 (`^CI28`), so CJK
 bytes are correct there when a CJK font is loaded on the Zebra; EPL2 has no
 multi-byte text mode.
 
@@ -486,10 +483,7 @@ binary, which has no AWT.
 ## Previewing print jobs
 
 Thermal output is hard to picture from HTML alone, so this repo provides a stylesheet
-that renders a print job in a browser roughly the way it will come off the printer:
-a narrow monospace paper roll on a character grid, with each supported tag mapped to
-the visual the ESC/POS renderer produces (double-size headings, `- `/`1.` list
-markers, dashed rules, content-sized table columns, 1D/2D barcode placeholders).
+that renders a print job in a browser roughly the way it will come off the printer.
 
 Add this line to the `<head>` of any print job and open it in a browser:
 
@@ -505,15 +499,15 @@ Add this line to the `<head>` of any print job and open it in a browser:
 
 This is an approximation, not an emulator: word-wrap points, exact column widths and
 image dithering are the browser's, not the printer's. It conveys the feel and catches
-layout mistakes early, but is not byte-accurate - the printer is the source of truth.
+layout mistakes early, but is not byte-accurate. The printer is the source of truth.
 
 ## Supported Devices
 
-Farad'n targets **ESC/POS (Epson-compatible) receipt printers**. The renderer is
-profile-driven: it reads the target's printable width, columns, resolution, fonts,
-code pages, and features from the bundled capability database
-([escpos-printer-db](https://github.com/receipt-print-hq/escpos-printer-db)) and
-adapts its output. Support comes in two tiers:
+Farad'n targets **ESC/POS (Epson-compatible) receipt printers** and **StarPRNT receipt
+printers**. The renderers are profile-driven: it reads the target's printable width,
+columns, resolution, fonts, code pages, and features from the bundled capability database
+([escpos-printer-db](https://github.com/receipt-print-hq/escpos-printer-db)) and adapts its output.
+Support comes in two tiers:
 
 - **Verified** - checked against the device spec and on real hardware. The Epson
   **TM-T88V** is the verified reference model.
@@ -527,28 +521,22 @@ adapts its output. Support comes in two tiers:
 If you have a printer to verify, please add it to the matrix and see
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
-> **Non-ESC/POS printers** (Brother, Zebra/ZPL, Star, TSPL, and so on) are not
-> supported yet: they speak different page-description languages. Multi-vendor
-> backends are a roadmap item (see `PLAN_LANGUAGES.md`), not part of this release.
-
 ### Capabilities per Device
 
-| Brand | Model   | Tier     | Basic Styles       | Images             | Tables             | Barcodes           |
-|-------|---------|----------|--------------------|--------------------|--------------------|--------------------|
-| Epson | TM-T88V | Verified | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Brand | Model    | Tier        | Basic Styles       | Images             | Tables             | Barcodes           |
+|-------|----------|-------------|--------------------|--------------------|--------------------|--------------------|
+| Epson | TM-T88V  | Verified    | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Star  | TSP100IV | Verified    | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Zebra | ZD421    | In Progress | :question:         | :question:         | :question:         | :question:         |
 
-**Basic Styles**
-
-- Bold text
-- Underlined text
-- Left, center, and right text alignment
-- Double-width / double-height text (headings)
 
 ## Building
 
 ```console
 $ ./mvnw verify                                    # build and test everything
 $ ./mvnw -pl faradn-cli -am -Pnative package       # build the native binary (needs GraalVM)
+$ ./mvnw formatter:format                          # format code
+$ ./mvnw spotbugs:check                            # lint code with SpotBugs
 $ ./mvnw license:format                            # stamp SPDX headers on new source files
 ```
 
@@ -566,22 +554,6 @@ $ mvn install:install-file -Dfile=libusb4java-1.3.0-darwin-aarch64.jar \
 ```
 
 The `macos-aarch64` Maven profile then wires it in automatically.
-
-## Roadmap
-
-- [x] HTML → IR: style resolution, paragraphs, images, barcodes
-- [x] IR → ESC/POS renderer (diffing run styles, reusing the command layer)
-- [x] Word wrapping based on printer profile (paper width × font size)
-- [x] Character-grid layout for `<table>` and column layouts
-- [x] Code page handling (Unicode → `ESC t` selection per printer)
-- [x] Transports (USB and raw TCP 9100) with real-time status
-- [x] CLI and HTTP server as a GraalVM native binary
-- [ ] Publish `faradn-core` to Maven Central and native binaries to GitHub Releases
-- [x] List markers, preformatted text, per-barcode options, aligned table cells
-- [x] Per-run code page switching for mixed-script text
-- [x] Kanji / CJK text (ESC/POS `FS &`, StarPRNT UTF-8 `ESC GS ) U`) with wide-character layout
-- [x] Table colspan and column widths
-- [x] Printer capability database: load profiles by device name from [escpos-printer-db](https://github.com/receipt-print-hq/escpos-printer-db)
 
 ## Contribution Guidelines
 
